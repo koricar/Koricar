@@ -1,0 +1,19 @@
+packages:
+  "framer-motion": "For premium page transitions and staggered list animations"
+  "use-debounce": "For debouncing text input in search fields"
+  "lucide-react": "For beautiful crisp UI icons"
+  "clsx": "For conditional class name merging"
+  "tailwind-merge": "For merging tailwind classes seamlessly"
+
+images:
+  - path: "artifacts/korean-car-search/public/images/hero-bg.png"
+    description: "A highly cinematic, ultra-realistic sleek modern Korean car (like a Genesis sedan or Hyundai SUV) in a clean, high-end studio environment. Dark moody lighting with subtle neon blue accents. Very premium and professional."
+    aspect_ratio: "16:9"
+  - path: "artifacts/korean-car-search/public/images/logo.png"
+    description: "Minimalist modern auto silhouette logo, elegant and geometric, crisp white symbol on a transparent background."
+    aspect_ratio: "1:1"
+
+notes:
+  - "The app uses full RTL (Right-to-Left) layout for Arabic language support."
+  - "Generated hooks from @workspace/api-client-react are used for API calls."
+  - "Ensure the backend server handles the query params for /api/cars/search correctly."
