@@ -436,6 +436,28 @@ function extractFeatures(car: EncarCar): string[] {
     if (label) { add(label); break; }
   }
 
+  // 5. Always-present features derived from guaranteed car fields
+  const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
+  const fuelAr: Record<string, string> = {
+    gasoline: "بنزين", diesel: "ديزل", hybrid: "هايبرد",
+    electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG",
+  };
+  if (fuelAr[fuel]) add(fuelAr[fuel]);
+
+  const trans = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "";
+  if (trans === "auto") add("أوتوماتيك");
+  else if (trans === "manual") add("يدوي");
+
+  const condition2 = car.Condition ?? [];
+  const inspected = condition2.includes("Inspection") || condition2.includes("InspectionDirect");
+  if (inspected) add("فحص معتمد");
+
+  const year = parseInt(car.FormYear ?? "0", 10);
+  if (year >= 2023) add("موديل حديث");
+  else if (year >= 2020) add("موديل جيد");
+
+  if ((car.Mileage ?? 0) < 50000) add("ممشى منخفض");
+
   return features;
 }
 
