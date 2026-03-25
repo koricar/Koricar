@@ -207,14 +207,21 @@ function buildEncarQuery(params: {
 
   if (params.model) {
     const input = params.model.trim();
-    const translated = EN_MODEL_TO_KR[input.toLowerCase()];
-    if (translated) {
-      // Known model: use Encar's server-side Model filter
-      q += `_.Model.${translated}.`;
-      modelKr = translated;
+    // If the value already contains Korean characters (sent from dropdown), use directly
+    const isKorean = /[\uAC00-\uD7A3]/.test(input);
+    if (isKorean) {
+      q += `_.Model.${input}.`;
+      modelKr = input;
     } else {
-      // Unknown model: keep for client-side filtering
-      modelRaw = input;
+      // English/romanized input: look up translation table
+      const translated = EN_MODEL_TO_KR[input.toLowerCase()];
+      if (translated) {
+        q += `_.Model.${translated}.`;
+        modelKr = translated;
+      } else {
+        // Unknown model: keep for client-side partial-match filtering
+        modelRaw = input;
+      }
     }
   }
 
