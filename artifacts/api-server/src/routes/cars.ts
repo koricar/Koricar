@@ -24,7 +24,7 @@ const MANUFACTURER_TO_EN: Record<string, string> = {
   "아우디": "Audi",
   "폭스바겐": "Volkswagen",
   "볼보": "Volvo",
-  "토요타": "Toyota",
+  "도요타": "Toyota",
   "혼다": "Honda",
   "닛산": "Nissan",
   "렉서스": "Lexus",
@@ -43,6 +43,7 @@ const MANUFACTURER_TO_EN: Record<string, string> = {
 };
 
 const EN_TO_MANUFACTURER: Record<string, string> = {
+  // Korean domestic (CarType.Y)
   "hyundai": "현대",
   "kia": "기아",
   "genesis": "제네시스",
@@ -51,16 +52,38 @@ const EN_TO_MANUFACTURER: Record<string, string> = {
   "renault samsung": "르노삼성",
   "renault korea": "르노코리아",
   "chevrolet": "쉐보레",
+  // Imported (CarType.N)
   "bmw": "BMW",
   "mercedes": "벤츠",
   "mercedes-benz": "벤츠",
   "audi": "아우디",
   "volkswagen": "폭스바겐",
   "volvo": "볼보",
-  "toyota": "토요타",
+  "toyota": "도요타",
   "honda": "혼다",
   "lexus": "렉서스",
+  "nissan": "닛산",
+  "infiniti": "인피니티",
+  "porsche": "포르쉐",
+  "land rover": "랜드로버",
+  "jaguar": "재규어",
+  "mini": "미니",
+  "ford": "포드",
+  "jeep": "지프",
+  "lincoln": "링컨",
+  "cadillac": "캐딜락",
+  "ferrari": "페라리",
+  "lamborghini": "람보르기니",
+  "maserati": "마세라티",
+  "rolls-royce": "롤스로이스",
+  "mclaren": "맥라렌",
 };
+
+// Brands that are CarType.Y (Korean domestic)
+const DOMESTIC_BRANDS = new Set([
+  "hyundai", "kia", "genesis", "ssangyong", "kg mobility",
+  "renault samsung", "renault korea", "chevrolet",
+]);
 
 const FUEL_TO_EN: Record<string, string> = {
   "가솔린": "gasoline",
@@ -165,9 +188,17 @@ function buildEncarQuery(params: {
   transmission?: string;
   bodyType?: string;
 }): { q: string; modelKr: string | null; modelRaw: string | null } {
-  let q = "(And.Hidden.N._.CarType.Y.";
   let modelKr: string | null = null;
   let modelRaw: string | null = null;
+
+  // Determine CarType: Y=domestic Korean, N=imported, omit=show all
+  let carType = "";
+  if (params.brand && params.brand !== "any") {
+    const key = params.brand.toLowerCase();
+    carType = DOMESTIC_BRANDS.has(key) ? "_.CarType.Y." : "_.CarType.N.";
+  }
+
+  let q = `(And.Hidden.N.${carType}`;
 
   if (params.brand && params.brand !== "any") {
     const kr = EN_TO_MANUFACTURER[params.brand.toLowerCase()];
@@ -267,9 +298,14 @@ function mapEncarCar(car: EncarCar) {
 router.get("/brands", (_req, res) => {
   res.json({
     brands: [
+      // Korean domestic
       "Hyundai", "Kia", "Genesis", "SsangYong", "KG Mobility",
-      "Renault Samsung", "Chevrolet", "BMW", "Mercedes-Benz",
-      "Audi", "Volkswagen", "Toyota", "Lexus",
+      "Renault Samsung", "Renault Korea", "Chevrolet",
+      // Imported
+      "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Volvo",
+      "Toyota", "Lexus", "Honda", "Nissan", "Infiniti",
+      "Porsche", "Land Rover", "MINI", "Ford", "Jeep",
+      "Lincoln", "Cadillac", "Maserati",
     ],
   });
 });
