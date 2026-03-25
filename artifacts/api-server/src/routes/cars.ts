@@ -3,6 +3,9 @@ import { SearchCarsQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
+// In-memory cache: populated by search results so the detail route can look up by ID
+const carCache = new Map<string, ReturnType<typeof mapEncarCar>>();
+
 const ENCAR_API = "https://api.encar.com";
 const ENCAR_PHOTO = "https://ci.encar.com";
 const ENCAR_DETAIL = "https://www.encar.com/dc/dc_cardetailview.do?carid=";
@@ -245,6 +248,7 @@ router.get("/search", async (req, res) => {
 
     const data = (await resp.json()) as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
+    cars.forEach((c) => carCache.set(c.id, c));
 
     // Client-side post-filters
     if (yearFrom !== undefined) cars = cars.filter((c) => c.year >= yearFrom);
@@ -269,10 +273,14 @@ router.get("/search", async (req, res) => {
 
 router.get("/:id", (req, res) => {
   const { id } = req.params;
-  res.json({
-    id,
-    sourceUrl: `${ENCAR_DETAIL}${id}`,
-    message: "View this car on Encar",
+  const cached = carCache.get(id);
+  if (cached) {
+    return res.json(cached);
+  }
+  // Car not in cache (user navigated directly without searching first)
+  res.status(404).json({
+    error: "not_found",
+    message: "Car not found. Please search first and click a result.",
   });
 });
 
