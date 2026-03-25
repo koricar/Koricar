@@ -232,6 +232,38 @@ const TRANSMISSION_TO_EN: Record<string, string> = {
   "DCT": "auto",
 };
 
+// Korean color name → Arabic label & English key
+const COLOR_MAP: Record<string, { ar: string; en: string }> = {
+  "흰색":   { ar: "أبيض",    en: "white" },
+  "검정색": { ar: "أسود",    en: "black" },
+  "쥐색":   { ar: "رمادي",   en: "gray" },
+  "은색":   { ar: "فضي",     en: "silver" },
+  "빨간색": { ar: "أحمر",    en: "red" },
+  "하늘색": { ar: "أزرق فاتح", en: "lightblue" },
+  "갈색":   { ar: "بني",     en: "brown" },
+  "녹색":   { ar: "أخضر",    en: "green" },
+  "노란색": { ar: "أصفر",    en: "yellow" },
+  "주황색": { ar: "برتقالي", en: "orange" },
+  "연두색": { ar: "أخضر فاتح", en: "lime" },
+};
+
+// Arabic/English color key → Korean color name for Encar query
+const EN_COLOR_TO_KR: Record<string, string> = {
+  "white":     "흰색",
+  "black":     "검정색",
+  "gray":      "쥐색",
+  "grey":      "쥐색",
+  "silver":    "은색",
+  "red":       "빨간색",
+  "lightblue": "하늘색",
+  "blue":      "하늘색",
+  "brown":     "갈색",
+  "green":     "녹색",
+  "yellow":    "노란색",
+  "orange":    "주황색",
+  "lime":      "연두색",
+};
+
 function formatPrice(price: number): string {
   return `${price.toLocaleString()}만원 (~${Math.round(price * 8500).toLocaleString()}﷼)`;
 }
@@ -243,6 +275,7 @@ function buildEncarQuery(params: {
   fuelType?: string;
   transmission?: string;
   bodyType?: string;
+  color?: string;
 }): { q: string; modelKr: string | null; modelRaw: string | null } {
   let modelKr: string | null = null;
   let modelRaw: string | null = null;
@@ -299,6 +332,11 @@ function buildEncarQuery(params: {
     q += "_.Category.RV.";
   }
 
+  if (params.color && params.color !== "any") {
+    const kr = EN_COLOR_TO_KR[params.color.toLowerCase()];
+    if (kr) q += `_.Color.${kr}.`;
+  }
+
   q += ")";
   return { q, modelKr, modelRaw };
 }
@@ -314,6 +352,8 @@ interface EncarCar {
   FormYear: string;
   Mileage: number;
   Price: number;
+  Color?: string;
+  Condition?: string[];
   OfficeCityState?: string;
   Photos?: Array<{ location: string; ordering: number }>;
 }
@@ -335,6 +375,14 @@ function mapEncarCar(car: EncarCar) {
   const price = Math.round(car.Price);
   const model = car.Badge ? `${car.Model} ${car.Badge}` : car.Model;
 
+  const colorKr = car.Color ?? "";
+  const colorInfo = COLOR_MAP[colorKr];
+  const colorEn = colorInfo?.en ?? colorKr;
+  const colorAr = colorInfo?.ar;
+
+  const condition = car.Condition ?? [];
+  const inspected = condition.includes("Inspection") || condition.includes("InspectionDirect");
+
   return {
     id: car.Id,
     brand: brandEn,
@@ -346,8 +394,10 @@ function mapEncarCar(car: EncarCar) {
     fuelType: fuelEn,
     transmission: transmissionEn,
     bodyType: "sedan",
-    color: "unknown",
+    color: colorEn,
+    colorAr,
     sunroof: false,
+    inspected,
     imageUrl,
     thumbnailUrl: imageUrl,
     description: `${brandEn} ${car.Model} ${car.FormYear}`,
@@ -390,6 +440,7 @@ router.get("/search", async (req, res) => {
     transmission,
     fuelType,
     bodyType,
+    color,
     priceMin,
     priceMax,
     mileageMax,
@@ -398,7 +449,7 @@ router.get("/search", async (req, res) => {
   } = parsed.data;
 
   try {
-    const { q: encarQ, modelRaw } = buildEncarQuery({ brand, model, sunroof, fuelType, transmission, bodyType });
+    const { q: encarQ, modelRaw } = buildEncarQuery({ brand, model, sunroof, fuelType, transmission, bodyType, color });
     const offset = (page - 1) * limit;
 
     // Fetch more from Encar so we can post-filter by year, price, mileage, and unknown model names

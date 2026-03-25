@@ -1,10 +1,23 @@
 import { Link } from "wouter";
-import { Gauge, Fuel, Settings2, MapPin, ExternalLink } from "lucide-react";
+import { Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck } from "lucide-react";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import type { Car } from "@workspace/api-client-react";
 
+const COLOR_SWATCHES: Record<string, { css: string }> = {
+  white:     { css: "#F8F8F8" },
+  black:     { css: "#1A1A1A" },
+  gray:      { css: "#6B7280" },
+  silver:    { css: "#C0C0C0" },
+  red:       { css: "#EF4444" },
+  lightblue: { css: "#60A5FA" },
+  brown:     { css: "#92400E" },
+  green:     { css: "#22C55E" },
+  yellow:    { css: "#EAB308" },
+  orange:    { css: "#F97316" },
+  lime:      { css: "#84CC16" },
+};
+
 export function CarCard({ car }: { car: Car }) {
-  // Translate types for display
   const translateFuel = (fuel: string) => {
     const map: Record<string, string> = {
       gasoline: "بنزين",
@@ -23,6 +36,8 @@ export function CarCard({ car }: { car: Car }) {
     return map[trans] || trans;
   };
 
+  const colorSwatch = COLOR_SWATCHES[car.color];
+
   return (
     <div className="group bg-card rounded-2xl overflow-hidden border border-border/50 shadow-md shadow-black/5 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 transition-all duration-300 flex flex-col h-full">
       {/* Image Container */}
@@ -32,12 +47,21 @@ export function CarCard({ car }: { car: Car }) {
           {car.source}
           <ExternalLink className="w-3 h-3 text-primary" />
         </div>
-        
-        {car.sunroof && (
-          <div className="absolute top-3 left-3 z-10 bg-primary/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg shadow-lg">
-            فتحة سقف
-          </div>
-        )}
+
+        {/* Top-left badges stack */}
+        <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
+          {car.inspected && (
+            <div className="bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
+              <ShieldCheck className="w-3.5 h-3.5" />
+              فحص معتمد
+            </div>
+          )}
+          {car.sunroof && (
+            <div className="bg-primary/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg">
+              فتحة سقف
+            </div>
+          )}
+        </div>
 
         {/* placeholder if no image, otherwise user-provided image */}
         {car.imageUrl ? (
@@ -91,12 +115,20 @@ export function CarCard({ car }: { car: Car }) {
             <Settings2 className="w-4 h-4 text-primary/70" />
             <span className="font-medium">{translateTransmission(car.transmission)}</span>
           </div>
-          {car.location && (
+          {car.colorAr ? (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <span
+                className="w-4 h-4 rounded-full border border-border/60 flex-shrink-0 shadow-sm"
+                style={{ backgroundColor: colorSwatch?.css ?? "#ccc" }}
+              />
+              <span className="font-medium">{car.colorAr}</span>
+            </div>
+          ) : car.location ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <MapPin className="w-4 h-4 text-primary/70" />
               <span className="font-medium truncate">{car.location}</span>
             </div>
-          )}
+          ) : null}
         </div>
 
         <Link

@@ -23,7 +23,9 @@ export interface Car {
   transmission: string;
   bodyType: string;
   color: string;
+  colorAr?: string;
   sunroof: boolean;
+  inspected?: boolean;
   imageUrl?: string;
   thumbnailUrl?: string;
   description?: string;
