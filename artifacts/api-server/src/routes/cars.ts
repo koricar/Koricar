@@ -79,6 +79,18 @@ const EN_TO_FUEL_KR: Record<string, string> = {
   "hybrid": "가솔린+전기",
 };
 
+const EN_TO_TRANSMISSION_KR: Record<string, string> = {
+  "auto": "오토",
+  "manual": "수동",
+};
+
+const TRANSMISSION_TO_EN: Record<string, string> = {
+  "오토": "auto",
+  "수동": "manual",
+  "CVT": "auto",
+  "DCT": "auto",
+};
+
 function formatPrice(price: number): string {
   return `${price.toLocaleString()}만원 (~${Math.round(price * 8500).toLocaleString()}﷼)`;
 }
@@ -87,21 +99,32 @@ function buildEncarQuery(params: {
   brand?: string;
   sunroof?: boolean;
   fuelType?: string;
+  transmission?: string;
+  bodyType?: string;
 }): string {
   let q = "(And.Hidden.N._.CarType.Y.";
 
   if (params.brand && params.brand !== "any") {
     const kr = EN_TO_MANUFACTURER[params.brand.toLowerCase()];
-    if (kr) q += `_.Maker.${kr}.`;
+    if (kr) q += `_.Manufacturer.${kr}.`;
   }
 
   if (params.sunroof === true) {
-    q += "_.SunRoof.Y.";
+    q += "_.Options.선루프.";
   }
 
   if (params.fuelType && params.fuelType !== "any") {
     const kr = EN_TO_FUEL_KR[params.fuelType];
     if (kr) q += `_.FuelType.${kr}.`;
+  }
+
+  if (params.transmission && params.transmission !== "any") {
+    const kr = EN_TO_TRANSMISSION_KR[params.transmission];
+    if (kr) q += `_.Transmission.${kr}.`;
+  }
+
+  if (params.bodyType && params.bodyType !== "any" && params.bodyType === "suv") {
+    q += "_.Category.RV.";
   }
 
   q += ")";
@@ -115,6 +138,7 @@ interface EncarCar {
   Badge?: string;
   GreenType: string;
   FuelType: string;
+  Transmission?: string;
   FormYear: string;
   Mileage: number;
   Price: number;
@@ -134,6 +158,7 @@ function mapEncarCar(car: EncarCar) {
 
   const brandEn = MANUFACTURER_TO_EN[car.Manufacturer] ?? car.Manufacturer;
   const fuelEn = FUEL_TO_EN[car.FuelType] ?? "gasoline";
+  const transmissionEn = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "auto";
   const year = parseInt(car.FormYear, 10) || 0;
   const price = Math.round(car.Price);
   const model = car.Badge ? `${car.Model} ${car.Badge}` : car.Model;
@@ -147,7 +172,7 @@ function mapEncarCar(car: EncarCar) {
     priceFormatted: formatPrice(price),
     mileage: Math.round(car.Mileage),
     fuelType: fuelEn,
-    transmission: "auto",
+    transmission: transmissionEn,
     bodyType: "sedan",
     color: "unknown",
     sunroof: false,
@@ -184,7 +209,9 @@ router.get("/search", async (req, res) => {
     yearFrom,
     yearTo,
     sunroof,
+    transmission,
     fuelType,
+    bodyType,
     priceMin,
     priceMax,
     mileageMax,
@@ -193,7 +220,7 @@ router.get("/search", async (req, res) => {
   } = parsed.data;
 
   try {
-    const encarQ = buildEncarQuery({ brand, sunroof, fuelType });
+    const encarQ = buildEncarQuery({ brand, sunroof, fuelType, transmission, bodyType });
     const offset = (page - 1) * limit;
 
     // Fetch more from Encar so we can post-filter by year, price, mileage
