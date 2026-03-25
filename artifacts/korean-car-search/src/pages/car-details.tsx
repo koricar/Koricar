@@ -5,9 +5,9 @@ import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import { Loader2, ArrowRight, Calendar, Settings2, Fuel, MapPin, Gauge, ShieldCheck, Check, ExternalLink, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
-/** Wrap any Korean site URL with Google Translate → Arabic */
+/** Wrap any Korean site URL with Yandex Translate → Arabic (works in Gulf region) */
 function toArabicUrl(url: string): string {
-  return `https://translate.google.com/translate?sl=ko&tl=ar&u=${encodeURIComponent(url)}`;
+  return `https://translate.yandex.com/translate?url=${encodeURIComponent(url)}&lang=ko-ar`;
 }
 
 export default function CarDetails() {
@@ -194,15 +194,27 @@ export default function CarDetails() {
                   <button className="w-full py-4 bg-primary text-white font-bold rounded-xl shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:-translate-y-0.5 transition-all">
                     طلب تسعيرة استيراد
                   </button>
-                  <a 
-                    href={car.sourceUrl ? toArabicUrl(car.sourceUrl) : "#"}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="w-full py-4 bg-secondary text-secondary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-secondary/80 transition-all"
-                  >
-                    رؤية الإعلان الأصلي (مترجم)
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
+                  {car.sourceUrl && (
+                    <div className="flex flex-col gap-2">
+                      <a
+                        href={toArabicUrl(car.sourceUrl)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-4 bg-secondary text-secondary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-secondary/80 transition-all"
+                      >
+                        رؤية الإعلان مترجماً
+                        <ExternalLink className="w-4 h-4" />
+                      </a>
+                      <a
+                        href={car.sourceUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="w-full py-2.5 text-center text-sm text-muted-foreground hover:text-foreground transition-colors underline underline-offset-2"
+                      >
+                        الإعلان الأصلي بالكورية
+                      </a>
+                    </div>
+                  )}
                 </div>
               </div>
 
