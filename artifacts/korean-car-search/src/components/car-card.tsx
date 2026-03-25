@@ -104,7 +104,7 @@ export function CarCard({ car }: { car: Car }) {
         {/* Features Tags */}
         {car.features && car.features.length > 0 && (
           <div className="flex flex-wrap gap-1.5 mb-3">
-            {car.features.slice(0, 5).map((feature) => (
+            {car.features.slice(0, 7).map((feature) => (
               <span
                 key={feature}
                 className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
@@ -113,9 +113,9 @@ export function CarCard({ car }: { car: Car }) {
                 {feature}
               </span>
             ))}
-            {car.features.length > 5 && (
+            {car.features.length > 7 && (
               <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                +{car.features.length - 5}
+                +{car.features.length - 7}
               </span>
             )}
           </div>
