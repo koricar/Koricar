@@ -265,7 +265,9 @@ const EN_COLOR_TO_KR: Record<string, string> = {
 };
 
 function formatPrice(price: number): string {
-  return `${price.toLocaleString()}만원 (~${Math.round(price * 8500).toLocaleString()}﷼)`;
+  // price is in 만원 (10,000 KRW units). 1만원 ≈ 27.4 SAR
+  const sar = Math.round(price * 27.4);
+  return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
 
 function buildEncarQuery(params: {
