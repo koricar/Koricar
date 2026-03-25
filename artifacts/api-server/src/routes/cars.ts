@@ -385,10 +385,48 @@ const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = 
   { keywords: ["전동시트", "파워시트", "전동 시트"],       id: "power_seat",      ar: "مقاعد كهربائية" },
   { keywords: ["메모리시트", "메모리 시트"],               id: "memory_seat",     ar: "مقاعد بذاكرة" },
   { keywords: ["4wd", "awd", "사륜", "4륜", "htrac", "xdrive", "quattro", "4motion"], id: "awd", ar: "دفع رباعي" },
-  { keywords: ["하이브리드", "hybrid", "hev"],             id: "hybrid",          ar: "هجين" },
-  { keywords: ["전기", "ev", "electric", "bev"],           id: "electric",        ar: "كهربائي" },
-  { keywords: ["플러그인", "phev", "plug-in"],             id: "phev",            ar: "هجين قابل للشحن" },
+  { keywords: ["하이브리드", "hybrid", "hev"],               id: "hybrid",          ar: "هجين" },
+  { keywords: ["전기차", "전기", "electric", "ev6", "ev3", "ev9", "ioniq", "아이오닉"], id: "electric", ar: "كهربائي" },
+  { keywords: ["플러그인", "phev", "plug-in", "플러그"],     id: "phev",            ar: "هجين قابل للشحن" },
 ];
+
+// Korean domestic manufacturers — these follow Korean standard feature inclusion rules
+const KOREAN_DOMESTIC_BRANDS = new Set([
+  "현대", "기아", "제네시스", "쌍용", "르노삼성", "한국GM", "쉐보레", "대우",
+  "hyundai", "kia", "genesis", "ssangyong",
+]);
+
+// Get the model year from Encar's Year field (YYYYMM format → YYYY)
+function getModelYear(car: EncarCar): number {
+  if (!car.Year) return 0;
+  // Year field is YYYYMM (e.g. 201712 = December 2017)
+  return Math.floor(car.Year / 100);
+}
+
+// Korean domestic cars have well-documented standard option packages by year.
+// Even base trims include features that are sold as options in other markets.
+function getKoreanBaselineOptions(brand: string, year: number): Array<{ id: string; ar: string }> {
+  const b = brand.toLowerCase();
+  const isKorean = [...KOREAN_DOMESTIC_BRANDS].some((k) => b.includes(k));
+  if (!isKorean || year < 2014) return [];
+
+  const opts: Array<{ id: string; ar: string }> = [];
+  // 2014+: navigation became essentially universal in Korean cars
+  if (year >= 2014) opts.push({ id: "navigation", ar: "ملاحة" });
+  // 2016+: smart key standard even on base trims (e.g. base Avante, Morning)
+  if (year >= 2016) opts.push({ id: "smart_key", ar: "مفتاح ذكي" });
+  // 2017+: heated front seats — standard across almost all Korean cars (cold climate)
+  if (year >= 2017) opts.push({ id: "heated_seat", ar: "مقاعد مدفأة" });
+  // 2018+: rear camera became standard (legally required from 2021, de facto from 2018)
+  if (year >= 2018) opts.push({ id: "camera_rear", ar: "كاميرا خلفية" });
+  // 2019+: auto climate control standard on mid-to-upper trims
+  if (year >= 2019) opts.push({ id: "auto_ac", ar: "مكيّف تلقائي" });
+  // 2020+: parking sensors / front+rear sensors standard
+  if (year >= 2020) opts.push({ id: "parking_sensor", ar: "حساسات وقوف" });
+  // 2021+: LED headlights became standard as Korean regulations tightened
+  if (year >= 2021) opts.push({ id: "led_lights", ar: "مصابيح LED" });
+  return opts;
+}
 
 // Top-trim keywords — these cars typically have all major options
 const TOP_TRIM_KEYWORDS = [
@@ -423,52 +461,61 @@ const SERVICE_MARK_MAP: Record<string, string> = {
   EncarMeetgo:        "Encar Meetgo",
 };
 
-// Extract hardware options (shown as icon tiles) from the badge/model text
+// Extract hardware options (shown as chips) from the badge/model text + year-based inference
 function extractOptions(car: EncarCar): Array<{ id: string; ar: string }> {
   const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
   const result: Array<{ id: string; ar: string }> = [];
   const seen = new Set<string>();
+  const add = (o: { id: string; ar: string }) => { if (!seen.has(o.id)) { seen.add(o.id); result.push(o); } };
 
   const isTopTrim = TOP_TRIM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
   const isPremiumTrim = PREMIUM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
 
-  for (const opt of HARDWARE_OPTIONS) {
-    const matched = opt.keywords.some((kw) => text.includes(kw.toLowerCase()));
-    if (matched && !seen.has(opt.id)) {
-      seen.add(opt.id);
-      result.push({ id: opt.id, ar: opt.ar });
+  // 1. Direct keyword matches in model/badge text (e.g. 선루프, 파노라마, AWD)
+  // Process phev/electric first so they take priority over the generic "hybrid"/"hev" match
+  const priorityOrder = ["phev", "electric", "hybrid"];
+  const sorted = [...HARDWARE_OPTIONS].sort((a, b) => {
+    const ai = priorityOrder.indexOf(a.id);
+    const bi = priorityOrder.indexOf(b.id);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+  for (const opt of sorted) {
+    if (opt.keywords.some((kw) => text.includes(kw.toLowerCase()))) {
+      // Don't add "hybrid" if "phev" is already detected (PHEV is a superset)
+      if (opt.id === "hybrid" && seen.has("phev")) continue;
+      add(opt);
     }
   }
 
-  // Top-trim cars: add all standard luxury options not already detected
+  // 2. Baseline options from Korean domestic brand standard packages (year-based)
+  const year = getModelYear(car);
+  const brand = car.Manufacturer ?? "";
+  for (const o of getKoreanBaselineOptions(brand, year)) add(o);
+
+  // 3. Top-trim keyword → full luxury package
   if (isTopTrim) {
-    const standardTopOptions: Array<{ id: string; ar: string }> = [
-      { id: "navigation",      ar: "ملاحة" },
+    for (const o of [
       { id: "leather_seat",    ar: "مقاعد جلدية" },
+      { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
+      { id: "power_seat",      ar: "مقاعد كهربائية" },
+      { id: "navigation",      ar: "ملاحة" },
       { id: "smart_key",       ar: "مفتاح ذكي" },
       { id: "auto_ac",         ar: "مكيّف تلقائي" },
       { id: "camera_rear",     ar: "كاميرا خلفية" },
       { id: "parking_sensor",  ar: "حساسات وقوف" },
       { id: "led_lights",      ar: "مصابيح LED" },
       { id: "heated_seat",     ar: "مقاعد مدفأة" },
-      { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
-      { id: "power_seat",      ar: "مقاعد كهربائية" },
-    ];
-    for (const o of standardTopOptions) {
-      if (!seen.has(o.id)) { seen.add(o.id); result.push(o); }
-    }
+    ]) add(o);
   } else if (isPremiumTrim) {
-    const standardPremiumOptions: Array<{ id: string; ar: string }> = [
-      { id: "navigation",     ar: "ملاحة" },
-      { id: "leather_seat",   ar: "مقاعد جلدية" },
-      { id: "smart_key",      ar: "مفتاح ذكي" },
-      { id: "auto_ac",        ar: "مكيّف تلقائي" },
-      { id: "camera_rear",    ar: "كاميرا خلفية" },
-      { id: "heated_seat",    ar: "مقاعد مدفأة" },
-    ];
-    for (const o of standardPremiumOptions) {
-      if (!seen.has(o.id)) { seen.add(o.id); result.push(o); }
-    }
+    // 4. Premium-trim keyword → mid luxury package
+    for (const o of [
+      { id: "leather_seat",  ar: "مقاعد جلدية" },
+      { id: "navigation",    ar: "ملاحة" },
+      { id: "smart_key",     ar: "مفتاح ذكي" },
+      { id: "auto_ac",       ar: "مكيّف تلقائي" },
+      { id: "camera_rear",   ar: "كاميرا خلفية" },
+      { id: "heated_seat",   ar: "مقاعد مدفأة" },
+    ]) add(o);
   }
 
   return result;
