@@ -1,6 +1,5 @@
-import { useState } from "react";
 import { useGetCarBrands, type SearchCarsParams } from "@workspace/api-client-react";
-import { Filter, X, ChevronDown, Check } from "lucide-react";
+import { Filter, ChevronDown, Check } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FilterSidebarProps {
@@ -10,9 +9,34 @@ interface FilterSidebarProps {
   className?: string;
 }
 
+const BRAND_MODELS: Record<string, string[]> = {
+  "Hyundai": [
+    "Palisade", "Santa Fe", "Tucson", "Kona", "Ioniq 5", "Ioniq 6",
+    "Sonata", "Grandeur", "Elantra", "Staria", "Nexo", "Casper",
+    "Veloster", "Starex", "Accent", "Porter",
+  ],
+  "Kia": [
+    "Sorento", "Sportage", "Carnival", "K8", "K5", "K3", "K9",
+    "Niro", "Seltos", "EV6", "EV9", "Stinger", "Telluride",
+    "Mohave", "Soul", "Morning", "Ray",
+  ],
+  "Genesis": ["GV80", "GV70", "GV60", "G90", "G80", "G70"],
+  "SsangYong": ["Rexton", "Korando", "Tivoli", "Musso", "Actyon"],
+  "KG Mobility": ["Rexton", "Korando", "Tivoli", "Musso", "Actyon"],
+  "Renault Samsung": ["QM6", "SM6", "XM3"],
+  "Renault Korea": ["QM6", "SM6", "XM3", "Arkana"],
+  "Chevrolet": ["Trailblazer", "Equinox", "Spark", "Malibu", "Colorado", "Tahoe", "Suburban", "Traverse"],
+  "BMW": ["3 Series", "5 Series", "7 Series", "X3", "X5", "X6", "X7", "i3", "i4", "i7", "iX"],
+  "Mercedes-Benz": ["C-Class", "E-Class", "S-Class", "GLC", "GLE", "GLS", "A-Class", "CLA", "EQS", "EQE"],
+  "Audi": ["A4", "A5", "A6", "A7", "A8", "Q3", "Q5", "Q7", "Q8", "e-tron"],
+  "Volkswagen": ["Golf", "Passat", "Tiguan", "Touareg", "ID.4"],
+  "Toyota": ["Camry", "Corolla", "RAV4", "Highlander", "Land Cruiser", "Prius", "Alphard"],
+  "Lexus": ["ES", "GS", "IS", "LS", "NX", "RX", "GX", "LX", "LC"],
+};
+
 export function FilterSidebar({ filters, updateFilter, resetFilters, className }: FilterSidebarProps) {
   const { data: brandsData, isLoading: isLoadingBrands } = useGetCarBrands();
-  
+
   const currentYear = new Date().getFullYear();
   const years = Array.from({ length: 15 }, (_, i) => currentYear - i);
 
@@ -30,10 +54,16 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
     { id: "coupe", label: "كوبيه" },
   ];
 
+  const selectedBrand = filters.brand || "";
+  const brandModels = selectedBrand ? (BRAND_MODELS[selectedBrand] ?? []) : [];
+  const hasModelList = brandModels.length > 0;
+
+  const handleBrandChange = (brand: string) => {
+    updateFilter("brand", brand);
+    updateFilter("model", undefined);
+  };
+
   const toggleFuel = (type: any) => {
-    // Current simple API implementation takes a single fuelType, 
-    // but standard UX toggles it. Let's adapt it to single select for now
-    // or set it exactly as the schema wants.
     updateFilter("fuelType", filters.fuelType === type ? undefined : type);
   };
 
@@ -48,7 +78,7 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
           <Filter className="w-5 h-5 text-primary" />
           التصفية
         </h3>
-        <button 
+        <button
           onClick={resetFilters}
           className="text-sm font-semibold text-muted-foreground hover:text-destructive transition-colors"
         >
@@ -62,12 +92,12 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
         <div className="relative">
           <select
             className="w-full appearance-none bg-background border-2 border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer"
-            value={filters.brand || ""}
-            onChange={(e) => updateFilter("brand", e.target.value)}
+            value={selectedBrand}
+            onChange={(e) => handleBrandChange(e.target.value)}
             disabled={isLoadingBrands}
           >
             <option value="">كل الماركات</option>
-            {brandsData?.brands.map(brand => (
+            {brandsData?.brands.map((brand) => (
               <option key={brand} value={brand}>{brand}</option>
             ))}
           </select>
@@ -75,26 +105,32 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
         </div>
       </div>
 
-      {/* Model Filter */}
+      {/* Model Filter — dropdown when brand is selected, text input otherwise */}
       <div className="space-y-3">
         <label className="text-sm font-bold text-foreground">الموديل</label>
-        <div className="relative">
+        {hasModelList ? (
+          <div className="relative">
+            <select
+              className="w-full appearance-none bg-background border-2 border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer"
+              value={filters.model || ""}
+              onChange={(e) => updateFilter("model", e.target.value || undefined)}
+            >
+              <option value="">كل الموديلات</option>
+              {brandModels.map((m) => (
+                <option key={m} value={m}>{m}</option>
+              ))}
+            </select>
+            <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
+          </div>
+        ) : (
           <input
             type="text"
-            placeholder="مثال: Palisade، Tucson، K5..."
+            placeholder={selectedBrand ? "اكتب اسم الموديل..." : "اختر الماركة أولاً أو اكتب الموديل..."}
             className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
             value={filters.model || ""}
             onChange={(e) => updateFilter("model", e.target.value || undefined)}
           />
-          {filters.model && (
-            <button
-              onClick={() => updateFilter("model", undefined)}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive transition-colors"
-            >
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </div>
+        )}
       </div>
 
       {/* Year Range */}
@@ -108,7 +144,7 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
               onChange={(e) => updateFilter("yearFrom", e.target.value ? parseInt(e.target.value) : undefined)}
             >
               <option value="">من</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
             <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -119,7 +155,7 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
               onChange={(e) => updateFilter("yearTo", e.target.value ? parseInt(e.target.value) : undefined)}
             >
               <option value="">إلى</option>
-              {years.map(y => <option key={y} value={y}>{y}</option>)}
+              {years.map((y) => <option key={y} value={y}>{y}</option>)}
             </select>
             <ChevronDown className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
           </div>
@@ -171,15 +207,15 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
                 onClick={() => toggleFuel(fuel.id)}
                 className={cn(
                   "py-2.5 px-3 rounded-lg text-sm font-semibold transition-all border-2 flex items-center justify-center gap-2",
-                  isSelected 
-                    ? "border-primary bg-primary/10 text-primary" 
+                  isSelected
+                    ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-background text-muted-foreground hover:border-primary/40"
                 )}
               >
                 {isSelected && <Check className="w-4 h-4" />}
                 {fuel.label}
               </button>
-            )
+            );
           })}
         </div>
       </div>
@@ -196,15 +232,15 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
                 onClick={() => toggleBody(body.id)}
                 className={cn(
                   "py-2.5 px-3 rounded-lg text-sm font-semibold transition-all border-2 flex items-center justify-center gap-2",
-                  isSelected 
-                    ? "border-primary bg-primary/10 text-primary" 
+                  isSelected
+                    ? "border-primary bg-primary/10 text-primary"
                     : "border-border bg-background text-muted-foreground hover:border-primary/40"
                 )}
               >
                 {isSelected && <Check className="w-4 h-4" />}
                 {body.label}
               </button>
-            )
+            );
           })}
         </div>
       </div>
