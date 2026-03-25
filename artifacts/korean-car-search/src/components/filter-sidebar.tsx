@@ -83,12 +83,12 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
             type="text"
             placeholder="مثال: Palisade، Tucson، K5..."
             className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
-            value={filters.query || ""}
-            onChange={(e) => updateFilter("query", e.target.value || undefined)}
+            value={filters.model || ""}
+            onChange={(e) => updateFilter("model", e.target.value || undefined)}
           />
-          {filters.query && (
+          {filters.model && (
             <button
-              onClick={() => updateFilter("query", undefined)}
+              onClick={() => updateFilter("model", undefined)}
               className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive transition-colors"
             >
               <X className="w-4 h-4" />

@@ -10,9 +10,14 @@ import { FilterSidebar } from "@/components/filter-sidebar";
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
 
-  // Debounce the query (typed in hero bar or sidebar model field) before sending to API
+  // Debounce text inputs before sending to API
   const [debouncedQuery] = useDebounce(filters.query, 500);
-  const apiParams = { ...filters, query: debouncedQuery || undefined };
+  const [debouncedModel] = useDebounce(filters.model, 500);
+  const apiParams = {
+    ...filters,
+    query: debouncedQuery || undefined,
+    model: debouncedModel || undefined,
+  };
 
   const { data, isLoading, isError } = useSearchCars(apiParams);
 
