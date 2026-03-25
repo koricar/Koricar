@@ -27,6 +27,10 @@ export const SearchCarsQueryParams = zod.object({
     .string()
     .optional()
     .describe("Search query (model name, brand)"),
+  model: zod.coerce
+    .string()
+    .optional()
+    .describe("Car model name filter (e.g. Palisade, Tucson, K5)"),
   brand: zod.coerce
     .string()
     .optional()

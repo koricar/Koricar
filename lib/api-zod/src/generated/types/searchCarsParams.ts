@@ -15,6 +15,10 @@ export type SearchCarsParams = {
    */
   query?: string;
   /**
+   * Car model name filter (e.g. Palisade, Tucson, K5)
+   */
+  model?: string;
+  /**
    * Car brand (Hyundai, Kia, Genesis, SsangYong, etc.)
    */
   brand?: string;
