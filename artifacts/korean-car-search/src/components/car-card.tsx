@@ -1,9 +1,6 @@
 import { Link } from "wouter";
 import {
   Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck,
-  Maximize2, Map, Camera, Flame, Wind, Key, Thermometer,
-  ScanLine, Lightbulb, ArrowLeftRight, EyeOff, Monitor,
-  Zap, Leaf, Plug, Mountain, MemoryStick, Armchair, Star,
 } from "lucide-react";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import type { Car } from "@workspace/api-client-react";
@@ -23,31 +20,6 @@ const COLOR_SWATCHES: Record<string, { css: string }> = {
 };
 
 type Option = { id: string; ar: string };
-
-const OPTION_ICON: Record<string, React.ReactNode> = {
-  sunroof_pano:    <Maximize2 className="w-5 h-5" />,
-  sunroof:         <Maximize2 className="w-5 h-5" />,
-  navigation:      <Map className="w-5 h-5" />,
-  camera_rear:     <Camera className="w-5 h-5" />,
-  camera_360:      <Camera className="w-5 h-5" />,
-  heated_seat:     <Flame className="w-5 h-5" />,
-  ventilated_seat: <Wind className="w-5 h-5" />,
-  smart_key:       <Key className="w-5 h-5" />,
-  leather_seat:    <Armchair className="w-5 h-5" />,
-  auto_ac:         <Thermometer className="w-5 h-5" />,
-  parking_sensor:  <ScanLine className="w-5 h-5" />,
-  led_lights:      <Lightbulb className="w-5 h-5" />,
-  cruise_control:  <Gauge className="w-5 h-5" />,
-  lane_assist:     <ArrowLeftRight className="w-5 h-5" />,
-  blind_spot:      <EyeOff className="w-5 h-5" />,
-  hud:             <Monitor className="w-5 h-5" />,
-  power_seat:      <Zap className="w-5 h-5" />,
-  memory_seat:     <MemoryStick className="w-5 h-5" />,
-  awd:             <Mountain className="w-5 h-5" />,
-  hybrid:          <Leaf className="w-5 h-5" />,
-  electric:        <Zap className="w-5 h-5" />,
-  phev:            <Plug className="w-5 h-5" />,
-};
 
 export function CarCard({ car }: { car: Car }) {
   const translateFuel = (fuel: string) => {
@@ -130,29 +102,23 @@ export function CarCard({ car }: { car: Car }) {
           </span>
         </div>
 
-        {/* Hardware Options Grid — icon tiles like the reference image */}
+        {/* Options — pill/chip style */}
         {options.length > 0 && (
           <div className="mb-4">
-            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">الخيارات المتاحة</p>
-            <div className="grid grid-cols-4 gap-1.5">
-              {options.slice(0, 8).map((opt) => (
-                <div
+            <p className="text-xs font-semibold text-muted-foreground mb-2">الخيارات</p>
+            <div className="flex flex-wrap gap-1.5">
+              {options.slice(0, 10).map((opt) => (
+                <span
                   key={opt.id}
-                  className="flex flex-col items-center justify-center gap-1 p-1.5 rounded-xl bg-secondary/60 border border-border/40 hover:bg-primary/10 hover:border-primary/30 transition-colors"
-                  title={opt.ar}
+                  className="text-[11px] font-medium text-foreground/80 bg-secondary/70 border border-border/50 rounded-full px-2.5 py-1 leading-none"
                 >
-                  <span className="text-primary/80">
-                    {OPTION_ICON[opt.id] ?? <Star className="w-5 h-5" />}
-                  </span>
-                  <span className="text-[9px] font-semibold text-muted-foreground text-center leading-tight line-clamp-2">
-                    {opt.ar}
-                  </span>
-                </div>
+                  {opt.ar}
+                </span>
               ))}
-              {options.length > 8 && (
-                <div className="flex flex-col items-center justify-center gap-1 p-1.5 rounded-xl bg-secondary/40 border border-border/30">
-                  <span className="text-xs font-bold text-muted-foreground">+{options.length - 8}</span>
-                </div>
+              {options.length > 10 && (
+                <span className="text-[11px] font-medium text-muted-foreground bg-secondary/40 border border-border/30 rounded-full px-2.5 py-1 leading-none">
+                  +{options.length - 10}
+                </span>
               )}
             </div>
           </div>
