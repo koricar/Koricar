@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Search, Loader2, FilterX, ChevronLeft, ChevronRight, Car } from "lucide-react";
 import { useDebounce } from "use-debounce";
@@ -9,14 +8,12 @@ import { CarCard } from "@/components/car-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 
 export default function Home() {
-  const [searchInput, setSearchInput] = useState("");
-  const [debouncedQuery] = useDebounce(searchInput, 500);
-  
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
 
-  // Merge the debounced query string into the API payload
+  // Debounce the query (typed in hero bar or sidebar model field) before sending to API
+  const [debouncedQuery] = useDebounce(filters.query, 500);
   const apiParams = { ...filters, query: debouncedQuery || undefined };
-  
+
   const { data, isLoading, isError } = useSearchCars(apiParams);
 
   const containerVariants = {
@@ -77,8 +74,8 @@ export default function Home() {
                 type="text"
                 placeholder="ابحث عن ماركة، موديل، أو مواصفات..."
                 className="w-full bg-transparent border-none text-white placeholder:text-white/50 px-12 py-4 text-lg font-medium focus:outline-none focus:ring-0"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
+                value={filters.query || ""}
+                onChange={(e) => updateFilter("query", e.target.value || undefined)}
               />
             </div>
             <button className="hidden sm:block px-8 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
