@@ -112,7 +112,7 @@ const EN_TO_TRANSMISSION_KR: Record<string, string> = {
 
 // Common English (and romanized) model names → Korean model name used by Encar
 const EN_MODEL_TO_KR: Record<string, string> = {
-  // Hyundai
+  // Hyundai — English
   "palisade": "팰리세이드",
   "tucson": "투싼",
   "sonata": "쏘나타",
@@ -134,7 +134,22 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "casper": "캐스퍼",
   "porter": "포터",
   "starex": "스타렉스",
-  // Kia
+  // Hyundai — Arabic
+  "باليسيد": "팰리세이드",
+  "بالسيد": "팰리세이드",
+  "توسان": "투싼",
+  "سانتافي": "싼타페",
+  "سانتا في": "싼타페",
+  "سوناتا": "쏘나타",
+  "سونانتا": "쏘나타",
+  "ايلانترا": "아반떼",
+  "ألانترا": "아반떼",
+  "كونا": "코나",
+  "ايونيك": "아이오닉",
+  "ايونق": "아이오닉",
+  "جرانديور": "그랜저",
+  "كاسبر": "캐스퍼",
+  // Kia — English
   "k5": "K5",
   "k8": "K8",
   "k3": "K3",
@@ -153,7 +168,15 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "ray": "레이",
   "ev6": "EV6",
   "ev9": "EV9",
-  // Genesis
+  // Kia — Arabic
+  "كارنيفال": "카니발",
+  "كرنفال": "카니발",
+  "سورينتو": "쏘렌토",
+  "سبورتاج": "스포티지",
+  "سيلتوس": "셀토스",
+  "نيرو": "니로",
+  "ستينجر": "스팅어",
+  // Genesis — English
   "gv80": "GV80",
   "gv70": "GV70",
   "gv60": "GV60",
@@ -161,12 +184,45 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "g70": "G70",
   "g90": "G90",
   "gv90": "GV90",
-  // SsangYong / KG Mobility
+  // SsangYong / KG Mobility — English
   "rexton": "렉스턴",
   "korando": "코란도",
   "tivoli": "티볼리",
   "musso": "무쏘",
   "actyon": "액티언",
+  "torres": "토레스",
+  // Toyota — English
+  "camry": "캠리",
+  "rav4": "RAV4",
+  "prius": "프리우스",
+  "sienna": "시에나",
+  "avalon": "아발론",
+  "gr86": "GR86",
+  "alphard": "알파드",
+  "crown": "크라운 크로스오버",
+  // Toyota — Arabic
+  "كامري": "캠리",
+  "كامرى": "캠리",
+  "برايوس": "프리우스",
+  "بريوس": "프리우스",
+  "راف4": "RAV4",
+  "راف 4": "RAV4",
+  "سيينا": "시에나",
+  // Lexus — English
+  "es300h": "ES300h 7세대",
+  "es350": "뉴 ES350",
+  "nx300h": "NX300h",
+  "nx350h": "NX350h 2세대",
+  "nx450h": "NX450h+ 2세대",
+  "rx450h": "RX450h 4세대",
+  "is250": "IS250",
+  "is300h": "IS300h",
+  "ls500h": "LS500h 5세대",
+  "ls460": "LS460",
+  "ux250h": "UX250h",
+  "ct200h": "CT200h",
+  // Lexus — Arabic
+  "لكزس": "ES300h 7세대",
 };
 
 const TRANSMISSION_TO_EN: Record<string, string> = {
