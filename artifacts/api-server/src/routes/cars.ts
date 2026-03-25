@@ -364,29 +364,47 @@ interface EncarCar {
   Photos?: Array<{ location: string; ordering: number }>;
 }
 
-// Keywords found in the Badge/Model name that imply specific features
+// Hardware options detectable from Badge/Model name — shown as icon tiles on the card
+const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = [
+  { keywords: ["파노라마", "파노라믹", "파노라믹선루프"], id: "sunroof_pano",    ar: "سقف بانورامي" },
+  { keywords: ["선루프", "썬루프", "sunroof"],            id: "sunroof",         ar: "فتحة سقف" },
+  { keywords: ["네비게이션", "내비게이션", "내비", "네비", "navi", "네비+"], id: "navigation", ar: "ملاحة" },
+  { keywords: ["후방카메라", "후방 카메라", "후카", "후방cam", "리어카메라"], id: "camera_rear", ar: "كاميرا خلفية" },
+  { keywords: ["360", "서라운드뷰", "어라운드뷰", "전방카메라"],  id: "camera_360",  ar: "كاميرا 360°" },
+  { keywords: ["열선시트", "열선 시트", "열선"],           id: "heated_seat",     ar: "مقاعد مدفأة" },
+  { keywords: ["통풍시트", "통풍 시트", "쿨링시트", "통풍"], id: "ventilated_seat", ar: "مقاعد مهوّاة" },
+  { keywords: ["스마트키", "스마트 키", "스마트키리스"],   id: "smart_key",       ar: "مفتاح ذكي" },
+  { keywords: ["가죽시트", "나파", "퀼팅시트", "천연가죽", "인조가죽"], id: "leather_seat", ar: "مقاعد جلدية" },
+  { keywords: ["오토에어컨", "듀얼에어컨", "풀오토에어컨", "풀오토 에어", "tri-zone", "trizone"], id: "auto_ac", ar: "مكيّف تلقائي" },
+  { keywords: ["파킹센서", "후방센서", "전방센서", "주차보조", "pdc", "주차센서", "upa"], id: "parking_sensor", ar: "حساسات وقوف" },
+  { keywords: ["led헤드", "led 헤드", "풀led", "풀 led", "헤드램프 led", "레이저헤드", "매트릭스led"], id: "led_lights", ar: "مصابيح LED" },
+  { keywords: ["어댑티브크루즈", "어댑티브 크루즈", "스마트크루즈", "acc", "scc"], id: "cruise_control", ar: "كروز تكيّفي" },
+  { keywords: ["차선이탈", "차선 이탈", "레인킵", "lka", "lda"],  id: "lane_assist",  ar: "مساعد الحارة" },
+  { keywords: ["사각지대", "bsd", "bcw", "후측방경보"],    id: "blind_spot",      ar: "كشف النقطة العمياء" },
+  { keywords: ["헤드업", "hud", "헤드업 디스플레이"],     id: "hud",             ar: "HUD" },
+  { keywords: ["전동시트", "파워시트", "전동 시트"],       id: "power_seat",      ar: "مقاعد كهربائية" },
+  { keywords: ["메모리시트", "메모리 시트"],               id: "memory_seat",     ar: "مقاعد بذاكرة" },
+  { keywords: ["4wd", "awd", "사륜", "4륜", "htrac", "xdrive", "quattro", "4motion"], id: "awd", ar: "دفع رباعي" },
+  { keywords: ["하이브리드", "hybrid", "hev"],             id: "hybrid",          ar: "هجين" },
+  { keywords: ["전기", "ev", "electric", "bev"],           id: "electric",        ar: "كهربائي" },
+  { keywords: ["플러그인", "phev", "plug-in"],             id: "phev",            ar: "هجين قابل للشحن" },
+];
+
+// Top-trim keywords — these cars typically have all major options
+const TOP_TRIM_KEYWORDS = [
+  "칼리그라피", "인스퍼레이션", "익스클루시브", "풀옵션", "최고급", "플래티넘",
+  "시그니처", "그래비티", "마스터즈", "prestige", "프레스티지",
+];
+// Premium keywords — usually include navigation, leather, smart key, auto AC
+const PREMIUM_KEYWORDS = [
+  "럭셔리", "프리미엄", "어드밴스드", "모던", "리미티드",
+  "파인스펙", "스마트", "트렌디", "디럭스플러스",
+];
+
+// Keywords found in the Badge/Model name that imply specific features (used for features[] field only)
 const BADGE_FEATURE_MAP: Array<{ keywords: string[]; ar: string }> = [
-  { keywords: ["파노라마", "파노라믹", "파노"],         ar: "سقف بانورامي" },
-  { keywords: ["선루프", "썬루프", "sunroof"],          ar: "فتحة سقف" },
-  { keywords: ["네비게이션", "내비게이션", "내비", "네비", "navi"], ar: "شاشة ملاحة" },
-  { keywords: ["후방카메라", "후방 카메라", "후카"],     ar: "كاميرا خلفية" },
-  { keywords: ["360", "서라운드뷰", "어라운드뷰"],       ar: "كاميرا 360°" },
-  { keywords: ["열선시트", "열선 시트"],                ar: "مقاعد مدفأة" },
-  { keywords: ["통풍시트", "통풍 시트", "쿨링시트"],    ar: "مقاعد مهوّاة" },
-  { keywords: ["스마트키", "스마트 키"],                ar: "مفتاح ذكي" },
-  { keywords: ["어댑티브", "어뎁티브크루즈", "acc"],    ar: "كروز تكيّفي" },
-  { keywords: ["차선이탈", "레인킵", "레인 킵"],        ar: "تنبيه الحارة" },
-  { keywords: ["사각지대", "bsd", "blind"],             ar: "كشف النقطة العمياء" },
-  { keywords: ["보조"],                                 ar: "مساعد القيادة" },
-  { keywords: ["헤드업", "hud"],                        ar: "HUD" },
-  { keywords: ["전동시트", "파워시트", "전동 시트"],    ar: "مقاعد كهربائية" },
-  { keywords: ["메모리시트", "메모리 시트"],            ar: "مقاعد بذاكرة" },
-  { keywords: ["럭셔리", "프리미엄", "익스클루시브", "풀옵션", "최고급", "플래티넘", "칼리그라피", "어드밴스드", "인스퍼레이션"], ar: "فئة مميزة" },
   { keywords: ["m 스포츠", "m스포츠", "m sport", "m-sport"], ar: "حزمة M الرياضية" },
-  { keywords: ["4wd", "awd", "사륜", "4륜"],            ar: "دفع رباعي" },
-  { keywords: ["하이브리드", "hybrid"],                 ar: "هجين" },
-  { keywords: ["전기", "ev", "electric"],               ar: "كهربائي" },
-  { keywords: ["플러그인", "phev", "plug-in"],          ar: "هجين قابل للشحن" },
+  { keywords: ["럭셔리", "프리미엄", "익스클루시브", "풀옵션", "최고급", "플래티넘", "칼리그라피", "어드밴스드", "인스퍼레이션"], ar: "فئة مميزة" },
 ];
 
 // Features derived from Condition / Trust / ServiceMark / BuyType
@@ -405,17 +423,66 @@ const SERVICE_MARK_MAP: Record<string, string> = {
   EncarMeetgo:        "Encar Meetgo",
 };
 
+// Extract hardware options (shown as icon tiles) from the badge/model text
+function extractOptions(car: EncarCar): Array<{ id: string; ar: string }> {
+  const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
+  const result: Array<{ id: string; ar: string }> = [];
+  const seen = new Set<string>();
+
+  const isTopTrim = TOP_TRIM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
+  const isPremiumTrim = PREMIUM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
+
+  for (const opt of HARDWARE_OPTIONS) {
+    const matched = opt.keywords.some((kw) => text.includes(kw.toLowerCase()));
+    if (matched && !seen.has(opt.id)) {
+      seen.add(opt.id);
+      result.push({ id: opt.id, ar: opt.ar });
+    }
+  }
+
+  // Top-trim cars: add all standard luxury options not already detected
+  if (isTopTrim) {
+    const standardTopOptions: Array<{ id: string; ar: string }> = [
+      { id: "navigation",      ar: "ملاحة" },
+      { id: "leather_seat",    ar: "مقاعد جلدية" },
+      { id: "smart_key",       ar: "مفتاح ذكي" },
+      { id: "auto_ac",         ar: "مكيّف تلقائي" },
+      { id: "camera_rear",     ar: "كاميرا خلفية" },
+      { id: "parking_sensor",  ar: "حساسات وقوف" },
+      { id: "led_lights",      ar: "مصابيح LED" },
+      { id: "heated_seat",     ar: "مقاعد مدفأة" },
+      { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
+      { id: "power_seat",      ar: "مقاعد كهربائية" },
+    ];
+    for (const o of standardTopOptions) {
+      if (!seen.has(o.id)) { seen.add(o.id); result.push(o); }
+    }
+  } else if (isPremiumTrim) {
+    const standardPremiumOptions: Array<{ id: string; ar: string }> = [
+      { id: "navigation",     ar: "ملاحة" },
+      { id: "leather_seat",   ar: "مقاعد جلدية" },
+      { id: "smart_key",      ar: "مفتاح ذكي" },
+      { id: "auto_ac",        ar: "مكيّف تلقائي" },
+      { id: "camera_rear",    ar: "كاميرا خلفية" },
+      { id: "heated_seat",    ar: "مقاعد مدفأة" },
+    ];
+    for (const o of standardPremiumOptions) {
+      if (!seen.has(o.id)) { seen.add(o.id); result.push(o); }
+    }
+  }
+
+  return result;
+}
+
 function extractFeatures(car: EncarCar): string[] {
   const features: string[] = [];
   const seen = new Set<string>();
   const add = (label: string) => { if (!seen.has(label)) { seen.add(label); features.push(label); } };
 
-  // 1. From Badge + Model text (lowercase for matching)
+  // 1. Trim-level badge labels
   const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
   for (const { keywords, ar } of BADGE_FEATURE_MAP) {
-    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) {
-      add(ar);
-    }
+    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) add(ar);
   }
 
   // 2. From Condition
@@ -430,13 +497,13 @@ function extractFeatures(car: EncarCar): string[] {
     if (label) add(label);
   }
 
-  // 4. From ServiceMark (only first relevant one to avoid clutter)
+  // 4. From ServiceMark (first relevant only)
   for (const sm of car.ServiceMark ?? []) {
     const label = SERVICE_MARK_MAP[sm];
     if (label) { add(label); break; }
   }
 
-  // 5. Always-present features derived from guaranteed car fields
+  // 5. Always-present meta tags
   const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
   const fuelAr: Record<string, string> = {
     gasoline: "بنزين", diesel: "ديزل", hybrid: "هايبرد",
@@ -487,8 +554,8 @@ function mapEncarCar(car: EncarCar) {
   const inspected = condition.includes("Inspection") || condition.includes("InspectionDirect");
 
   const features = extractFeatures(car);
+  const options = extractOptions(car);
 
-  // Sunroof: true if badge/model mentions it OR if it appears in features
   const badgeText = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
   const hasSunroof = ["선루프", "썬루프", "파노라마", "파노라믹", "파노"].some((kw) => badgeText.includes(kw));
 
@@ -511,6 +578,7 @@ function mapEncarCar(car: EncarCar) {
     thumbnailUrl: imageUrl,
     description: `${brandEn} ${car.Model} ${car.FormYear}`,
     features,
+    options,
     source: "Encar",
     sourceUrl: `${ENCAR_DETAIL}${car.Id}`,
     location: car.OfficeCityState ?? "كوريا",
