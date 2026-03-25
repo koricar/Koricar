@@ -75,6 +75,28 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
         </div>
       </div>
 
+      {/* Model Filter */}
+      <div className="space-y-3">
+        <label className="text-sm font-bold text-foreground">الموديل</label>
+        <div className="relative">
+          <input
+            type="text"
+            placeholder="مثال: Palisade، Tucson، K5..."
+            className="w-full bg-background border-2 border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all"
+            value={filters.query || ""}
+            onChange={(e) => updateFilter("query", e.target.value || undefined)}
+          />
+          {filters.query && (
+            <button
+              onClick={() => updateFilter("query", undefined)}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-destructive transition-colors"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+      </div>
+
       {/* Year Range */}
       <div className="space-y-3">
         <label className="text-sm font-bold text-foreground">سنة الصنع</label>
