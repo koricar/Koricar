@@ -1,5 +1,10 @@
 import { Link } from "wouter";
-import { Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck, Star } from "lucide-react";
+import {
+  Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck,
+  Maximize2, Map, Camera, Flame, Wind, Key, Thermometer,
+  ScanLine, Lightbulb, ArrowLeftRight, EyeOff, Monitor,
+  Zap, Leaf, Plug, Mountain, MemoryStick, Armchair, Star,
+} from "lucide-react";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import type { Car } from "@workspace/api-client-react";
 
@@ -15,6 +20,33 @@ const COLOR_SWATCHES: Record<string, { css: string }> = {
   yellow:    { css: "#EAB308" },
   orange:    { css: "#F97316" },
   lime:      { css: "#84CC16" },
+};
+
+type Option = { id: string; ar: string };
+
+const OPTION_ICON: Record<string, React.ReactNode> = {
+  sunroof_pano:    <Maximize2 className="w-5 h-5" />,
+  sunroof:         <Maximize2 className="w-5 h-5" />,
+  navigation:      <Map className="w-5 h-5" />,
+  camera_rear:     <Camera className="w-5 h-5" />,
+  camera_360:      <Camera className="w-5 h-5" />,
+  heated_seat:     <Flame className="w-5 h-5" />,
+  ventilated_seat: <Wind className="w-5 h-5" />,
+  smart_key:       <Key className="w-5 h-5" />,
+  leather_seat:    <Armchair className="w-5 h-5" />,
+  auto_ac:         <Thermometer className="w-5 h-5" />,
+  parking_sensor:  <ScanLine className="w-5 h-5" />,
+  led_lights:      <Lightbulb className="w-5 h-5" />,
+  cruise_control:  <Gauge className="w-5 h-5" />,
+  lane_assist:     <ArrowLeftRight className="w-5 h-5" />,
+  blind_spot:      <EyeOff className="w-5 h-5" />,
+  hud:             <Monitor className="w-5 h-5" />,
+  power_seat:      <Zap className="w-5 h-5" />,
+  memory_seat:     <MemoryStick className="w-5 h-5" />,
+  awd:             <Mountain className="w-5 h-5" />,
+  hybrid:          <Leaf className="w-5 h-5" />,
+  electric:        <Zap className="w-5 h-5" />,
+  phev:            <Plug className="w-5 h-5" />,
 };
 
 export function CarCard({ car }: { car: Car }) {
@@ -37,18 +69,17 @@ export function CarCard({ car }: { car: Car }) {
   };
 
   const colorSwatch = COLOR_SWATCHES[car.color];
+  const options: Option[] = (car as any).options ?? [];
 
   return (
     <div className="group bg-card rounded-2xl overflow-hidden border border-border/50 shadow-md shadow-black/5 hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/20 transition-all duration-300 flex flex-col h-full">
       {/* Image Container */}
       <div className="relative aspect-[4/3] overflow-hidden bg-muted">
-        {/* Source Badge */}
         <div className="absolute top-3 right-3 z-10 bg-black/70 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-lg">
           {car.source}
           <ExternalLink className="w-3 h-3 text-primary" />
         </div>
 
-        {/* Top-left badges stack */}
         <div className="absolute top-3 left-3 z-10 flex flex-col gap-1.5">
           {car.inspected && (
             <div className="bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
@@ -63,7 +94,6 @@ export function CarCard({ car }: { car: Car }) {
           )}
         </div>
 
-        {/* placeholder if no image, otherwise user-provided image */}
         {car.imageUrl ? (
           <img
             src={car.imageUrl}
@@ -76,8 +106,7 @@ export function CarCard({ car }: { car: Car }) {
             <span className="font-semibold opacity-50">لا توجد صورة</span>
           </div>
         )}
-        
-        {/* Gradient overlay for bottom of image */}
+
         <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
       </div>
 
@@ -95,29 +124,37 @@ export function CarCard({ car }: { car: Car }) {
           </div>
         </div>
 
-        <div className="mb-3">
+        <div className="mb-4">
           <span className="text-2xl font-black font-numbers text-foreground flex items-baseline gap-1">
             {car.priceFormatted || formatPriceKRW(car.price)}
           </span>
         </div>
 
-        {/* Features Tags */}
-        {car.features && car.features.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 mb-3">
-            {car.features.slice(0, 7).map((feature) => (
-              <span
-                key={feature}
-                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
-              >
-                <Star className="w-2.5 h-2.5" />
-                {feature}
-              </span>
-            ))}
-            {car.features.length > 7 && (
-              <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
-                +{car.features.length - 7}
-              </span>
-            )}
+        {/* Hardware Options Grid — icon tiles like the reference image */}
+        {options.length > 0 && (
+          <div className="mb-4">
+            <p className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider mb-2">الخيارات المتاحة</p>
+            <div className="grid grid-cols-4 gap-1.5">
+              {options.slice(0, 8).map((opt) => (
+                <div
+                  key={opt.id}
+                  className="flex flex-col items-center justify-center gap-1 p-1.5 rounded-xl bg-secondary/60 border border-border/40 hover:bg-primary/10 hover:border-primary/30 transition-colors"
+                  title={opt.ar}
+                >
+                  <span className="text-primary/80">
+                    {OPTION_ICON[opt.id] ?? <Star className="w-5 h-5" />}
+                  </span>
+                  <span className="text-[9px] font-semibold text-muted-foreground text-center leading-tight line-clamp-2">
+                    {opt.ar}
+                  </span>
+                </div>
+              ))}
+              {options.length > 8 && (
+                <div className="flex flex-col items-center justify-center gap-1 p-1.5 rounded-xl bg-secondary/40 border border-border/30">
+                  <span className="text-xs font-bold text-muted-foreground">+{options.length - 8}</span>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
