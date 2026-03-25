@@ -267,6 +267,24 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
     updateFilter("bodyType", filters.bodyType === type ? undefined : type);
   };
 
+  const toggleColor = (colorKey: string) => {
+    updateFilter("color", filters.color === colorKey ? undefined : colorKey);
+  };
+
+  const colors = [
+    { key: "white",     ar: "أبيض",        css: "#F8F8F8",  border: "#D1D5DB" },
+    { key: "silver",    ar: "فضي",          css: "#C0C0C0",  border: "#9CA3AF" },
+    { key: "gray",      ar: "رمادي",        css: "#6B7280",  border: "#4B5563" },
+    { key: "black",     ar: "أسود",         css: "#1A1A1A",  border: "#374151" },
+    { key: "red",       ar: "أحمر",         css: "#EF4444",  border: "#DC2626" },
+    { key: "orange",    ar: "برتقالي",      css: "#F97316",  border: "#EA580C" },
+    { key: "yellow",    ar: "أصفر",         css: "#EAB308",  border: "#CA8A04" },
+    { key: "green",     ar: "أخضر",         css: "#22C55E",  border: "#16A34A" },
+    { key: "lime",      ar: "أخضر فاتح",   css: "#84CC16",  border: "#65A30D" },
+    { key: "lightblue", ar: "أزرق فاتح",   css: "#60A5FA",  border: "#3B82F6" },
+    { key: "brown",     ar: "بني",          css: "#92400E",  border: "#78350F" },
+  ];
+
   return (
     <div className={cn("bg-card rounded-2xl border border-border shadow-sm p-6 flex flex-col gap-6", className)}>
       <div className="flex items-center justify-between pb-4 border-b border-border">
@@ -439,6 +457,50 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
             );
           })}
         </div>
+      </div>
+
+      {/* Color Filter */}
+      <div className="space-y-3">
+        <label className="text-sm font-bold text-foreground">
+          اللون
+          {filters.color && (
+            <button
+              onClick={() => updateFilter("color", undefined)}
+              className="mr-2 text-xs font-normal text-muted-foreground hover:text-destructive transition-colors"
+            >
+              (مسح)
+            </button>
+          )}
+        </label>
+        <div className="flex flex-wrap gap-2">
+          {colors.map((c) => {
+            const isSelected = filters.color === c.key;
+            return (
+              <button
+                key={c.key}
+                onClick={() => toggleColor(c.key)}
+                title={c.ar}
+                className={cn(
+                  "relative w-8 h-8 rounded-full transition-all focus:outline-none",
+                  isSelected ? "scale-110 ring-2 ring-primary ring-offset-2 ring-offset-card" : "hover:scale-105"
+                )}
+                style={{ backgroundColor: c.css, border: `2px solid ${c.border}` }}
+              >
+                {isSelected && (
+                  <Check
+                    className="absolute inset-0 m-auto w-4 h-4"
+                    style={{ color: c.key === "white" || c.key === "silver" || c.key === "yellow" || c.key === "lime" ? "#374151" : "#fff" }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
+        {filters.color && (
+          <p className="text-xs text-muted-foreground">
+            {colors.find((c) => c.key === filters.color)?.ar ?? filters.color}
+          </p>
+        )}
       </div>
 
       {/* Checkboxes */}
