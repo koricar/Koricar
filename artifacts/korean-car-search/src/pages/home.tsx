@@ -7,16 +7,94 @@ import { Layout } from "@/components/layout";
 import { CarCard } from "@/components/car-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 
+// Map of Arabic and English brand names to the official brand key
+const BRAND_ALIASES: Record<string, string> = {
+  // English
+  "bmw": "BMW", "bimmer": "BMW",
+  "mercedes": "Mercedes-Benz", "benz": "Mercedes-Benz", "mercedes-benz": "Mercedes-Benz",
+  "hyundai": "Hyundai",
+  "kia": "Kia",
+  "genesis": "Genesis",
+  "audi": "Audi",
+  "toyota": "Toyota",
+  "lexus": "Lexus",
+  "porsche": "Porsche",
+  "volkswagen": "Volkswagen", "vw": "Volkswagen",
+  "volvo": "Volvo",
+  "ford": "Ford",
+  "jeep": "Jeep",
+  "land rover": "Land Rover", "landrover": "Land Rover", "range rover": "Land Rover",
+  "mini": "MINI",
+  "nissan": "Nissan",
+  "honda": "Honda",
+  "infiniti": "Infiniti",
+  "ssangyong": "SsangYong",
+  "chevrolet": "Chevrolet", "chevy": "Chevrolet",
+  "ferrari": "Ferrari",
+  "lamborghini": "Lamborghini",
+  "maserati": "Maserati",
+  // Arabic
+  "بي ام دبليو": "BMW", "بي أم دبليو": "BMW", "بي ام": "BMW", "بي إم دبليو": "BMW",
+  "مرسيدس": "Mercedes-Benz", "بنز": "Mercedes-Benz", "مرسيدس بنز": "Mercedes-Benz",
+  "هيونداي": "Hyundai", "هونداي": "Hyundai", "هيونده": "Hyundai",
+  "كيا": "Kia",
+  "جينيسيس": "Genesis", "جنيسس": "Genesis", "جينيسس": "Genesis",
+  "اودي": "Audi", "أودي": "Audi",
+  "تويوتا": "Toyota", "طيوطا": "Toyota",
+  "لكزس": "Lexus", "لكسس": "Lexus",
+  "بورش": "Porsche", "بورشه": "Porsche",
+  "فولكس": "Volkswagen", "فولكسفاغن": "Volkswagen",
+  "فولفو": "Volvo",
+  "فورد": "Ford",
+  "جيب": "Jeep",
+  "رنج روفر": "Land Rover", "لاندروفر": "Land Rover", "رينج روفر": "Land Rover",
+  "ميني": "MINI",
+  "نيسان": "Nissan",
+  "هوندا": "Honda",
+  "انفينيتي": "Infiniti", "إنفينيتي": "Infiniti",
+  "سانيونج": "SsangYong",
+  "شيفروليه": "Chevrolet", "شيفرولية": "Chevrolet",
+  "فيراري": "Ferrari",
+  "لامبورغيني": "Lamborghini",
+  "مازيراتي": "Maserati",
+};
+
+function parseHeroSearch(text: string): { brand?: string; model?: string } {
+  const lower = text.toLowerCase().trim();
+  // Sort by length descending so "land rover" matches before "land"
+  const sorted = Object.entries(BRAND_ALIASES).sort((a, b) => b[0].length - a[0].length);
+  for (const [alias, brand] of sorted) {
+    if (lower.includes(alias)) {
+      const remaining = text.trim().replace(new RegExp(alias, "i"), "").trim();
+      return { brand, model: remaining || undefined };
+    }
+  }
+  // No brand found — treat the whole text as a model search
+  return { model: text.trim() || undefined };
+}
+
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
 
   // Debounce text inputs before sending to API
-  const [debouncedQuery] = useDebounce(filters.query, 500);
   const [debouncedModel] = useDebounce(filters.model, 500);
   const apiParams = {
     ...filters,
-    query: debouncedQuery || undefined,
+    query: undefined,
     model: debouncedModel || undefined,
+  };
+
+  const handleHeroSearch = () => {
+    const raw = filters.query?.trim();
+    if (!raw) return;
+    const { brand, model } = parseHeroSearch(raw);
+    if (brand) updateFilter("brand", brand);
+    updateFilter("model", model || undefined);
+    updateFilter("query", undefined);
+    updateFilter("page", 1);
+    setTimeout(() => {
+      document.getElementById("results-section")?.scrollIntoView({ behavior: "smooth" });
+    }, 100);
   };
 
   const { data, isLoading, isError } = useSearchCars(apiParams);
@@ -81,9 +159,13 @@ export default function Home() {
                 className="w-full bg-transparent border-none text-white placeholder:text-white/50 px-12 py-4 text-lg font-medium focus:outline-none focus:ring-0"
                 value={filters.query || ""}
                 onChange={(e) => updateFilter("query", e.target.value || undefined)}
+                onKeyDown={(e) => { if (e.key === "Enter") handleHeroSearch(); }}
               />
             </div>
-            <button className="hidden sm:block px-8 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25">
+            <button
+              onClick={handleHeroSearch}
+              className="hidden sm:block px-8 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
+            >
               بحث
             </button>
           </motion.div>
@@ -91,7 +173,7 @@ export default function Home() {
       </section>
 
       {/* Main Content */}
-      <section className="py-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <section id="results-section" className="py-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           
           {/* Sidebar */}
