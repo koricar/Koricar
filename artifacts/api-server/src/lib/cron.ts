@@ -9,6 +9,11 @@ const ENCAR_PHOTO = "https://ci.encar.com";
 const ENCAR_DETAIL = "https://www.encar.com/dc/dc_cardetailview.do?carid=";
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
+/** Wrap Encar URL with Google Translate (Korean → Arabic) */
+function toArabicUrl(url: string): string {
+  return `https://translate.google.com/translate?sl=ko&tl=ar&u=${encodeURIComponent(url)}`;
+}
+
 const EN_TO_FUEL_KR: Record<string, string> = {
   gasoline: "가솔린",
   diesel: "디젤",
@@ -211,7 +216,7 @@ async function checkAlert(alert: typeof alertsTable.$inferSelect) {
     await sendPushToSession(alert.sessionId, {
       title,
       body,
-      url: `${ENCAR_DETAIL}${first.id}`,
+      url: toArabicUrl(`${ENCAR_DETAIL}${first.id}`),
       cars: newCars.slice(0, 3),
       alertId: alert.id,
     });

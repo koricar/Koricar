@@ -5,6 +5,11 @@ import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import { Loader2, ArrowRight, Calendar, Settings2, Fuel, MapPin, Gauge, ShieldCheck, Check, ExternalLink, AlertTriangle } from "lucide-react";
 import { motion } from "framer-motion";
 
+/** Wrap any Korean site URL with Google Translate → Arabic */
+function toArabicUrl(url: string): string {
+  return `https://translate.google.com/translate?sl=ko&tl=ar&u=${encodeURIComponent(url)}`;
+}
+
 export default function CarDetails() {
   const { id } = useParams();
   
@@ -190,12 +195,12 @@ export default function CarDetails() {
                     طلب تسعيرة استيراد
                   </button>
                   <a 
-                    href={car.sourceUrl}
+                    href={car.sourceUrl ? toArabicUrl(car.sourceUrl) : "#"}
                     target="_blank"
                     rel="noopener noreferrer"
                     className="w-full py-4 bg-secondary text-secondary-foreground font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-secondary/80 transition-all"
                   >
-                    رؤية الإعلان الأصلي
+                    رؤية الإعلان الأصلي (مترجم)
                     <ExternalLink className="w-4 h-4" />
                   </a>
                 </div>
