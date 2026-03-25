@@ -356,8 +356,87 @@ interface EncarCar {
   Price: number;
   Color?: string;
   Condition?: string[];
+  Trust?: string[];
+  ServiceMark?: string[];
+  BuyType?: string[];
+  HomeServiceVerification?: string;
   OfficeCityState?: string;
   Photos?: Array<{ location: string; ordering: number }>;
+}
+
+// Keywords found in the Badge/Model name that imply specific features
+const BADGE_FEATURE_MAP: Array<{ keywords: string[]; ar: string }> = [
+  { keywords: ["파노라마", "파노라믹", "파노"],         ar: "سقف بانورامي" },
+  { keywords: ["선루프", "썬루프", "sunroof"],          ar: "فتحة سقف" },
+  { keywords: ["네비게이션", "내비게이션", "내비", "네비", "navi"], ar: "شاشة ملاحة" },
+  { keywords: ["후방카메라", "후방 카메라", "후카"],     ar: "كاميرا خلفية" },
+  { keywords: ["360", "서라운드뷰", "어라운드뷰"],       ar: "كاميرا 360°" },
+  { keywords: ["열선시트", "열선 시트"],                ar: "مقاعد مدفأة" },
+  { keywords: ["통풍시트", "통풍 시트", "쿨링시트"],    ar: "مقاعد مهوّاة" },
+  { keywords: ["스마트키", "스마트 키"],                ar: "مفتاح ذكي" },
+  { keywords: ["어댑티브", "어뎁티브크루즈", "acc"],    ar: "كروز تكيّفي" },
+  { keywords: ["차선이탈", "레인킵", "레인 킵"],        ar: "تنبيه الحارة" },
+  { keywords: ["사각지대", "bsd", "blind"],             ar: "كشف النقطة العمياء" },
+  { keywords: ["보조"],                                 ar: "مساعد القيادة" },
+  { keywords: ["헤드업", "hud"],                        ar: "HUD" },
+  { keywords: ["전동시트", "파워시트", "전동 시트"],    ar: "مقاعد كهربائية" },
+  { keywords: ["메모리시트", "메모리 시트"],            ar: "مقاعد بذاكرة" },
+  { keywords: ["럭셔리", "프리미엄", "익스클루시브", "풀옵션", "최고급", "플래티넘", "칼리그라피", "어드밴스드", "인스퍼레이션"], ar: "فئة مميزة" },
+  { keywords: ["m 스포츠", "m스포츠", "m sport", "m-sport"], ar: "حزمة M الرياضية" },
+  { keywords: ["4wd", "awd", "사륜", "4륜"],            ar: "دفع رباعي" },
+  { keywords: ["하이브리드", "hybrid"],                 ar: "هجين" },
+  { keywords: ["전기", "ev", "electric"],               ar: "كهربائي" },
+  { keywords: ["플러그인", "phev", "plug-in"],          ar: "هجين قابل للشحن" },
+];
+
+// Features derived from Condition / Trust / ServiceMark / BuyType
+const CONDITION_FEATURE_MAP: Record<string, string> = {
+  Record:           "سجل الصيانة",
+  Resume:           "تاريخ السيارة",
+};
+
+const TRUST_FEATURE_MAP: Record<string, string> = {
+  HomeService: "توصيل للمنزل",
+};
+
+const SERVICE_MARK_MAP: Record<string, string> = {
+  EncarDiagnosisP1:   "تشخيص Encar",
+  EncarDiagnosisP2:   "تشخيص Encar",
+  EncarMeetgo:        "Encar Meetgo",
+};
+
+function extractFeatures(car: EncarCar): string[] {
+  const features: string[] = [];
+  const seen = new Set<string>();
+  const add = (label: string) => { if (!seen.has(label)) { seen.add(label); features.push(label); } };
+
+  // 1. From Badge + Model text (lowercase for matching)
+  const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
+  for (const { keywords, ar } of BADGE_FEATURE_MAP) {
+    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) {
+      add(ar);
+    }
+  }
+
+  // 2. From Condition
+  for (const c of car.Condition ?? []) {
+    const label = CONDITION_FEATURE_MAP[c];
+    if (label) add(label);
+  }
+
+  // 3. From Trust
+  for (const t of car.Trust ?? []) {
+    const label = TRUST_FEATURE_MAP[t];
+    if (label) add(label);
+  }
+
+  // 4. From ServiceMark (only first relevant one to avoid clutter)
+  for (const sm of car.ServiceMark ?? []) {
+    const label = SERVICE_MARK_MAP[sm];
+    if (label) { add(label); break; }
+  }
+
+  return features;
 }
 
 interface EncarResponse {
@@ -385,6 +464,12 @@ function mapEncarCar(car: EncarCar) {
   const condition = car.Condition ?? [];
   const inspected = condition.includes("Inspection") || condition.includes("InspectionDirect");
 
+  const features = extractFeatures(car);
+
+  // Sunroof: true if badge/model mentions it OR if it appears in features
+  const badgeText = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
+  const hasSunroof = ["선루프", "썬루프", "파노라마", "파노라믹", "파노"].some((kw) => badgeText.includes(kw));
+
   return {
     id: car.Id,
     brand: brandEn,
@@ -398,12 +483,12 @@ function mapEncarCar(car: EncarCar) {
     bodyType: "sedan",
     color: colorEn,
     colorAr,
-    sunroof: false,
+    sunroof: hasSunroof,
     inspected,
     imageUrl,
     thumbnailUrl: imageUrl,
     description: `${brandEn} ${car.Model} ${car.FormYear}`,
-    features: [] as string[],
+    features,
     source: "Encar",
     sourceUrl: `${ENCAR_DETAIL}${car.Id}`,
     location: car.OfficeCityState ?? "كوريا",

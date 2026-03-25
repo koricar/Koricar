@@ -1,5 +1,5 @@
 import { Link } from "wouter";
-import { Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck } from "lucide-react";
+import { Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck, Star } from "lucide-react";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import type { Car } from "@workspace/api-client-react";
 
@@ -95,11 +95,31 @@ export function CarCard({ car }: { car: Car }) {
           </div>
         </div>
 
-        <div className="mb-4">
+        <div className="mb-3">
           <span className="text-2xl font-black font-numbers text-foreground flex items-baseline gap-1">
             {car.priceFormatted || formatPriceKRW(car.price)}
           </span>
         </div>
+
+        {/* Features Tags */}
+        {car.features && car.features.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 mb-3">
+            {car.features.slice(0, 5).map((feature) => (
+              <span
+                key={feature}
+                className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
+              >
+                <Star className="w-2.5 h-2.5" />
+                {feature}
+              </span>
+            ))}
+            {car.features.length > 5 && (
+              <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-full bg-secondary text-muted-foreground">
+                +{car.features.length - 5}
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Specs Grid */}
         <div className="grid grid-cols-2 gap-y-3 gap-x-2 mt-auto pt-4 border-t border-border/60">
