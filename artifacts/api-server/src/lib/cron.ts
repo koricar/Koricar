@@ -9,9 +9,9 @@ const ENCAR_PHOTO = "https://ci.encar.com";
 const ENCAR_DETAIL = "https://www.encar.com/dc/dc_cardetailview.do?carid=";
 const CHECK_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
-/** Wrap Encar URL with Google Translate (Korean → Arabic) */
+/** Wrap Encar URL with Yandex Translate (Korean → Arabic, works in Gulf region) */
 function toArabicUrl(url: string): string {
-  return `https://translate.google.com/translate?sl=ko&tl=ar&u=${encodeURIComponent(url)}`;
+  return `https://translate.yandex.com/translate?url=${encodeURIComponent(url)}&lang=ko-ar`;
 }
 
 const EN_TO_FUEL_KR: Record<string, string> = {
