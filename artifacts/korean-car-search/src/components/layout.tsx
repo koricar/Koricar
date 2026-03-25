@@ -3,6 +3,9 @@ import { Search, Car, Menu, X, Heart, User, ChevronLeft } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { AlertBell } from "@/components/alert-bell";
+import { AlertModal } from "@/components/alert-modal";
+import { useAlertContext } from "@/contexts/alert-context";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +15,7 @@ export function Layout({ children }: LayoutProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
+  const { open: alertOpen, defaultFilters, openModal, closeModal } = useAlertContext();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -75,12 +79,12 @@ export function Layout({ children }: LayoutProps) {
 
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center gap-4">
-              <button className={cn(
-                "p-2.5 rounded-full transition-colors",
-                !isScrolled && location === '/' ? "text-white/80 hover:bg-white/10" : "text-foreground/70 hover:bg-muted"
-              )}>
-                <Heart className="w-5 h-5" />
-              </button>
+              <AlertBell
+                onClick={() => openModal()}
+                className={cn(
+                  !isScrolled && location === '/' ? "text-white/80 hover:bg-white/10" : "text-foreground/70"
+                )}
+              />
               <button className={cn(
                 "p-2.5 rounded-full transition-colors",
                 !isScrolled && location === '/' ? "text-white/80 hover:bg-white/10" : "text-foreground/70 hover:bg-muted"
@@ -137,6 +141,9 @@ export function Layout({ children }: LayoutProps) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* Alert Modal */}
+      <AlertModal open={alertOpen} onClose={closeModal} currentFilters={defaultFilters} />
 
       {/* Main Content */}
       <main className="flex-1 w-full flex flex-col">

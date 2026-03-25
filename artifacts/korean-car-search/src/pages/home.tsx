@@ -1,11 +1,12 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, FilterX, ChevronLeft, ChevronRight, Car } from "lucide-react";
+import { Search, Loader2, FilterX, ChevronLeft, ChevronRight, Car, Bell } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useSearchCars } from "@workspace/api-client-react";
 import { useCarFilters } from "@/hooks/use-car-filters";
 import { Layout } from "@/components/layout";
 import { CarCard } from "@/components/car-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
+import { useAlertContext } from "@/contexts/alert-context";
 
 // Map of Arabic and English brand names to the official brand key
 const BRAND_ALIASES: Record<string, string> = {
@@ -75,6 +76,7 @@ function parseHeroSearch(text: string): { brand?: string; model?: string } {
 
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
+  const { openModal } = useAlertContext();
 
   // Debounce text inputs before sending to API
   const [debouncedModel] = useDebounce(filters.model, 500);
@@ -200,6 +202,13 @@ export default function Home() {
                   </span>
                 )}
               </h2>
+              <button
+                onClick={() => openModal(filters)}
+                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 hover:border-primary transition-all"
+              >
+                <Bell className="w-4 h-4" />
+                تنبيه بهذا البحث
+              </button>
             </div>
 
             {/* Content State */}

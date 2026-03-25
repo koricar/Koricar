@@ -24,3 +24,10 @@ expertMode = true
 [postMerge]
 path = "scripts/post-merge.sh"
 timeoutMs = 20000
+
+[userenv]
+
+[userenv.shared]
+VAPID_PUBLIC_KEY = "BPS2aZmTafA1VCvFLB5pVszrRm662s51Vk1cxIOagDvrL3GKXT1Pl-U4ttHno2SeuVGvtHEsZNYR9Ci8-obCqG8"
+VAPID_PRIVATE_KEY = "YtOcPfMsgIkrYX0PeL0PxOVw3ooSQfEH63Yg_D9j2CE"
+VAPID_EMAIL = "mailto:alerts@koreancar.com"
