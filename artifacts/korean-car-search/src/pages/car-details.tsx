@@ -108,10 +108,10 @@ export default function CarDetails() {
             {/* Key Specs Row */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Calendar, label: "سنة الصنع", value: car.year.toString() },
-                { icon: Gauge, label: "الممشى", value: `${formatNumber(car.mileage)} كم` },
-                { icon: Fuel, label: "الوقود", value: car.fuelType },
-                { icon: Settings2, label: "ناقل الحركة", value: car.transmission },
+                { icon: Calendar, label: "سنة الصنع", value: car.year?.toString() ?? "—" },
+                { icon: Gauge, label: "الممشى", value: car.mileage != null ? `${formatNumber(car.mileage)} كم` : "—" },
+                { icon: Fuel, label: "الوقود", value: car.fuelType ?? "—" },
+                { icon: Settings2, label: "ناقل الحركة", value: car.transmission ?? "—" },
               ].map((spec, i) => (
                 <motion.div 
                   initial={{ opacity: 0, y: 20 }}
