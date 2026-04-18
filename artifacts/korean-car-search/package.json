@@ -75,6 +75,7 @@
     "zod": "catalog:"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.103.1",
     "use-debounce": "^10.1.0"
   }
 }
