@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: koricar-frontend
+    env: static
+    rootDir: artifacts/korean-car-search
+    buildCommand: npm install -g pnpm && pnpm install && pnpm run build
+    staticPublishPath: dist
