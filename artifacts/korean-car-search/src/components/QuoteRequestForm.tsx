@@ -10,7 +10,7 @@ export default function QuoteRequestForm({ carName="", carPrice="", carId }: Pro
   const [form, setForm] = useState({ name:"", phone:"", country:"sa", inspection:"yes", contact:"whatsapp", notes:"" });
   const countries: Record<string,string> = { sa:"🇸🇦 السعودية", ae:"🇦🇪 الإمارات", kw:"🇰🇼 الكويت", qa:"🇶🇦 قطر", bh:"🇧🇭 البحرين", om:"🇴🇲 عُمان", jo:"🇯🇴 الأردن", eg:"🇪🇬 مصر", iq:"🇮🇶 العراق" };
   const set = (k: string, v: string) => setForm(f => ({...f, [k]:v}));
-  const msg = () => encodeURIComponent(`🚗 *طلب تسعيرة استيراد*\n\n*السيارة:* ${carName}\n*السعر:* ${carPrice}\n*الرابط:* https://car-search-korea.replit.app/cars/${carId}\n\n*الاسم:* ${form.name}\n*الجوال:* ${form.phone}\n*الدولة:* ${countries[form.country]}\n*فحص:* ${form.inspection==="yes"?"✅ نعم":"❌ لا"}\n*التواصل:* ${form.contact==="whatsapp"?"واتساب":"اتصال"}\n*ملاحظات:* ${form.notes||"لا يوجد"}`);
+  const msg = () => encodeURIComponent(`🚗 *طلب تسعيرة استيراد*\n\n*السيارة:* ${carName}\n*السعر:* ${carPrice}\n*الرابط:* https://koricar-ba7l.onrender.com/cars/${carId}\n\n*الاسم:* ${form.name}\n*الجوال:* ${form.phone}\n*الدولة:* ${countries[form.country]}\n*فحص:* ${form.inspection==="yes"?"✅ نعم":"❌ لا"}\n*التواصل:* ${form.contact==="whatsapp"?"واتساب":"اتصال"}\n*ملاحظات:* ${form.notes||"لا يوجد"}`);
   const submit = async () => {
     if (!form.name||!form.phone) return;
     setLoading(true);
