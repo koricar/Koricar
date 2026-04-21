@@ -667,21 +667,11 @@ router.get("/search", async (req, res) => {
     const data = (await resp.json()) as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
 
-    // بعد السطر: let cars = data.SearchResults.map(mapEncarCar);
-
-    // ✅ dedup بالـ ID (موجود) + dedup بالـ model+price+mileage
+    // Remove duplicates by ID
     const seenIds = new Set<string>();
-    const seenFingerprints = new Set<string>();
-
     cars = cars.filter(c => {
       if (seenIds.has(c.id)) return false;
       seenIds.add(c.id);
-
-      // fingerprint للسيارات اللي ممكن تكون نفس السيارة بـ ID مختلف
-      const fp = `${c.brand}|${c.model}|${c.year}|${c.price}|${c.mileage}`;
-      if (seenFingerprints.has(fp)) return false;
-      seenFingerprints.add(fp);
-
       return true;
     });
 
