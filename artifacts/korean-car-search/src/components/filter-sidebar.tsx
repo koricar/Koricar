@@ -172,7 +172,73 @@ const BRAND_MODELS: Record<string, ModelOption[]> = {
     { label: "Cayenne PO536 (2018+)", value: "카이엔 (PO536)" },
     { label: "Panamera 976 (2023+)", value: "파나메라 (976)" },
     { label: "911 (992) (2019+)", value: "911 (992)" },
-    { label: "Taycan", value: "타이칸" },
+    { label: "Taycan", value: "타이칸" },],
+    "Volkswagen": [
+    { label: "Tiguan 2nd Gen (2016+)", value: "티구안 2세대" },
+    { label: "Passat B8", value: "파사트 (B8)" },
+    { label: "Touareg 3rd Gen", value: "투아렉 3세대" },
+    { label: "ID.4", value: "ID.4" },
+    { label: "Golf 8th Gen", value: "골프 8세대" },
+  ],
+  "Land Rover": [
+    { label: "Range Rover 5th Gen (2022+)", value: "레인지로버 5세대" },
+    { label: "Range Rover Sport 3rd Gen", value: "레인지로버 스포츠 3세대" },
+    { label: "Range Rover Velar", value: "레인지로버 벨라" },
+    { label: "Discovery 5th Gen", value: "디스커버리 5세대" },
+    { label: "Defender 90/110", value: "디펜더" },
+  ],
+  "Jaguar": [
+    { label: "F-Pace", value: "F-페이스" },
+    { label: "XE", value: "XE" },
+    { label: "XF", value: "XF" },
+    { label: "I-Pace", value: "I-페이스" },
+  ],
+  "MINI": [
+    { label: "Countryman F60", value: "컨트리맨 (F60)" },
+    { label: "Cooper 3-Door F56", value: "쿠퍼 3도어 (F56)" },
+    { label: "Clubman F54", value: "클럽맨 (F54)" },
+  ],
+  "Ford": [
+    { label: "Explorer 6th Gen", value: "익스플로러 6세대" },
+    { label: "Mustang Mach-E", value: "머스탱 마하-E" },
+    { label: "Bronco", value: "브롱코" },
+  ],
+  "Jeep": [
+    { label: "Grand Cherokee WL (2021+)", value: "그랜드 체로키 WL" },
+    { label: "Wrangler JL", value: "랭글러 JL" },
+    { label: "Compass", value: "컴패스" },
+  ],
+  "Lincoln": [
+    { label: "Navigator 4th Gen", value: "네비게이터 4세대" },
+    { label: "Aviator", value: "에비에이터" },
+  ],
+  "Cadillac": [
+    { label: "Escalade 5th Gen", value: "에스컬레이드 5세대" },
+    { label: "XT5", value: "XT5" },
+    { label: "XT6", value: "XT6" },
+    { label: "Lyriq", value: "리릭" },
+  ],
+  "Infiniti": [
+    { label: "QX80", value: "QX80" },
+    { label: "QX60", value: "QX60" },
+    { label: "Q50", value: "Q50" },
+  ],
+  "Maserati": [
+    { label: "Ghibli", value: "기블리" },
+    { label: "Levante", value: "르반떼" },
+    { label: "Quattroporte", value: "콰트로포르테" },
+    { label: "Grecale", value: "그레칼레" },
+  ],
+  "Honda": [
+    { label: "Odyssey 5th Gen", value: "오디세이 5세대" },
+    { label: "CR-V 6th Gen", value: "CR-V 6세대" },
+    { label: "Accord 10th Gen", value: "어코드 10세대" },
+  ],
+  "Nissan": [
+    { label: "Patrol Y62", value: "패트롤 Y62" },
+    { label: "Murano 3rd Gen", value: "무라노 3세대" },
+    { label: "Ariya", value: "아리야" },
+  
   ],
   "Volvo": [
     { label: "XC60 2nd Gen (2017+)", value: "XC60 2세대" },
