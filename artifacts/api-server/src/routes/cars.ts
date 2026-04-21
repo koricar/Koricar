@@ -419,7 +419,6 @@ const SERVICE_MARK_MAP: Record<string, string> = {
   EncarMeetgo: "Encar Meetgo",
 };
 
-// Map Encar Options array to Arabic feature names
 const ENCAR_OPTION_MAP: Record<string, { id: string; ar: string }> = {
   "선루프": { id: "sunroof", ar: "فتحة سقف" },
   "파노라마선루프": { id: "sunroof_pano", ar: "سقف بانورامي" },
@@ -456,7 +455,6 @@ function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; 
 }
 
 function extractOptions(car: EncarCar): Array<{ id: string; ar: string }> {
-  // If Encar provides real Options array, use it directly
   if (car.Options && car.Options.length > 0) {
     const fromOptions = extractOptionsFromEncarOptions(car.Options);
     if (fromOptions.length > 0) return fromOptions;
@@ -668,6 +666,15 @@ router.get("/search", async (req, res) => {
 
     const data = (await resp.json()) as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
+
+    // Remove duplicates by ID
+    const seenIds = new Set<string>();
+    cars = cars.filter(c => {
+      if (seenIds.has(c.id)) return false;
+      seenIds.add(c.id);
+      return true;
+    });
+
     cars.forEach((c) => carCache.set(c.id, c));
 
     if (modelRaw) {
