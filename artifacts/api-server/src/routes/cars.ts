@@ -646,8 +646,8 @@ router.get("/search", async (req, res) => {
 
   try {
     const { q: encarQ, modelRaw } = buildEncarQuery({ brand, model, sunroof, fuelType, transmission, bodyType, color });
-    const offset = (page - 1) * limit * 5;
-    const fetchLimit = limit * 5;
+    const offset = (page - 1) * limit;
+    const fetchLimit = limit;
     const url = new URL(`${ENCAR_API}/search/car/list/general`);
     url.searchParams.set("count", "true");
     url.searchParams.set("q", encarQ);
