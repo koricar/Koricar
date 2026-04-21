@@ -667,11 +667,15 @@ router.get("/search", async (req, res) => {
     const data = (await resp.json()) as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
 
-    // Remove duplicates by ID
+    // Remove duplicates by ID and by exact match
     const seenIds = new Set<string>();
+    const seenFp = new Set<string>();
     cars = cars.filter(c => {
       if (seenIds.has(c.id)) return false;
       seenIds.add(c.id);
+      const fp = `${c.price}|${c.mileage}|${c.location}|${c.model}`;
+      if (seenFp.has(fp)) return false;
+      seenFp.add(fp);
       return true;
     });
 
