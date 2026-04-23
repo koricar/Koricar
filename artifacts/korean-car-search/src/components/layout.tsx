@@ -167,7 +167,7 @@ export function Layout({ children }: LayoutProps) {
               <h4 className="text-white font-bold mb-6 text-lg">تواصل معنا</h4>
               <ul className="space-y-4 text-sm">
                 <li className="font-numbers">support@koreancar.com</li>
-                <li className="font-numbers" dir="ltr">+966 50 000 0000</li>
+                <li className="font-numbers" dir="ltr">+966 53 809 0436 </li>
                 <li>المملكة العربية السعودية، الرياض</li>
               </ul>
             </div>
