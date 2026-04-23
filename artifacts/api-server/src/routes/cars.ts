@@ -804,7 +804,11 @@ function buildEncarQuery(params: {
   let carType = "";
   if (params.brand && params.brand !== "any") {
     const key = params.brand.toLowerCase();
-    carType = DOMESTIC_BRANDS.has(key) ? "_.CarType.Y." : "_.CarType.N.";
+    // للماركات الكورية نحدد CarType.Y (محلي)
+    // للماركات المستوردة نشيل CarType كلياً — لأن بعض الموديلات
+    // (مثل i8، iX، Tesla، كهربائيات) مصنفة تحت CarType مختلف في Encar
+    // والـ Manufacturer وحده يكفي للتصفية الصحيحة
+    carType = DOMESTIC_BRANDS.has(key) ? "_.CarType.Y." : "";
   }
 
   let q = `(And.Hidden.N.${carType}`;
