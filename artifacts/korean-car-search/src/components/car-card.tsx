@@ -108,10 +108,10 @@ export function CarCard({ car }: { car: Car }) {
           </div>
         )}
 
-        {/* Hover overlay with gradient */}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+        {/* Hover overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
 
-        {/* Quick view button on hover */}
+        {/* Quick view on hover */}
         <div className="absolute inset-0 flex items-end justify-center pb-4 opacity-0 group-hover:opacity-100 transition-all duration-300 translate-y-2 group-hover:translate-y-0 z-10">
           <Link
             href={`/cars/${car.id}`}
@@ -134,7 +134,7 @@ export function CarCard({ car }: { car: Car }) {
         </div>
 
         {/* Price */}
-        <div className="mb-3 flex items-end gap-2">
+        <div className="mb-3">
           <span className="text-xl font-black font-numbers text-foreground">
             {car.priceFormatted || formatPriceKRW(car.price)}
           </span>

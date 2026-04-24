@@ -135,27 +135,6 @@ export function Layout({ children }: LayoutProps) {
         {/* Background glow */}
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Stats bar */}
-        <div className="border-b border-slate-800/60">
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {[
-                { num: "+200K", label: "سيارة متاحة", icon: "🚗" },
-                { num: "100%", label: "فحص معتمد",   icon: "✅" },
-                { num: "15+",  label: "دولة نشحن لها", icon: "🌍" },
-                { num: "24/7", label: "دعم مستمر",    icon: "💬" },
-              ].map((s) => (
-                <div key={s.label} className="flex items-center gap-3">
-                  <span className="text-2xl">{s.icon}</span>
-                  <div>
-                    <div className="text-white font-black text-xl font-numbers">{s.num}</div>
-                    <div className="text-slate-400 text-xs mt-0.5">{s.label}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
 
         {/* Main footer content */}
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
