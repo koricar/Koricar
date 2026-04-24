@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Search, Car, Menu, X, Heart, User, ChevronLeft } from "lucide-react";
+import { Search, Car, Menu, X, Heart, User, ChevronLeft, Phone, Mail, MapPin, Instagram, Twitter, Youtube, MessageCircle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
@@ -100,12 +100,12 @@ export function Layout({ children }: LayoutProps) {
           >
             <nav className="flex flex-col gap-6 text-xl font-bold mt-8">
               {[
-                { name: "الرئيسية",      path: "/" },
-                { name: "تصفح السيارات", path: "/search" },
-                { name: "كيف نستورد",    path: "/how-to-import" },
-                { name: "من نحن",        path: "/about" },
+                { name: "الرئيسية",        path: "/" },
+                { name: "تصفح السيارات",   path: "/search" },
+                { name: "كيف نستورد",      path: "/how-to-import" },
+                { name: "من نحن",          path: "/about" },
                 { name: "الأسئلة الشائعة", path: "/faq" },
-                { name: "تواصل معنا",    path: "/contact" },
+                { name: "تواصل معنا",      path: "/contact" },
               ].map((item) => (
                 <Link key={item.path} href={item.path}
                   className="flex items-center justify-between border-b border-border pb-4">
@@ -126,58 +126,171 @@ export function Layout({ children }: LayoutProps) {
 
       <main className="flex-1 w-full flex flex-col">{children}</main>
 
-      {/* Footer */}
-      <footer className="bg-slate-950 text-slate-300 py-12 md:py-16 mt-auto">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
+      {/* ── Footer ── */}
+      <footer className="relative bg-slate-950 text-slate-300 overflow-hidden mt-auto">
 
+        {/* Top gradient line */}
+        <div className="h-px w-full bg-gradient-to-r from-transparent via-primary/60 to-transparent" />
+
+        {/* Background glow */}
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[600px] h-[300px] bg-primary/5 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Stats bar */}
+        <div className="border-b border-slate-800/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
+              {[
+                { num: "+200K", label: "سيارة متاحة", icon: "🚗" },
+                { num: "100%", label: "فحص معتمد",   icon: "✅" },
+                { num: "15+",  label: "دولة نشحن لها", icon: "🌍" },
+                { num: "24/7", label: "دعم مستمر",    icon: "💬" },
+              ].map((s) => (
+                <div key={s.label} className="flex items-center gap-3">
+                  <span className="text-2xl">{s.icon}</span>
+                  <div>
+                    <div className="text-white font-black text-xl font-numbers">{s.num}</div>
+                    <div className="text-slate-400 text-xs mt-0.5">{s.label}</div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Main footer content */}
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 md:py-16">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-10">
+
+            {/* Brand */}
             <div className="md:col-span-1">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30">
                   <Car className="w-6 h-6" />
                 </div>
                 <span className="text-2xl font-bold tracking-tight text-white">
                   كوري<span className="text-primary font-black">كار</span>
                 </span>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed">
+              <p className="text-slate-400 text-sm leading-relaxed mb-6">
                 منصتك الأولى الموثوقة للبحث واستيراد السيارات الكورية المستعملة والجديدة بأفضل الأسعار وأعلى معايير الجودة.
               </p>
+              {/* Social links */}
+              <div className="flex gap-3">
+                {[
+                  { icon: <MessageCircle className="w-4 h-4" />, href: "#", label: "واتساب", color: "hover:bg-green-600" },
+                  { icon: <Instagram className="w-4 h-4" />,     href: "#", label: "انستغرام", color: "hover:bg-pink-600" },
+                  { icon: <Twitter className="w-4 h-4" />,       href: "#", label: "تويتر", color: "hover:bg-sky-500" },
+                  { icon: <Youtube className="w-4 h-4" />,       href: "#", label: "يوتيوب", color: "hover:bg-red-600" },
+                ].map((s) => (
+                  <a
+                    key={s.label}
+                    href={s.href}
+                    aria-label={s.label}
+                    className={cn(
+                      "w-9 h-9 rounded-lg bg-slate-800 flex items-center justify-center text-slate-400 hover:text-white transition-all duration-200",
+                      s.color
+                    )}
+                  >
+                    {s.icon}
+                  </a>
+                ))}
+              </div>
             </div>
 
+            {/* Quick links */}
             <div>
-              <h4 className="text-white font-bold mb-6 text-lg">روابط سريعة</h4>
-              <ul className="space-y-4">
-                <li><Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link></li>
-                <li><Link href="/search" className="hover:text-primary transition-colors">تصفح السيارات</Link></li>
-                <li><Link href="/about" className="hover:text-primary transition-colors">من نحن</Link></li>
+              <h4 className="text-white font-bold mb-5 text-base flex items-center gap-2">
+                <span className="w-1 h-4 bg-primary rounded-full inline-block" />
+                روابط سريعة
+              </h4>
+              <ul className="space-y-3">
+                {[
+                  { name: "الرئيسية",        path: "/" },
+                  { name: "تصفح السيارات",   path: "/search" },
+                  { name: "كيف نستورد",      path: "/how-to-import" },
+                  { name: "من نحن",          path: "/about" },
+                ].map((item) => (
+                  <li key={item.path}>
+                    <Link href={item.path}
+                      className="text-slate-400 hover:text-primary transition-colors text-sm flex items-center gap-2 group">
+                      <span className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-primary transition-colors" />
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
+            {/* Support */}
             <div>
-              <h4 className="text-white font-bold mb-6 text-lg">المساعدة والدعم</h4>
-              <ul className="space-y-4">
-                <li><Link href="/faq" className="hover:text-primary transition-colors">الأسئلة الشائعة</Link></li>
-                <li><Link href="/how-to-import" className="hover:text-primary transition-colors">كيفية الاستيراد</Link></li>
-                <li><Link href="/contact" className="hover:text-primary transition-colors">تواصل معنا</Link></li>
+              <h4 className="text-white font-bold mb-5 text-base flex items-center gap-2">
+                <span className="w-1 h-4 bg-primary rounded-full inline-block" />
+                المساعدة والدعم
+              </h4>
+              <ul className="space-y-3">
+                {[
+                  { name: "الأسئلة الشائعة", path: "/faq" },
+                  { name: "كيفية الاستيراد", path: "/how-to-import" },
+                  { name: "تواصل معنا",      path: "/contact" },
+                ].map((item) => (
+                  <li key={item.path}>
+                    <Link href={item.path}
+                      className="text-slate-400 hover:text-primary transition-colors text-sm flex items-center gap-2 group">
+                      <span className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-primary transition-colors" />
+                      {item.name}
+                    </Link>
+                  </li>
+                ))}
               </ul>
             </div>
 
+            {/* Contact */}
             <div>
-              <h4 className="text-white font-bold mb-6 text-lg">تواصل معنا</h4>
-              <ul className="space-y-4 text-sm">
-                <li className="font-numbers">support@koreancar.com</li>
-                <li className="font-numbers" dir="ltr">+966 53 809 0436 </li>
-                <li>المملكة العربية السعودية، الدمام</li>
+              <h4 className="text-white font-bold mb-5 text-base flex items-center gap-2">
+                <span className="w-1 h-4 bg-primary rounded-full inline-block" />
+                تواصل معنا
+              </h4>
+              <ul className="space-y-4">
+                <li>
+                  <a href="mailto:support@koreancar.com"
+                    className="flex items-center gap-3 text-sm text-slate-400 hover:text-primary transition-colors group">
+                    <div className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-primary/20 flex items-center justify-center transition-colors shrink-0">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <span className="font-numbers">support@koreancar.com</span>
+                  </a>
+                </li>
+                <li>
+                  <a href="tel:+966538090436"
+                    className="flex items-center gap-3 text-sm text-slate-400 hover:text-primary transition-colors group">
+                    <div className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-primary/20 flex items-center justify-center transition-colors shrink-0">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <span className="font-numbers" dir="ltr">+966 53 809 0436</span>
+                  </a>
+                </li>
+                <li>
+                  <div className="flex items-center gap-3 text-sm text-slate-400">
+                    <div className="w-8 h-8 rounded-lg bg-slate-800 flex items-center justify-center shrink-0">
+                      <MapPin className="w-4 h-4" />
+                    </div>
+                    <span>المملكة العربية السعودية، الدمام</span>
+                  </div>
+                </li>
               </ul>
             </div>
           </div>
+        </div>
 
-          <div className="border-t border-slate-800 mt-12 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
-            <p className="text-sm font-numbers">© {new Date().getFullYear()} KoreanCar. All rights reserved.</p>
-            <div className="flex gap-4">
-              <Link href="/faq" className="text-sm hover:text-white transition-colors">الشروط والأحكام</Link>
-              <Link href="/contact" className="text-sm hover:text-white transition-colors">سياسة الخصوصية</Link>
+        {/* Bottom bar */}
+        <div className="border-t border-slate-800/60">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-3">
+            <p className="text-slate-500 text-sm font-numbers">
+              © {new Date().getFullYear()} KoreanCar. All rights reserved.
+            </p>
+            <div className="flex gap-5">
+              <Link href="/faq"     className="text-slate-500 hover:text-slate-300 text-sm transition-colors">الشروط والأحكام</Link>
+              <Link href="/contact" className="text-slate-500 hover:text-slate-300 text-sm transition-colors">سياسة الخصوصية</Link>
             </div>
           </div>
         </div>

@@ -54,7 +54,6 @@ const HOW_IT_WORKS = [
   { step: "٤", icon: "🚗", title: "استلم سيارتك", desc: "توصيل السيارة إلى بلدك بأمان. أنت تنتظر فقط — نحن نتولى الباقي!" },
 ];
 
-// ─── Hero Carousel Data ───────────────────────────────────────────────────────
 const HERO_SLIDES = [
   {
     image: "https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=1600&q=80",
@@ -98,7 +97,6 @@ const HERO_SLIDES = [
   },
 ];
 
-// ─── Hero Carousel Component ──────────────────────────────────────────────────
 function HeroCarousel({
   query,
   onQueryChange,
@@ -148,7 +146,6 @@ function HeroCarousel({
       onMouseEnter={() => setPaused(true)}
       onMouseLeave={() => setPaused(false)}
     >
-      {/* Slides background */}
       <AnimatePresence mode="sync">
         <motion.div
           key={current}
@@ -158,11 +155,7 @@ function HeroCarousel({
           transition={{ duration: 0.8 }}
           className="absolute inset-0"
         >
-          <img
-            src={slide.image}
-            alt={slide.title}
-            className="w-full h-full object-cover object-center"
-          />
+          <img src={slide.image} alt={slide.title} className="w-full h-full object-cover object-center" />
           <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-900/75 to-slate-900/40" />
         </motion.div>
       </AnimatePresence>
@@ -171,17 +164,13 @@ function HeroCarousel({
       <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/10 z-20">
         <div
           className="h-full transition-none"
-          style={{
-            width: `${progress}%`,
-            background: slide.accent,
-            boxShadow: `0 0 8px ${slide.accent}`,
-          }}
+          style={{ width: `${progress}%`, background: slide.accent, boxShadow: `0 0 8px ${slide.accent}` }}
         />
       </div>
 
       {/* Content */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-4 pt-32 pb-24 md:pt-40 md:pb-32 flex flex-col items-center justify-center text-center">
-        {/* Badge */}
+
         <AnimatePresence mode="wait">
           <motion.div
             key={`badge-${current}`}
@@ -190,17 +179,12 @@ function HeroCarousel({
             exit={{ opacity: 0, y: -10 }}
             transition={{ duration: 0.4 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-5 text-sm font-bold backdrop-blur-sm"
-            style={{
-              background: `${slide.accent}22`,
-              borderColor: `${slide.accent}55`,
-              color: slide.accent,
-            }}
+            style={{ background: `${slide.accent}22`, borderColor: `${slide.accent}55`, color: slide.accent }}
           >
             {slide.badge}
           </motion.div>
         </AnimatePresence>
 
-        {/* Title */}
         <AnimatePresence mode="wait">
           <motion.h1
             key={`title-${current}`}
@@ -211,18 +195,12 @@ function HeroCarousel({
             className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 leading-tight"
           >
             {slide.title} <br />
-            <span
-              className="bg-clip-text text-transparent"
-              style={{
-                backgroundImage: `linear-gradient(135deg, ${slide.accent}, #fff)`,
-              }}
-            >
+            <span className="bg-clip-text text-transparent" style={{ backgroundImage: `linear-gradient(135deg, ${slide.accent}, #fff)` }}>
               {slide.highlight}
             </span>
           </motion.h1>
         </AnimatePresence>
 
-        {/* Subtitle */}
         <AnimatePresence mode="wait">
           <motion.p
             key={`sub-${current}`}
@@ -236,7 +214,7 @@ function HeroCarousel({
           </motion.p>
         </AnimatePresence>
 
-        {/* Search bar */}
+        {/* Search */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -262,13 +240,14 @@ function HeroCarousel({
             بحث
           </button>
         </motion.div>
-{/* Stats */}
+
+        {/* Stats pills */}
         <div className="flex gap-3 mt-8 flex-wrap justify-center">
           {[
             { icon: "🚗", num: "+200K", label: "سيارة متاحة" },
-            { icon: "🛡️", num: "100%", label: "فحص معتمد" },
-            { icon: "🌍", num: "شحن", label: "دولي سريع" },
-            { icon: "💬", num: "24/7", label: "دعم فوري" },
+            { icon: "🛡️", num: "100%",  label: "فحص معتمد" },
+            { icon: "🌍", num: "شحن",   label: "دولي سريع" },
+            { icon: "💬", num: "24/7",  label: "دعم فوري" },
           ].map((s) => (
             <div
               key={s.label}
@@ -283,21 +262,15 @@ function HeroCarousel({
         </div>
       </div>
 
-      {/* Arrow buttons */}
-      <button
-        onClick={goPrev}
-        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all"
-      >
+      {/* Arrows */}
+      <button onClick={goPrev} className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all">
         <ChevronLeft className="w-5 h-5" />
       </button>
-      <button
-        onClick={goNext}
-        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all"
-      >
+      <button onClick={goNext} className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all">
         <ChevronRight className="w-5 h-5" />
       </button>
 
-      {/* Slide counter */}
+      {/* Counter */}
       <div className="absolute top-5 left-5 z-20 bg-black/40 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-white text-xs font-bold">
         {current + 1} / {HERO_SLIDES.length}
       </div>
@@ -321,7 +294,6 @@ function HeroCarousel({
   );
 }
 
-// ─── How It Works ─────────────────────────────────────────────────────────────
 function HowItWorks() {
   return (
     <section className="py-16 bg-background">
@@ -330,41 +302,49 @@ function HowItWorks() {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-14"
         >
-          <h2 className="text-3xl font-black text-foreground mb-3">كيف يعمل koricar؟</h2>
-          <p className="text-muted-foreground text-lg">4 خطوات بسيطة وسيارتك الكورية في بابك 🚢</p>
+          <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest mb-4">
+            كيف يعمل koricar؟
+          </span>
+          <h2 className="text-3xl font-black text-foreground mb-3">4 خطوات بسيطة</h2>
+          <p className="text-muted-foreground text-lg">وسيارتك الكورية في بابك 🚢</p>
         </motion.div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {HOW_IT_WORKS.map((item, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="relative bg-card rounded-2xl p-6 shadow-sm border border-border flex flex-col items-center text-center"
-            >
-              <div className="absolute -top-4 right-4 w-8 h-8 rounded-full bg-primary text-primary-foreground text-sm font-black flex items-center justify-center shadow">
-                {item.step}
-              </div>
-              <div className="text-4xl mb-4">{item.icon}</div>
-              <h3 className="font-bold text-foreground text-lg mb-2">{item.title}</h3>
-              <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
-            </motion.div>
-          ))}
+        <div className="relative">
+          <div className="hidden lg:block absolute top-10 right-[12.5%] left-[12.5%] h-0.5 bg-gradient-to-l from-primary/10 via-primary/40 to-primary/10" />
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
+            {HOW_IT_WORKS.map((item, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.15 }}
+                className="relative flex flex-col items-center text-center group"
+              >
+                <div className="relative mb-5">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-4xl shadow-sm shadow-primary/10 group-hover:scale-110 group-hover:shadow-primary/20 group-hover:border-primary/40 transition-all duration-300">
+                    {item.icon}
+                  </div>
+                  <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-primary text-white text-xs font-black flex items-center justify-center shadow-lg shadow-primary/40">
+                    {item.step}
+                  </div>
+                </div>
+                <h3 className="font-bold text-foreground text-base mb-2 group-hover:text-primary transition-colors">{item.title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{item.desc}</p>
+              </motion.div>
+            ))}
+          </div>
         </div>
       </div>
     </section>
   );
 }
 
-// ─── Home Page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
   const { openModal } = useAlertContext();
-
   const [debouncedModel] = useDebounce(filters.model, 500);
   const apiParams = { ...filters, query: undefined, model: debouncedModel || undefined };
 
@@ -385,32 +365,27 @@ export default function Home() {
 
   const containerVariants = {
     hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } }
+    show: { opacity: 1, transition: { staggerChildren: 0.1 } },
   };
-
   const itemVariants = {
     hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } }
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
   };
 
   return (
     <Layout>
-      {/* ── Hero Carousel ── */}
       <HeroCarousel
         query={filters.query || ""}
         onQueryChange={(v) => updateFilter("query", v || undefined)}
         onSearch={handleHeroSearch}
       />
 
-      {/* ── How It Works ── */}
       <HowItWorks />
 
-      {/* ── Divider ── */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="border-t border-border" />
       </div>
 
-      {/* ── Results ── */}
       <section id="results-section" className="py-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="w-full lg:w-80 shrink-0">
@@ -458,10 +433,7 @@ export default function Home() {
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-3">لا توجد نتائج</h3>
                 <p className="text-muted-foreground max-w-md mb-8">لم نتمكن من العثور على سيارات تطابق معايير البحث الخاصة بك. جرب إزالة بعض الفلاتر.</p>
-                <button
-                  onClick={resetFilters}
-                  className="px-6 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl hover:bg-secondary/80 transition-colors"
-                >
+                <button onClick={resetFilters} className="px-6 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl hover:bg-secondary/80 transition-colors">
                   مسح جميع الفلاتر
                 </button>
               </div>
