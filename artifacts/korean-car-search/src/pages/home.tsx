@@ -262,18 +262,22 @@ function HeroCarousel({
             بحث
           </button>
         </motion.div>
-
-        {/* Stats */}
-        <div className="flex gap-6 mt-8 flex-wrap justify-center">
+{/* Stats */}
+        <div className="flex gap-3 mt-8 flex-wrap justify-center">
           {[
-            { num: "+200K", label: "سيارة" },
-            { num: "✅", label: "فحص معتمد" },
-            { num: "🌍", label: "شحن دولي" },
-            { num: "24/7", label: "دعم فوري" },
+            { icon: "🚗", num: "+200K", label: "سيارة متاحة" },
+            { icon: "🛡️", num: "100%", label: "فحص معتمد" },
+            { icon: "🌍", num: "شحن", label: "دولي سريع" },
+            { icon: "💬", num: "24/7", label: "دعم فوري" },
           ].map((s) => (
-            <div key={s.label} className="text-center">
-              <div className="text-xl font-black text-white">{s.num}</div>
-              <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
+            <div
+              key={s.label}
+              className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20 text-white text-sm font-bold"
+              style={{ background: "rgba(255,255,255,0.08)" }}
+            >
+              <span>{s.icon}</span>
+              <span style={{ color: slide.accent }}>{s.num}</span>
+              <span className="text-white/70 font-normal">{s.label}</span>
             </div>
           ))}
         </div>
