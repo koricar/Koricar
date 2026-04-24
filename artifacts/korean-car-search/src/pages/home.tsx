@@ -7,6 +7,7 @@ import { Layout } from "@/components/layout";
 import { CarCard } from "@/components/car-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 import { useAlertContext } from "@/contexts/alert-context";
+import { useState, useEffect, useRef } from "react";
 
 const BRAND_ALIASES: Record<string, string> = {
   "bmw": "BMW", "bimmer": "BMW",
@@ -53,6 +54,270 @@ const HOW_IT_WORKS = [
   { step: "٤", icon: "🚗", title: "استلم سيارتك", desc: "توصيل السيارة إلى بلدك بأمان. أنت تنتظر فقط — نحن نتولى الباقي!" },
 ];
 
+// ─── Hero Carousel Data ───────────────────────────────────────────────────────
+const HERO_SLIDES = [
+  {
+    image: "https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=1600&q=80",
+    badge: "🔥 أكثر من 200,000 سيارة",
+    title: "استورد سيارتك الكورية",
+    highlight: "بثقة وسهولة",
+    sub: "نبحث في أكبر منصات بيع السيارات في كوريا (Encar, K Car) لنوفر لك أفضل الخيارات.",
+    accent: "#3b82f6",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1552519507-da3b142c6e3d?w=1600&q=80",
+    badge: "⚡ هايبرد وكهرباء",
+    title: "مستقبل السيارات",
+    highlight: "في يدك الآن",
+    sub: "أحدث موديلات هايبرد وكهربائية بفحص معتمد وأسعار تنافسية مباشرة من كوريا.",
+    accent: "#10b981",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=1600&q=80",
+    badge: "🏆 Genesis & Hyundai",
+    title: "الفخامة الكورية",
+    highlight: "بأسعار لا تصدق",
+    sub: "أفخم السيارات الكورية بفحص معتمد وضمان جودة عالية — من كوريا إلى بابك.",
+    accent: "#8b5cf6",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=1600&q=80",
+    badge: "🚙 عائلية وعملية",
+    title: "SUV وسيدان",
+    highlight: "لكل احتياج",
+    sub: "تشكيلة ضخمة من السيارات العائلية والاقتصادية — اختر ما يناسبك بكل سهولة.",
+    accent: "#f59e0b",
+  },
+  {
+    image: "https://images.unsplash.com/photo-1494976388531-d1058494cdd8?w=1600&q=80",
+    badge: "✅ فحص وشحن وجمارك",
+    title: "استيراد متكامل",
+    highlight: "نحن نتولى كل شيء",
+    sub: "من الفحص الميكانيكي إلى التخليص الجمركي — نوفر لك تجربة استيراد آمنة 100%.",
+    accent: "#06b6d4",
+  },
+];
+
+// ─── Hero Carousel Component ──────────────────────────────────────────────────
+function HeroCarousel({
+  query,
+  onQueryChange,
+  onSearch,
+}: {
+  query: string;
+  onQueryChange: (v: string) => void;
+  onSearch: () => void;
+}) {
+  const [current, setCurrent] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const progressVal = useRef(0);
+  const DURATION = 5000;
+
+  const goTo = (idx: number) => {
+    setCurrent(idx);
+    setProgress(0);
+    progressVal.current = 0;
+  };
+
+  const goNext = () => goTo((current + 1) % HERO_SLIDES.length);
+  const goPrev = () => goTo((current - 1 + HERO_SLIDES.length) % HERO_SLIDES.length);
+
+  useEffect(() => {
+    if (paused) return;
+    progressVal.current = 0;
+    setProgress(0);
+    const step = 100 / (DURATION / 50);
+    const id = setInterval(() => {
+      progressVal.current += step;
+      setProgress(Math.min(progressVal.current, 100));
+      if (progressVal.current >= 100) {
+        clearInterval(id);
+        goNext();
+      }
+    }, 50);
+    return () => clearInterval(id);
+  }, [current, paused]);
+
+  const slide = HERO_SLIDES[current];
+
+  return (
+    <section
+      className="relative w-full overflow-hidden"
+      style={{ minHeight: "520px" }}
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      {/* Slides background */}
+      <AnimatePresence mode="sync">
+        <motion.div
+          key={current}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.8 }}
+          className="absolute inset-0"
+        >
+          <img
+            src={slide.image}
+            alt={slide.title}
+            className="w-full h-full object-cover object-center"
+          />
+          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/92 via-slate-900/75 to-slate-900/40" />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Progress bar */}
+      <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/10 z-20">
+        <div
+          className="h-full transition-none"
+          style={{
+            width: `${progress}%`,
+            background: slide.accent,
+            boxShadow: `0 0 8px ${slide.accent}`,
+          }}
+        />
+      </div>
+
+      {/* Content */}
+      <div className="relative z-10 w-full max-w-4xl mx-auto px-4 pt-32 pb-24 md:pt-40 md:pb-32 flex flex-col items-center justify-center text-center">
+        {/* Badge */}
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={`badge-${current}`}
+            initial={{ opacity: 0, y: -10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.4 }}
+            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-5 text-sm font-bold backdrop-blur-sm"
+            style={{
+              background: `${slide.accent}22`,
+              borderColor: `${slide.accent}55`,
+              color: slide.accent,
+            }}
+          >
+            {slide.badge}
+          </motion.div>
+        </AnimatePresence>
+
+        {/* Title */}
+        <AnimatePresence mode="wait">
+          <motion.h1
+            key={`title-${current}`}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            transition={{ duration: 0.5 }}
+            className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 leading-tight"
+          >
+            {slide.title} <br />
+            <span
+              className="bg-clip-text text-transparent"
+              style={{
+                backgroundImage: `linear-gradient(135deg, ${slide.accent}, #fff)`,
+              }}
+            >
+              {slide.highlight}
+            </span>
+          </motion.h1>
+        </AnimatePresence>
+
+        {/* Subtitle */}
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={`sub-${current}`}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.5, delay: 0.1 }}
+            className="text-base md:text-lg text-slate-300 mb-10 max-w-2xl mx-auto"
+          >
+            {slide.sub}
+          </motion.p>
+        </AnimatePresence>
+
+        {/* Search bar */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          className="relative w-full max-w-2xl mx-auto bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20 shadow-2xl flex items-center"
+        >
+          <div className="flex-1 relative">
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 text-white/50" />
+            <input
+              type="text"
+              placeholder="ابحث عن ماركة، موديل، أو مواصفات..."
+              className="w-full bg-transparent border-none text-white placeholder:text-white/50 px-12 py-4 text-lg font-medium focus:outline-none focus:ring-0"
+              value={query}
+              onChange={(e) => onQueryChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") onSearch(); }}
+            />
+          </div>
+          <button
+            onClick={onSearch}
+            className="hidden sm:block px-8 py-4 text-white rounded-xl font-bold transition-all shadow-lg"
+            style={{ background: slide.accent }}
+          >
+            بحث
+          </button>
+        </motion.div>
+
+        {/* Stats */}
+        <div className="flex gap-6 mt-8 flex-wrap justify-center">
+          {[
+            { num: "+200K", label: "سيارة" },
+            { num: "✅", label: "فحص معتمد" },
+            { num: "🌍", label: "شحن دولي" },
+            { num: "24/7", label: "دعم فوري" },
+          ].map((s) => (
+            <div key={s.label} className="text-center">
+              <div className="text-xl font-black text-white">{s.num}</div>
+              <div className="text-xs text-slate-400 mt-0.5">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Arrow buttons */}
+      <button
+        onClick={goPrev}
+        className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all"
+      >
+        <ChevronLeft className="w-5 h-5" />
+      </button>
+      <button
+        onClick={goNext}
+        className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all"
+      >
+        <ChevronRight className="w-5 h-5" />
+      </button>
+
+      {/* Slide counter */}
+      <div className="absolute top-5 left-5 z-20 bg-black/40 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-white text-xs font-bold">
+        {current + 1} / {HERO_SLIDES.length}
+      </div>
+
+      {/* Dots */}
+      <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex gap-2 items-center">
+        {HERO_SLIDES.map((s, i) => (
+          <button
+            key={i}
+            onClick={() => goTo(i)}
+            className="h-2 rounded-full transition-all duration-300"
+            style={{
+              width: i === current ? 28 : 8,
+              background: i === current ? s.accent : "rgba(255,255,255,0.4)",
+              boxShadow: i === current ? `0 0 8px ${s.accent}` : "none",
+            }}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+// ─── How It Works ─────────────────────────────────────────────────────────────
 function HowItWorks() {
   return (
     <section className="py-16 bg-background">
@@ -91,6 +356,7 @@ function HowItWorks() {
   );
 }
 
+// ─── Home Page ────────────────────────────────────────────────────────────────
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
   const { openModal } = useAlertContext();
@@ -125,74 +391,24 @@ export default function Home() {
 
   return (
     <Layout>
-      {/* Hero Section */}
-      <section className="relative w-full pt-32 pb-24 md:pt-40 md:pb-32 flex items-center justify-center overflow-hidden">
-        <div className="absolute inset-0 z-0">
-          <img
-            src={`${import.meta.env.BASE_URL}images/hero-bg.png`}
-            alt="Korean Cars Hero"
-            className="w-full h-full object-cover object-center"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-slate-950/90 via-slate-900/80 to-slate-900/60" />
-        </div>
+      {/* ── Hero Carousel ── */}
+      <HeroCarousel
+        query={filters.query || ""}
+        onQueryChange={(v) => updateFilter("query", v || undefined)}
+        onSearch={handleHeroSearch}
+      />
 
-        <div className="relative z-10 w-full max-w-4xl mx-auto px-4 text-center">
-          <motion.h1
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-6 leading-tight"
-          >
-            استورد سيارتك الكورية <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary to-blue-400">بثقة وسهولة</span>
-          </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="text-lg md:text-xl text-slate-300 mb-10 max-w-2xl mx-auto"
-          >
-            نبحث في أكبر منصات بيع السيارات في كوريا (Encar, K Car) لنوفر لك أفضل الخيارات مع ضمان الجودة والشفافية.
-          </motion.p>
-
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.2 }}
-            className="relative max-w-2xl mx-auto bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20 shadow-2xl flex items-center"
-          >
-            <div className="flex-1 relative">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 text-white/50" />
-              <input
-                type="text"
-                placeholder="ابحث عن ماركة، موديل، أو مواصفات..."
-                className="w-full bg-transparent border-none text-white placeholder:text-white/50 px-12 py-4 text-lg font-medium focus:outline-none focus:ring-0"
-                value={filters.query || ""}
-                onChange={(e) => updateFilter("query", e.target.value || undefined)}
-                onKeyDown={(e) => { if (e.key === "Enter") handleHeroSearch(); }}
-              />
-            </div>
-            <button
-              onClick={handleHeroSearch}
-              className="hidden sm:block px-8 py-4 bg-primary text-white rounded-xl font-bold hover:bg-primary/90 transition-colors shadow-lg shadow-primary/25"
-            >
-              بحث
-            </button>
-          </motion.div>
-        </div>
-      </section>
-
-      {/* How It Works */}
+      {/* ── How It Works ── */}
       <HowItWorks />
 
-      {/* Divider */}
+      {/* ── Divider ── */}
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="border-t border-border" />
       </div>
 
-      {/* Main Content */}
+      {/* ── Results ── */}
       <section id="results-section" className="py-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
-
           <div className="w-full lg:w-80 shrink-0">
             <div className="sticky top-24">
               <FilterSidebar filters={filters} updateFilter={updateFilter} resetFilters={resetFilters} />
