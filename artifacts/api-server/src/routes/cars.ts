@@ -417,8 +417,17 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "랭글러": "랭글러", "그랜드체로키": "그랜드체로키",
   "컴패스": "컴패스", "레니게이드": "레니게이드",
   // ── LINCOLN ──────────────────────────────
-  "네비게이터": "네비게이터", "에비에이터": "에비에이터", "컨티넨탈": "컨티넨탈",
-  "노틸러스": "노틸러스", "코르세어": "코르세어",
+  "네비게이터": "네비게이터",
+  "네비게이터 4세대": "네비게이터",
+  "네비게이터 L": "네비게이터",
+  "에비에이터": "에비에이터",
+  "에비에이터 2세대": "에비에이터",
+  "노틸러스": "노틸러스",
+  "노틸러스 2세대": "노틸러스",
+  "코르세어": "코르세어",
+  "컨티넨탈": "컨티넨탈",
+  "컨티넨탈 10세대": "컨티넨탈",
+  "MKZ": "MKZ", "MKX": "MKX", "MKC": "MKC",
   // ── CADILLAC ─────────────────────────────
   "에스컬레이드": "에스컬레이드", "CT5": "CT5", "CT6": "CT6",
   "XT4": "XT4", "XT5": "XT5", "XT6": "XT6",
@@ -890,7 +899,7 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "maybach s": "마이바흐 S클래스",
   "maybach gls": "마이바흐 GLS",
   "마이바흐 s": "마이바흐 S클래스",
-  
+
 };
 
 const TRANSMISSION_TO_EN: Record<string, string> = {
@@ -937,14 +946,27 @@ function buildEncarQuery(params: {
   let modelKr: string | null = null;
   let modelRaw: string | null = null;
 
+  const KOREAN_MODEL_GROUPS = new Set([
+    "아이오닉 5", "아이오닉 6", "아이오닉 9", "아이오닉",
+    "아반떼", "쏘나타", "그랜저", "투싼", "싼타페", "팰리세이드",
+    "코나", "넥쏘", "베뉴", "캐스퍼", "스타리아", "스타렉스",
+    "K3", "K5", "K8", "K9", "스포티지", "쏘렌토", "텔루라이드",
+    "모하비", "셀토스", "니로", "카니발", "EV3", "EV6", "EV9",
+    "G70", "G80", "G90", "GV60", "GV70", "GV80", "GV90",
+  ]);
+
   let carType = "";
   if (params.brand && params.brand !== "any") {
     const key = params.brand.toLowerCase();
-    // للماركات الكورية نحدد CarType.Y (محلي)
-    // للماركات المستوردة نشيل CarType كلياً — لأن بعض الموديلات
-    // (مثل i8، iX، Tesla، كهربائيات) مصنفة تحت CarType مختلف في Encar
-    // والـ Manufacturer وحده يكفي للتصفية الصحيحة
     carType = DOMESTIC_BRANDS.has(key) ? "_.CarType.Y." : "";
+  } else if (params.model) {
+    // لما ما في ماركة محددة، نحاول نعرف هل الموديل كوري أو لا
+    const input = params.model.trim();
+    const lowerInput = input.toLowerCase();
+    const translated = EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[input] ?? input;
+    if (KOREAN_MODEL_GROUPS.has(translated)) {
+      carType = "_.CarType.Y.";
+    }
   }
 
   let q = `(And.Hidden.N.${carType}`;
