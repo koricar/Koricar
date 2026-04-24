@@ -582,6 +582,90 @@ const BRAND_MODELS: Record<string, ModelOption[]> = {
     { label: "Flying Spur",     value: "플라잉 스퍼" },
   ],
 
+  // ── GMC ───────────────────────────────────────────────────────────────────
+  "GMC": [
+    { label: "Sierra",      value: "시에라" },
+    { label: "Acadia",      value: "아카디아" },
+    { label: "Yukon",       value: "유콘" },
+    { label: "Canyon",      value: "캐니언" },
+  ],
+
+  // ── DODGE ─────────────────────────────────────────────────────────────────
+  "Dodge": [
+    { label: "Challenger",  value: "챌린저" },
+    { label: "Charger",     value: "차저" },
+    { label: "Durango",     value: "듀랑고" },
+    { label: "RAM",         value: "램" },
+  ],
+
+  // ── POLESTAR ──────────────────────────────────────────────────────────────
+  "Polestar": [
+    { label: "Polestar 2",  value: "폴스타 2" },
+    { label: "Polestar 3",  value: "폴스타 3" },
+    { label: "Polestar 4",  value: "폴스타 4" },
+  ],
+
+  // ── FIAT ──────────────────────────────────────────────────────────────────
+  "Fiat": [
+    { label: "500",         value: "500" },
+    { label: "500X",        value: "500X" },
+  ],
+
+  // ── HUMMER ────────────────────────────────────────────────────────────────
+  "Hummer": [
+    { label: "H2",          value: "허머 H2" },
+    { label: "H3",          value: "허머 H3" },
+    { label: "Hummer EV",   value: "GMC 허머 EV" },
+  ],
+
+  // ── SAAB ──────────────────────────────────────────────────────────────────
+  "Saab": [
+    { label: "9-3",         value: "사브 9-3" },
+    { label: "9-5",         value: "사브 9-5" },
+  ],
+
+  // ── LOTUS ─────────────────────────────────────────────────────────────────
+  "Lotus": [
+    { label: "Elise",       value: "엘리스" },
+    { label: "Evora",       value: "에보라" },
+    { label: "Emira",       value: "에미라" },
+    { label: "Eletre",      value: "일레트르" },
+  ],
+
+  // ── BYD ───────────────────────────────────────────────────────────────────
+  "BYD": [
+    { label: "Atto 3",      value: "아토 3" },
+    { label: "Seal",        value: "씰" },
+    { label: "Dolphin",     value: "돌핀" },
+    { label: "Han",         value: "한" },
+    { label: "Tang",        value: "탕" },
+  ],
+
+  // ── MAYBACH ───────────────────────────────────────────────────────────────
+  "Maybach": [
+    { label: "S-Class",     value: "마이바흐 S클래스" },
+    { label: "GLS",         value: "마이바흐 GLS" },
+  ],
+
+  // ── DAEWOO / GM대우 ───────────────────────────────────────────────────────
+  "Daewoo": [
+    { label: "Damas",           value: "다마스" },
+    { label: "New Damas",       value: "뉴 다마스" },
+    { label: "Labo",            value: "라보" },
+    { label: "New Labo",        value: "뉴 라보" },
+    { label: "Matiz",           value: "마티즈" },
+    { label: "Matiz Creative",  value: "마티즈 크리에이티브" },
+    { label: "Gentra",          value: "젠트라" },
+    { label: "Lacetti",         value: "라세티" },
+    { label: "Lacetti Premier", value: "라세티 프리미어" },
+    { label: "Cruze",           value: "크루즈" },
+    { label: "Rezzo",           value: "레조" },
+    { label: "Winstorm",        value: "윈스톰" },
+    { label: "Alpheon",         value: "알페온" },
+    { label: "Magnus",          value: "매그너스" },
+    { label: "Veritas",         value: "베리타스" },
+  ],
+
   // ── ROLLS-ROYCE ───────────────────────────────────────────────────────────
   "Rolls-Royce": [
     { label: "Phantom",   value: "팬텀" },
@@ -845,7 +929,6 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
       </div>
 
       {/* Body */}
-      "Peugeot"
       <div className="space-y-3">
         <label className="text-sm font-bold text-foreground">نوع السيارة</label>
         <div className="grid grid-cols-2 gap-2">

@@ -19,6 +19,9 @@ const MANUFACTURER_TO_EN: Record<string, string> = {
   "르노코리아": "Renault Korea",
   "쉐보레": "Chevrolet",
   "쉐보레(GM대우)": "Chevrolet",
+  "대우": "Daewoo",
+  "GM대우": "Daewoo",
+  "한국GM": "Daewoo",
   "BMW": "BMW",
   "벤츠": "Mercedes-Benz",
   "아우디": "Audi",
@@ -52,6 +55,20 @@ const MANUFACTURER_TO_EN: Record<string, string> = {
   "롤스로이스": "Rolls-Royce",
   "맥라렌": "McLaren",
   "애스턴마틴": "Aston Martin",
+  // ── ماركات ناقصة ──────────────────────────
+  "GMC": "GMC",
+  "닷지": "Dodge",
+  "다이하쯔": "Daihatsu",
+  "동풍소콘": "Dongfeng Sokon",
+  "폴스타": "Polestar",
+  "피아트": "Fiat",
+  "험머": "Hummer",
+  "사브": "Saab",
+  "이네오스": "Ineos",
+  "로터스": "Lotus",
+  "BYD": "BYD",
+  "비와이디": "BYD",
+  "마이바흐": "Maybach",
 };
 
 const EN_TO_MANUFACTURER: Record<string, string> = {
@@ -63,6 +80,10 @@ const EN_TO_MANUFACTURER: Record<string, string> = {
   "renault samsung": "르노삼성",
   "renault korea": "르노코리아",
   "chevrolet": "쉐보레(GM대우)",
+  "daewoo": "쉐보레(GM대우)",
+  "gm daewoo": "쉐보레(GM대우)",
+  "damas": "쉐보레(GM대우)",
+  "labo": "쉐보레(GM대우)",
   "bmw": "BMW",
   "mercedes": "벤츠",
   "mercedes-benz": "벤츠",
@@ -97,11 +118,23 @@ const EN_TO_MANUFACTURER: Record<string, string> = {
   "citroen": "시트로엥",
   "bentley": "벤틀리",
   "aston martin": "애스턴마틴",
+  "gmc": "GMC",
+  "dodge": "닷지",
+  "daihatsu": "다이하쯔",
+  "polestar": "폴스타",
+  "fiat": "피아트",
+  "hummer": "험머",
+  "saab": "사브",
+  "ineos": "이네오스",
+  "lotus": "로터스",
+  "byd": "BYD",
+  "maybach": "마이바흐",
 };
 
 const DOMESTIC_BRANDS = new Set([
   "hyundai", "kia", "genesis", "ssangyong", "kg mobility",
   "renault samsung", "renault korea", "chevrolet",
+  "daewoo", "gm daewoo",
 ]);
 
 const FUEL_TO_EN: Record<string, string> = {
@@ -143,9 +176,14 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "팰리세이드": "팰리세이드", "더 뉴 팰리세이드": "팰리세이드",
   "코나": "코나", "코나 (OS)": "코나", "코나 (SX2)": "코나",
   "아이오닉 5": "아이오닉 5", "아이오닉 5 N": "아이오닉 5",
-  "아이오닉 6": "아이오닉 6",
-  "아이오닉 9": "아이오닉 9",
+  "아이오닉5": "아이오닉 5",
+  "아이오닉 6": "아이오닉 6", "아이오닉6": "아이오닉 6",
+  "아이오닉 9": "아이오닉 9", "아이오닉9": "아이오닉 9",
   "아이오닉": "아이오닉",
+  "더 뉴 아이오닉 하이브리드": "아이오닉",
+  "아이오닉 하이브리드": "아이오닉",
+  "아이오닉 플러그인 하이브리드": "아이오닉",
+  "아이오닉 일렉트릭": "아이오닉",
   "스타리아": "스타리아", "스타리아 라운지": "스타리아",
   "스타렉스": "스타렉스", "더 뉴 그랜드 스타렉스": "스타렉스",
   "넥쏘": "넥쏘", "베뉴": "베뉴",
@@ -186,6 +224,50 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "콜로라도": "콜로라도", "트래버스": "트래버스",
   "타호": "타호", "올란도": "올란도", "캡티바": "캡티바",
   "블레이저 EV": "블레이저 EV",
+  // ── DAEWOO / GM대우 ───────────────────────
+  "다마스": "다마스",
+  "뉴 다마스": "다마스",
+  "라보": "라보",
+  "뉴 라보": "라보",
+  "마티즈": "마티즈",
+  "마티즈 크리에이티브": "마티즈",
+  "젠트라": "젠트라",
+  "젠트라 X": "젠트라",
+  "라세티": "라세티",
+  "라세티 프리미어": "라세티",
+  "크루즈": "크루즈",
+  "레조": "레조",
+  "윈스톰": "윈스톰",
+  "윈스톰 맥스": "윈스톰",
+  "알페온": "알페온",
+  "매그너스": "매그너스",
+  "베리타스": "베리타스",
+  // ── GMC ───────────────────────────────────
+  "시에라": "시에라", "GMC 시에라": "시에라",
+  "아카디아": "아카디아", "GMC 아카디아": "아카디아",
+  "유콘": "유콘", "캐니언": "캐니언",
+  // ── DODGE ─────────────────────────────────
+  "챌린저": "챌린저", "차저": "차저",
+  "듀랑고": "듀랑고", "램": "램",
+  // ── POLESTAR ──────────────────────────────
+  "폴스타 2": "폴스타 2", "폴스타 3": "폴스타 3",
+  "폴스타 4": "폴스타 4",
+  // ── FIAT ──────────────────────────────────
+  "500": "500", "500X": "500X",
+  // ── HUMMER ────────────────────────────────
+  "허머 H2": "허머 H2", "허머 H3": "허머 H3",
+  "GMC 허머 EV": "GMC 허머 EV",
+  // ── SAAB ──────────────────────────────────
+  "사브 9-3": "사브 9-3", "사브 9-5": "사브 9-5",
+  // ── LOTUS ─────────────────────────────────
+  "엘리스": "엘리스", "에보라": "에보라",
+  "에미라": "에미라", "일레트르": "일레트르",
+  // ── BYD ───────────────────────────────────
+  "아토 3": "아토 3", "씰": "씰",
+  "돌핀": "돌핀", "탕": "탕",
+  // ── MAYBACH ───────────────────────────────
+  "마이바흐 S클래스": "마이바흐 S클래스",
+  "마이바흐 GLS": "마이바흐 GLS",
   // ── RENAULT ───────────────────────────────
   "QM6": "QM6", "QM6 LPe": "QM6", "SM6": "SM6", "XM3": "XM3",
   "아르카나": "XM3", "SM3": "SM3", "SM5": "SM5", "SM7": "SM7",
@@ -256,7 +338,6 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "EQA": "EQA", "EQB": "EQB", "EQC": "EQC",
   "EQE": "EQE", "EQE SUV": "EQE",
   "EQS": "EQS", "EQS SUV": "EQS",
-  "마이바흐 S클래스": "마이바흐 S클래스",
   "AMG GT": "AMG GT", "AMG GT (R190)": "AMG GT",
   "SL클래스": "SL클래스",
   // ── AUDI ──────────────────────────────────
@@ -457,6 +538,22 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "traverse": "트래버스", "트래버스": "트래버스",
   "tahoe": "타호", "타호": "타호", "تاهو": "타호",
   "blazer ev": "블레이저 EV", "blazer": "블레이저 EV",
+  // ── DAEWOO / GM대우 ───────────────────────
+  "damas": "다마스", "다마스": "다마스", "داماس": "다마스",
+  "new damas": "다마스", "뉴 다마스": "다마스",
+  "labo": "라보", "라보": "라보", "لابو": "라보",
+  "new labo": "라보", "뉴 라보": "라보",
+  "matiz": "마티즈", "마티즈": "마티즈", "ماتيز": "마티즈",
+  "matiz creative": "마티즈", "마티즈 크리에이티브": "마티즈",
+  "gentra": "젠트라", "젠트라": "젠트라",
+  "lacetti": "라세티", "라세티": "라세티",
+  "lacetti premier": "라세티", "라세티 프리미어": "라세티",
+  "cruze": "크루즈", "크루즈": "크루즈", "كروز": "크루즈",
+  "rezzo": "레조", "레조": "레조",
+  "winstorm": "윈스톰", "윈스톰": "윈스톰",
+  "alpheon": "알페온", "알페온": "알페온",
+  "magnus": "매그너스", "매그너스": "매그너스",
+  "veritas": "베리타스", "베리타스": "베리타스",
   // ── BMW ───────────────────────────────────
   // 1 Series
   "1 series": "1시리즈", "1series": "1시리즈", "1시리즈": "1시리즈",
@@ -755,6 +852,45 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "ghost": "고스트", "고스트": "고스트",
   "cullinan": "컬리넌", "컬리넌": "컬리넌",
   "wraith": "레이스",
+  // ── GMC ───────────────────────────────────
+  "sierra": "시에라", "시에라": "시에라",
+  "acadia": "아카디아", "아카디아": "아카디아",
+  "yukon": "유콘", "유콘": "유콘",
+  "canyon": "캐니언", "캐니언": "캐니언",
+  // ── DODGE ─────────────────────────────────
+  "challenger": "챌린저", "챌린저": "챌린저",
+  "charger": "차저", "차저": "차저",
+  "durango": "듀랑고", "듀랑고": "듀랑고",
+  "ram": "램", "램": "램",
+  // ── POLESTAR ──────────────────────────────
+  "polestar 2": "폴스타 2", "폴스타 2": "폴스타 2",
+  "polestar 3": "폴스타 3", "폴스타 3": "폴스타 3",
+  "polestar 4": "폴스타 4", "폴스타 4": "폴스타 4",
+  // ── FIAT ──────────────────────────────────
+  "fiat 500": "500", "500": "500",
+  "500x": "500X", "fiat 500x": "500X",
+  // ── HUMMER ────────────────────────────────
+  "hummer h2": "허머 H2", "hummer h3": "허머 H3",
+  "hummer ev": "GMC 허머 EV",
+  // ── SAAB ──────────────────────────────────
+  "saab 9-3": "사브 9-3", "saab 9-5": "사브 9-5",
+  "9-3": "사브 9-3", "9-5": "사브 9-5",
+  // ── LOTUS ─────────────────────────────────
+  "elise": "엘리스", "엘리스": "엘리스",
+  "evora": "에보라", "에보라": "에보라",
+  "emira": "에미라", "에미라": "에미라",
+  "eletre": "일레트르", "일레트르": "일레트르",
+  // ── BYD ───────────────────────────────────
+  "atto 3": "아토 3", "아토 3": "아토 3",
+  "seal": "씰", "씰": "씰",
+  "dolphin": "돌핀", "돌핀": "돌핀",
+  "tang": "탕", "탕": "탕",
+  "han": "한", "한": "한",
+  // ── MAYBACH ───────────────────────────────
+  "maybach s": "마이바흐 S클래스",
+  "maybach gls": "마이바흐 GLS",
+  "마이바흐 s": "마이바흐 S클래스",
+  
 };
 
 const TRANSMISSION_TO_EN: Record<string, string> = {
@@ -804,7 +940,11 @@ function buildEncarQuery(params: {
   let carType = "";
   if (params.brand && params.brand !== "any") {
     const key = params.brand.toLowerCase();
-    carType = DOMESTIC_BRANDS.has(key) ? "_.CarType.Y." : "_.CarType.N.";
+    // للماركات الكورية نحدد CarType.Y (محلي)
+    // للماركات المستوردة نشيل CarType كلياً — لأن بعض الموديلات
+    // (مثل i8، iX، Tesla، كهربائيات) مصنفة تحت CarType مختلف في Encar
+    // والـ Manufacturer وحده يكفي للتصفية الصحيحة
+    carType = DOMESTIC_BRANDS.has(key) ? "_.CarType.Y." : "";
   }
 
   let q = `(And.Hidden.N.${carType}`;
@@ -1145,13 +1285,15 @@ router.get("/brands", (_req, res) => {
   res.json({
     brands: [
       "Hyundai", "Kia", "Genesis", "SsangYong", "KG Mobility",
-      "Renault Samsung", "Renault Korea", "Chevrolet",
+      "Renault Samsung", "Renault Korea", "Chevrolet", "Daewoo",
       "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Volvo",
       "Toyota", "Lexus", "Honda", "Nissan", "Infiniti",
       "Porsche", "Land Rover", "MINI", "Ford", "Jeep",
       "Lincoln", "Cadillac", "Maserati", "Ferrari", "Lamborghini",
       "Tesla", "Mazda", "Subaru", "Alfa Romeo", "Mitsubishi",
       "Chrysler", "Peugeot", "Citroen", "Bentley", "Rolls-Royce", "McLaren",
+      "GMC", "Dodge", "Polestar", "Fiat", "Hummer", "Saab",
+      "Lotus", "BYD", "Maybach",
     ],
   });
 });
@@ -1163,7 +1305,7 @@ router.get("/search", async (req, res) => {
     return;
   }
   const {
-    query, model, brand, yearFrom, yearTo, sunroof, transmission,
+    model, brand, yearFrom, yearTo, sunroof, transmission,
     fuelType, bodyType, color, priceMin, priceMax, mileageMax,
     page = 1, limit = 20,
   } = parsed.data;
