@@ -74,7 +74,7 @@ function useCountdown() {
   return { h, m, s };
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://saleemshop.onrender.com";
+const API_BASE = import.meta.env.VITE_API_URL || "https://koricar-ba7l.onrender.com";
 
 export function DealOfDay() {
   const [current, setCurrent] = useState(0);
