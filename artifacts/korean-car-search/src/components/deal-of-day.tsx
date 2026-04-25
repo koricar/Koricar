@@ -1,19 +1,18 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Clock, ChevronLeft, ShieldCheck, ExternalLink } from "lucide-react";
+import { Flame, Clock, ShieldCheck, ExternalLink, RefreshCw } from "lucide-react";
 import { Link } from "wouter";
 
-// بيانات تجريبية — يمكن ربطها بالـ API لاحقاً
 const DEALS = [
   {
     id: 1,
     brand: "HYUNDAI",
+    brandEn: "Hyundai",
     model: "Palisade 3.8 4WD",
+    modelEn: "Palisade",
     year: 2022,
     priceKRW: "3,200만원",
-    priceAR: "87,700 ريال",
-    originalAR: "132,000 ريال",
-    saving: "44,300",
+    ourPriceAR: 87700,
     image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80",
     accent: "#3b82f6",
     mileage: "42,000 كم",
@@ -23,12 +22,12 @@ const DEALS = [
   {
     id: 2,
     brand: "KIA",
+    brandEn: "Kia",
     model: "Sportage 1.6T AWD",
+    modelEn: "Sportage",
     year: 2023,
     priceKRW: "2,850만원",
-    priceAR: "78,200 ريال",
-    originalAR: "115,000 ريال",
-    saving: "36,800",
+    ourPriceAR: 78200,
     image: "https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=800&q=80",
     accent: "#10b981",
     mileage: "18,500 كم",
@@ -38,12 +37,12 @@ const DEALS = [
   {
     id: 3,
     brand: "GENESIS",
+    brandEn: "Genesis",
     model: "G80 2.5T",
+    modelEn: "G80",
     year: 2023,
     priceKRW: "4,100만원",
-    priceAR: "112,500 ريال",
-    originalAR: "168,000 ريال",
-    saving: "55,500",
+    ourPriceAR: 112500,
     image: "https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=800&q=80",
     accent: "#8b5cf6",
     mileage: "9,200 كم",
@@ -75,10 +74,44 @@ function useCountdown() {
   return { h, m, s };
 }
 
+const API_BASE = import.meta.env.VITE_API_URL || "https://saleemshop.onrender.com";
+
 export function DealOfDay() {
   const [current, setCurrent] = useState(0);
+  const [marketPrice, setMarketPrice] = useState<number | null>(null);
+  const [priceSource, setPriceSource] = useState("");
+  const [loadingPrice, setLoadingPrice] = useState(false);
   const { h, m, s } = useCountdown();
   const deal = DEALS[current];
+
+  // جلب سعر السوق من API
+  useEffect(() => {
+    setMarketPrice(null);
+    setPriceSource("");
+    setLoadingPrice(true);
+
+    const fetchPrice = async () => {
+      try {
+        const res = await fetch(
+          `${API_BASE}/api/market-price?brand=${deal.brandEn}&model=${deal.modelEn}&year=${deal.year}`
+        );
+        const data = await res.json();
+        if (data.marketPrice) {
+          setMarketPrice(data.marketPrice);
+          setPriceSource(data.source);
+        }
+      } catch (e) {
+        console.error("Failed to fetch market price:", e);
+      } finally {
+        setLoadingPrice(false);
+      }
+    };
+
+    fetchPrice();
+  }, [current]);
+
+  const saving = marketPrice ? marketPrice - deal.ourPriceAR : null;
+  const savingPct = saving && marketPrice ? Math.round((saving / marketPrice) * 100) : null;
 
   return (
     <section className="py-10 bg-gradient-to-b from-slate-950 to-slate-900" dir="rtl">
@@ -127,17 +160,15 @@ export function DealOfDay() {
             <div className="flex flex-col md:flex-row">
               {/* Image */}
               <div className="relative md:w-1/2 h-56 md:h-auto overflow-hidden bg-slate-800">
-                <img
-                  src={deal.image}
-                  alt={deal.model}
-                  className="w-full h-full object-cover"
-                />
+                <img src={deal.image} alt={deal.model} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-l from-slate-900/80 to-transparent" />
 
-                {/* Saving badge */}
-                <div className="absolute top-4 right-4 bg-orange-500 text-white font-black text-sm px-4 py-2 rounded-xl shadow-lg shadow-orange-500/40">
-                  وفّر {deal.saving} ريال 💰
-                </div>
+                {/* Saving badge — يظهر فقط لو عندنا سعر حقيقي */}
+                {saving && saving > 0 && (
+                  <div className="absolute top-4 right-4 bg-orange-500 text-white font-black text-sm px-4 py-2 rounded-xl shadow-lg shadow-orange-500/40">
+                    وفّر {saving.toLocaleString()} ريال 💰
+                  </div>
+                )}
 
                 {deal.inspected && (
                   <div className="absolute bottom-4 right-4 bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5">
@@ -158,20 +189,46 @@ export function DealOfDay() {
 
                   {/* Price comparison */}
                   <div className="bg-slate-800/60 rounded-xl p-4 mb-4 border border-white/5">
+
+                    {/* سعر السوق المحلي */}
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-slate-400 text-sm">السعر في السوق المحلي</span>
-                      <span className="text-slate-400 text-sm line-through font-numbers">{deal.originalAR}</span>
+                      <span className="text-slate-400 text-sm">السوق المحلي الخليجي</span>
+                      {loadingPrice ? (
+                        <span className="flex items-center gap-1 text-slate-500 text-xs">
+                          <RefreshCw className="w-3 h-3 animate-spin" />
+                          جاري البحث...
+                        </span>
+                      ) : marketPrice ? (
+                        <div className="text-left">
+                          <span className="text-slate-300 text-sm line-through font-numbers">
+                            {marketPrice.toLocaleString()} ريال
+                          </span>
+                          {priceSource && (
+                            <p className="text-slate-500 text-[10px] mt-0.5">المصدر: {priceSource}</p>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="text-slate-500 text-xs">غير متوفر حالياً</span>
+                      )}
                     </div>
+
+                    {/* سعرنا */}
                     <div className="flex justify-between items-center">
                       <span className="text-white font-bold text-sm">سعرنا شامل كل شيء</span>
                       <span className="font-black text-xl font-numbers" style={{ color: deal.accent }}>
-                        {deal.priceAR}
+                        {deal.ourPriceAR.toLocaleString()} ريال
                       </span>
                     </div>
-                    <div className="mt-2 pt-2 border-t border-white/5 flex justify-between">
-                      <span className="text-orange-400 text-xs font-bold">💰 توفيرك</span>
-                      <span className="text-orange-400 font-black text-sm font-numbers">{deal.saving} ريال</span>
-                    </div>
+
+                    {/* التوفير */}
+                    {saving && saving > 0 && savingPct && (
+                      <div className="mt-2 pt-2 border-t border-white/5 flex justify-between">
+                        <span className="text-orange-400 text-xs font-bold">💰 توفيرك</span>
+                        <span className="text-orange-400 font-black text-sm font-numbers">
+                          {saving.toLocaleString()} ريال ({savingPct}%)
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
 
@@ -195,7 +252,7 @@ export function DealOfDay() {
           </motion.div>
         </AnimatePresence>
 
-        {/* Deal selector dots */}
+        {/* Dots */}
         <div className="flex justify-center gap-2 mt-4">
           {DEALS.map((d, i) => (
             <button
