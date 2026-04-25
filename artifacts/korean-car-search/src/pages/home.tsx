@@ -8,6 +8,9 @@ import { CarCard } from "@/components/car-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
 import { useAlertContext } from "@/contexts/alert-context";
 import { useState, useEffect, useRef } from "react";
+import { TickerBanner } from "@/components/ticker-banner";
+import { DealOfDay } from "@/components/deal-of-day";
+import { SavingsPopup } from "@/components/savings-popup";
 
 const BRAND_ALIASES: Record<string, string> = {
   "bmw": "BMW", "bimmer": "BMW",
@@ -160,24 +163,13 @@ function HeroCarousel({
         </motion.div>
       </AnimatePresence>
 
-      {/* Progress bar */}
       <div className="absolute top-0 left-0 right-0 h-[3px] bg-white/10 z-20">
-        <div
-          className="h-full transition-none"
-          style={{ width: `${progress}%`, background: slide.accent, boxShadow: `0 0 8px ${slide.accent}` }}
-        />
+        <div className="h-full transition-none" style={{ width: `${progress}%`, background: slide.accent, boxShadow: `0 0 8px ${slide.accent}` }} />
       </div>
 
-      {/* Content */}
       <div className="relative z-10 w-full max-w-4xl mx-auto px-4 pt-32 pb-24 md:pt-40 md:pb-32 flex flex-col items-center justify-center text-center">
-
         <AnimatePresence mode="wait">
-          <motion.div
-            key={`badge-${current}`}
-            initial={{ opacity: 0, y: -10 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.4 }}
+          <motion.div key={`badge-${current}`} initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} transition={{ duration: 0.4 }}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border mb-5 text-sm font-bold backdrop-blur-sm"
             style={{ background: `${slide.accent}22`, borderColor: `${slide.accent}55`, color: slide.accent }}
           >
@@ -186,12 +178,7 @@ function HeroCarousel({
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
-          <motion.h1
-            key={`title-${current}`}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: 20 }}
-            transition={{ duration: 0.5 }}
+          <motion.h1 key={`title-${current}`} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: 20 }} transition={{ duration: 0.5 }}
             className="text-4xl md:text-6xl lg:text-7xl font-black text-white mb-3 leading-tight"
           >
             {slide.title} <br />
@@ -202,23 +189,14 @@ function HeroCarousel({
         </AnimatePresence>
 
         <AnimatePresence mode="wait">
-          <motion.p
-            key={`sub-${current}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
+          <motion.p key={`sub-${current}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.5, delay: 0.1 }}
             className="text-base md:text-lg text-slate-300 mb-10 max-w-2xl mx-auto"
           >
             {slide.sub}
           </motion.p>
         </AnimatePresence>
 
-        {/* Search */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.2 }}
+        <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} transition={{ delay: 0.2 }}
           className="relative w-full max-w-2xl mx-auto bg-white/10 backdrop-blur-xl p-2 rounded-2xl border border-white/20 shadow-2xl flex items-center"
         >
           <div className="flex-1 relative">
@@ -232,16 +210,11 @@ function HeroCarousel({
               onKeyDown={(e) => { if (e.key === "Enter") onSearch(); }}
             />
           </div>
-          <button
-            onClick={onSearch}
-            className="hidden sm:block px-8 py-4 text-white rounded-xl font-bold transition-all shadow-lg"
-            style={{ background: slide.accent }}
-          >
+          <button onClick={onSearch} className="hidden sm:block px-8 py-4 text-white rounded-xl font-bold transition-all shadow-lg" style={{ background: slide.accent }}>
             بحث
           </button>
         </motion.div>
 
-        {/* Stats pills */}
         <div className="flex gap-3 mt-8 flex-wrap justify-center">
           {[
             { icon: "🚗", num: "+200K", label: "سيارة متاحة" },
@@ -249,11 +222,7 @@ function HeroCarousel({
             { icon: "🌍", num: "شحن",   label: "دولي سريع" },
             { icon: "💬", num: "24/7",  label: "دعم فوري" },
           ].map((s) => (
-            <div
-              key={s.label}
-              className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20 text-white text-sm font-bold"
-              style={{ background: "rgba(255,255,255,0.08)" }}
-            >
+            <div key={s.label} className="flex items-center gap-2 px-4 py-2 rounded-full backdrop-blur-sm border border-white/20 text-white text-sm font-bold" style={{ background: "rgba(255,255,255,0.08)" }}>
               <span>{s.icon}</span>
               <span style={{ color: slide.accent }}>{s.num}</span>
               <span className="text-white/70 font-normal">{s.label}</span>
@@ -262,7 +231,6 @@ function HeroCarousel({
         </div>
       </div>
 
-      {/* Arrows */}
       <button onClick={goPrev} className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-10 h-10 rounded-full bg-black/40 hover:bg-black/70 border border-white/20 text-white flex items-center justify-center backdrop-blur-sm transition-all">
         <ChevronLeft className="w-5 h-5" />
       </button>
@@ -270,23 +238,14 @@ function HeroCarousel({
         <ChevronRight className="w-5 h-5" />
       </button>
 
-      {/* Counter */}
       <div className="absolute top-5 left-5 z-20 bg-black/40 backdrop-blur-sm border border-white/20 rounded-full px-3 py-1 text-white text-xs font-bold">
         {current + 1} / {HERO_SLIDES.length}
       </div>
 
-      {/* Dots */}
       <div className="absolute bottom-5 left-1/2 -translate-x-1/2 z-20 flex gap-2 items-center">
         {HERO_SLIDES.map((s, i) => (
-          <button
-            key={i}
-            onClick={() => goTo(i)}
-            className="h-2 rounded-full transition-all duration-300"
-            style={{
-              width: i === current ? 28 : 8,
-              background: i === current ? s.accent : "rgba(255,255,255,0.4)",
-              boxShadow: i === current ? `0 0 8px ${s.accent}` : "none",
-            }}
+          <button key={i} onClick={() => goTo(i)} className="h-2 rounded-full transition-all duration-300"
+            style={{ width: i === current ? 28 : 8, background: i === current ? s.accent : "rgba(255,255,255,0.4)", boxShadow: i === current ? `0 0 8px ${s.accent}` : "none" }}
           />
         ))}
       </div>
@@ -298,12 +257,7 @@ function HowItWorks() {
   return (
     <section className="py-16 bg-background">
       <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-14"
-        >
+        <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} className="text-center mb-14">
           <span className="inline-block px-4 py-1.5 rounded-full bg-primary/10 text-primary text-xs font-bold uppercase tracking-widest mb-4">
             كيف يعمل koricar؟
           </span>
@@ -315,16 +269,11 @@ function HowItWorks() {
           <div className="hidden lg:block absolute top-10 right-[12.5%] left-[12.5%] h-0.5 bg-gradient-to-l from-primary/10 via-primary/40 to-primary/10" />
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
             {HOW_IT_WORKS.map((item, i) => (
-              <motion.div
-                key={i}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ delay: i * 0.15 }}
+              <motion.div key={i} initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ delay: i * 0.15 }}
                 className="relative flex flex-col items-center text-center group"
               >
                 <div className="relative mb-5">
-                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-4xl shadow-sm shadow-primary/10 group-hover:scale-110 group-hover:shadow-primary/20 group-hover:border-primary/40 transition-all duration-300">
+                  <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center text-4xl shadow-sm group-hover:scale-110 group-hover:border-primary/40 transition-all duration-300">
                     {item.icon}
                   </div>
                   <div className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-primary text-white text-xs font-black flex items-center justify-center shadow-lg shadow-primary/40">
@@ -363,29 +312,32 @@ export default function Home() {
 
   const { data, isLoading, isError } = useSearchCars(apiParams);
 
-  const containerVariants = {
-    hidden: { opacity: 0 },
-    show: { opacity: 1, transition: { staggerChildren: 0.1 } },
-  };
-  const itemVariants = {
-    hidden: { opacity: 0, y: 20 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } },
-  };
+  const containerVariants = { hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } };
+  const itemVariants = { hidden: { opacity: 0, y: 20 }, show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 300, damping: 24 } } };
 
   return (
     <Layout>
+      {/* ── Ticker ── */}
+      <TickerBanner />
+
+      {/* ── Hero Carousel ── */}
       <HeroCarousel
         query={filters.query || ""}
         onQueryChange={(v) => updateFilter("query", v || undefined)}
         onSearch={handleHeroSearch}
       />
 
+      {/* ── Deal of the Day ── */}
+      <DealOfDay />
+
+      {/* ── How It Works ── */}
       <HowItWorks />
 
       <div className="w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="border-t border-border" />
       </div>
 
+      {/* ── Results ── */}
       <section id="results-section" className="py-16 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col lg:flex-row gap-8">
           <div className="w-full lg:w-80 shrink-0">
@@ -404,10 +356,7 @@ export default function Home() {
                   </span>
                 )}
               </h2>
-              <button
-                onClick={() => openModal(filters)}
-                className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 hover:border-primary transition-all"
-              >
+              <button onClick={() => openModal(filters)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 hover:border-primary transition-all">
                 <Bell className="w-4 h-4" />
                 تنبيه بهذا البحث
               </button>
@@ -432,19 +381,14 @@ export default function Home() {
                   <Car className="w-10 h-10 text-muted-foreground/50" />
                 </div>
                 <h3 className="text-2xl font-bold text-foreground mb-3">لا توجد نتائج</h3>
-                <p className="text-muted-foreground max-w-md mb-8">لم نتمكن من العثور على سيارات تطابق معايير البحث الخاصة بك. جرب إزالة بعض الفلاتر.</p>
+                <p className="text-muted-foreground max-w-md mb-8">لم نتمكن من العثور على سيارات تطابق معايير البحث الخاصة بك.</p>
                 <button onClick={resetFilters} className="px-6 py-3 bg-secondary text-secondary-foreground font-bold rounded-xl hover:bg-secondary/80 transition-colors">
                   مسح جميع الفلاتر
                 </button>
               </div>
             ) : (
               <>
-                <motion.div
-                  variants={containerVariants}
-                  initial="hidden"
-                  animate="show"
-                  className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6"
-                >
+                <motion.div variants={containerVariants} initial="hidden" animate="show" className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
                   <AnimatePresence mode="popLayout">
                     {data.cars.map((car) => (
                       <motion.div key={car.id} variants={itemVariants} layout>
@@ -456,11 +400,7 @@ export default function Home() {
 
                 {data.totalPages > 1 && (
                   <div className="mt-12 flex items-center justify-center gap-2">
-                    <button
-                      disabled={data.page <= 1}
-                      onClick={() => updateFilter('page', data.page - 1)}
-                      className="p-3 rounded-xl border-2 border-border bg-background hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50 disabled:pointer-events-none transition-all"
-                    >
+                    <button disabled={data.page <= 1} onClick={() => updateFilter('page', data.page - 1)} className="p-3 rounded-xl border-2 border-border bg-background hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50 disabled:pointer-events-none transition-all">
                       <ChevronRight className="w-5 h-5" />
                     </button>
                     <div className="flex items-center gap-1 font-numbers px-4 font-bold text-foreground">
@@ -468,11 +408,7 @@ export default function Home() {
                       <span className="text-muted-foreground font-sans font-normal mx-1">من</span>
                       <span className="w-8 text-center">{data.totalPages}</span>
                     </div>
-                    <button
-                      disabled={data.page >= data.totalPages}
-                      onClick={() => updateFilter('page', data.page + 1)}
-                      className="p-3 rounded-xl border-2 border-border bg-background hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50 disabled:pointer-events-none transition-all"
-                    >
+                    <button disabled={data.page >= data.totalPages} onClick={() => updateFilter('page', data.page + 1)} className="p-3 rounded-xl border-2 border-border bg-background hover:border-primary/50 hover:bg-primary/5 disabled:opacity-50 disabled:pointer-events-none transition-all">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                   </div>
@@ -482,6 +418,9 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {/* ── Savings Popup ── */}
+      <SavingsPopup />
     </Layout>
   );
 }
