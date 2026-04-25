@@ -6,7 +6,7 @@ import { Link } from "wouter";
 const YOUTUBE_CHANNEL = "@KoriCarSA";
 const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@KoriCarSA";
 const LIVE_VIDEO_ID = "";
-const DEMO_VIDEO_ID = "HB2ZJGhVVtc";
+const DEMO_VIDEO_ID = "8aYaL-a3hCY";
 
 export function LiveShowcase() {
   const [isLive] = useState(!!LIVE_VIDEO_ID);
