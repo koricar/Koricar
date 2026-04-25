@@ -12,7 +12,8 @@ const YOUTUBE_CHANNEL_URL = "https://www.youtube.com/@KoriCarSA";
 const LIVE_VIDEO_ID = ""; // اتركه فارغ لما ما في Live
 
 // فيديو تجريبي لما ما في Live (فيديو عن السيارات الكورية)
-const DEMO_VIDEO_ID = "dQw4w9WgXcQ"; // غيّره بأول فيديو تنشره
+// غيّره بأول فيديو تنشره
+const DEMO_VIDEO_ID = "tPMEGMqMlvA";
 
 const HIGHLIGHTS = [
   { icon: "🔍", title: "بحث ذكي", desc: "ابحث من بين 200,000+ سيارة" },
