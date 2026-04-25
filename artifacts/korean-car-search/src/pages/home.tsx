@@ -11,6 +11,7 @@ import { useState, useEffect, useRef } from "react";
 import { TickerBanner } from "@/components/ticker-banner";
 import { DealOfDay } from "@/components/deal-of-day";
 import { SavingsPopup } from "@/components/savings-popup";
+import { LiveShowcase } from "@/components/live-showcase";
 
 const BRAND_ALIASES: Record<string, string> = {
   "bmw": "BMW", "bimmer": "BMW",
@@ -329,6 +330,9 @@ export default function Home() {
 
       {/* ── Deal of the Day ── */}
       <DealOfDay />
+
+      {/* ── Live Showcase ── */}
+      <LiveShowcase />
 
       {/* ── How It Works ── */}
       <HowItWorks />
