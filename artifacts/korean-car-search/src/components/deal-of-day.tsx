@@ -1,19 +1,19 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Flame, Clock, ShieldCheck, ExternalLink, RefreshCw } from "lucide-react";
+import { Flame, Clock, ShieldCheck, ExternalLink } from "lucide-react";
 import { Link } from "wouter";
 
 const DEALS = [
   {
     id: 1,
     brand: "HYUNDAI",
-    brandEn: "Hyundai",
+    brandEn: "hyundai",
     model: "Palisade 3.8 4WD",
-    modelEn: "Palisade",
+    modelEn: "palisade",
     year: 2022,
     priceKRW: "3,200만원",
     ourPriceAR: 87700,
-    image: "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=800&q=80",
     accent: "#3b82f6",
     mileage: "42,000 كم",
     fuel: "بنزين",
@@ -22,13 +22,13 @@ const DEALS = [
   {
     id: 2,
     brand: "KIA",
-    brandEn: "Kia",
+    brandEn: "kia",
     model: "Sportage 1.6T AWD",
-    modelEn: "Sportage",
+    modelEn: "sportage",
     year: 2023,
     priceKRW: "2,850만원",
     ourPriceAR: 78200,
-    image: "https://images.unsplash.com/photo-1617469767053-d3b523a0b982?w=800&q=80",
+    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
     accent: "#10b981",
     mileage: "18,500 كم",
     fuel: "هايبرد",
@@ -37,9 +37,9 @@ const DEALS = [
   {
     id: 3,
     brand: "GENESIS",
-    brandEn: "Genesis",
+    brandEn: "genesis",
     model: "G80 2.5T",
-    modelEn: "G80",
+    modelEn: "g80",
     year: 2023,
     priceKRW: "4,100만원",
     ourPriceAR: 112500,
@@ -51,6 +51,32 @@ const DEALS = [
   },
 ];
 
+// أسعار السوق الخليجي (ريال سعودي)
+const GULF_PRICES: Record<string, Record<number, number>> = {
+  "hyundai palisade": { 2020: 118000, 2021: 125000, 2022: 135000, 2023: 145000, 2024: 158000 },
+  "hyundai tucson":   { 2020: 78000,  2021: 85000,  2022: 92000,  2023: 98000,  2024: 108000 },
+  "hyundai sonata":   { 2020: 72000,  2021: 78000,  2022: 84000,  2023: 90000,  2024: 98000  },
+  "kia sportage":     { 2020: 82000,  2021: 88000,  2022: 95000,  2023: 105000, 2024: 115000 },
+  "kia sorento":      { 2020: 95000,  2021: 102000, 2022: 112000, 2023: 122000, 2024: 132000 },
+  "kia carnival":     { 2021: 115000, 2022: 125000, 2023: 135000, 2024: 145000 },
+  "genesis g80":      { 2020: 145000, 2021: 155000, 2022: 168000, 2023: 180000, 2024: 195000 },
+  "genesis gv80":     { 2021: 175000, 2022: 188000, 2023: 200000, 2024: 215000 },
+  "genesis g70":      { 2020: 118000, 2021: 125000, 2022: 135000, 2023: 145000 },
+};
+
+function getGulfPrice(brandEn: string, modelEn: string, year: number): number | null {
+  const key = `${brandEn} ${modelEn}`;
+  const prices = GULF_PRICES[key];
+  if (!prices) return null;
+  if (prices[year]) return prices[year];
+  // أقرب سنة
+  const years = Object.keys(prices).map(Number).sort();
+  const closest = years.reduce((prev, curr) =>
+    Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev
+  );
+  return prices[closest];
+}
+
 function useCountdown() {
   const getSecondsUntilMidnight = () => {
     const now = new Date();
@@ -58,58 +84,25 @@ function useCountdown() {
     midnight.setHours(24, 0, 0, 0);
     return Math.floor((midnight.getTime() - now.getTime()) / 1000);
   };
-
   const [seconds, setSeconds] = useState(getSecondsUntilMidnight());
-
   useEffect(() => {
     const id = setInterval(() => {
       setSeconds((s) => (s <= 1 ? getSecondsUntilMidnight() : s - 1));
     }, 1000);
     return () => clearInterval(id);
   }, []);
-
   const h = String(Math.floor(seconds / 3600)).padStart(2, "0");
   const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, "0");
   const s = String(seconds % 60).padStart(2, "0");
   return { h, m, s };
 }
 
-const API_BASE = import.meta.env.VITE_API_URL || "https://koricar-ba7l.onrender.com";
-
 export function DealOfDay() {
   const [current, setCurrent] = useState(0);
-  const [marketPrice, setMarketPrice] = useState<number | null>(null);
-  const [priceSource, setPriceSource] = useState("");
-  const [loadingPrice, setLoadingPrice] = useState(false);
   const { h, m, s } = useCountdown();
   const deal = DEALS[current];
 
-  // جلب سعر السوق من API
-  useEffect(() => {
-    setMarketPrice(null);
-    setPriceSource("");
-    setLoadingPrice(true);
-
-    const fetchPrice = async () => {
-      try {
-        const res = await fetch(
-          `${API_BASE}/api/market-price?brand=${deal.brandEn}&model=${deal.modelEn}&year=${deal.year}`
-        );
-        const data = await res.json();
-        if (data.marketPrice) {
-          setMarketPrice(data.marketPrice);
-          setPriceSource(data.source);
-        }
-      } catch (e) {
-        console.error("Failed to fetch market price:", e);
-      } finally {
-        setLoadingPrice(false);
-      }
-    };
-
-    fetchPrice();
-  }, [current]);
-
+  const marketPrice = getGulfPrice(deal.brandEn, deal.modelEn, deal.year);
   const saving = marketPrice ? marketPrice - deal.ourPriceAR : null;
   const savingPct = saving && marketPrice ? Math.round((saving / marketPrice) * 100) : null;
 
@@ -163,7 +156,6 @@ export function DealOfDay() {
                 <img src={deal.image} alt={deal.model} className="w-full h-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-l from-slate-900/80 to-transparent" />
 
-                {/* Saving badge — يظهر فقط لو عندنا سعر حقيقي */}
                 {saving && saving > 0 && (
                   <div className="absolute top-4 right-4 bg-orange-500 text-white font-black text-sm px-4 py-2 rounded-xl shadow-lg shadow-orange-500/40">
                     وفّر {saving.toLocaleString()} ريال 💰
@@ -189,30 +181,17 @@ export function DealOfDay() {
 
                   {/* Price comparison */}
                   <div className="bg-slate-800/60 rounded-xl p-4 mb-4 border border-white/5">
-
-                    {/* سعر السوق المحلي */}
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-slate-400 text-sm">السوق المحلي الخليجي</span>
-                      {loadingPrice ? (
-                        <span className="flex items-center gap-1 text-slate-500 text-xs">
-                          <RefreshCw className="w-3 h-3 animate-spin" />
-                          جاري البحث...
+                      {marketPrice ? (
+                        <span className="text-slate-300 text-sm line-through font-numbers">
+                          {marketPrice.toLocaleString()} ريال
                         </span>
-                      ) : marketPrice ? (
-                        <div className="text-left">
-                          <span className="text-slate-300 text-sm line-through font-numbers">
-                            {marketPrice.toLocaleString()} ريال
-                          </span>
-                          {priceSource && (
-                            <p className="text-slate-500 text-[10px] mt-0.5">المصدر: {priceSource}</p>
-                          )}
-                        </div>
                       ) : (
-                        <span className="text-slate-500 text-xs">غير متوفر حالياً</span>
+                        <span className="text-slate-500 text-xs">غير متوفر</span>
                       )}
                     </div>
 
-                    {/* سعرنا */}
                     <div className="flex justify-between items-center">
                       <span className="text-white font-bold text-sm">سعرنا شامل كل شيء</span>
                       <span className="font-black text-xl font-numbers" style={{ color: deal.accent }}>
@@ -220,7 +199,6 @@ export function DealOfDay() {
                       </span>
                     </div>
 
-                    {/* التوفير */}
                     {saving && saving > 0 && savingPct && (
                       <div className="mt-2 pt-2 border-t border-white/5 flex justify-between">
                         <span className="text-orange-400 text-xs font-bold">💰 توفيرك</span>
