@@ -11,10 +11,12 @@ const DEALS = [
     model: "Palisade 3.8 4WD",
     modelEn: "palisade",
     year: 2022,
-    priceKRW: "3,200만원",
     ourPriceAR: 87700,
-    // صورة حقيقية للـ Hyundai Palisade من Hyundai Motor Group على Unsplash
-    image: "https://images.unsplash.com/photo-1659024329071-8516a9dd6b64?w=800&q=80",
+    images: [
+      "https://www.hyundaiusa.com/content/dam/hyundai/us/myhyundai/Image/2024/palisade/compare/2024-Hyundai-Palisade-compare.jpg",
+      "https://images.unsplash.com/photo-1543465077-db45d34b88a5?w=800&q=80",
+      "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80",
+    ],
     accent: "#3b82f6",
     mileage: "42,000 كم",
     fuel: "بنزين",
@@ -27,10 +29,12 @@ const DEALS = [
     model: "Sportage 1.6T AWD",
     modelEn: "sportage",
     year: 2023,
-    priceKRW: "2,850만원",
     ourPriceAR: 78200,
-    // صورة KIA Sportage
-    image: "https://images.unsplash.com/photo-1669215420148-6ae1e47f5cd3?w=800&q=80",
+    images: [
+      "https://www.kia.com/content/dam/kia/global/en/models/sportage/nq5/24my/pc/kv/sportage-24my-pc-kv.jpg",
+      "https://images.unsplash.com/photo-1622251802628-3b91e0bf46ea?w=800&q=80",
+      "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
+    ],
     accent: "#10b981",
     mileage: "18,500 كم",
     fuel: "هايبرد",
@@ -43,10 +47,12 @@ const DEALS = [
     model: "G80 2.5T",
     modelEn: "g80",
     year: 2023,
-    priceKRW: "4,100만원",
     ourPriceAR: 112500,
-    // صورة Genesis G80
-    image: "https://images.unsplash.com/photo-1617814076229-3b2e0e0b0b5a?w=800&q=80",
+    images: [
+      "https://www.genesis.com/content/dam/genesis-app/models/g80/2024/exterior/genesis-g80-2024-exterior-01.jpg",
+      "https://images.unsplash.com/photo-1605559424843-9e4c228bf1c2?w=800&q=80",
+      "https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=800&q=80",
+    ],
     accent: "#8b5cf6",
     mileage: "9,200 كم",
     fuel: "بنزين",
@@ -77,6 +83,24 @@ function getGulfPrice(brandEn: string, modelEn: string, year: number): number | 
     Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev
   );
   return prices[closest];
+}
+
+// مكون الصورة مع fallback تلقائي
+function CarImage({ images, alt }: { images: string[]; alt: string }) {
+  const [imgIndex, setImgIndex] = useState(0);
+
+  return (
+    <img
+      src={images[imgIndex]}
+      alt={alt}
+      className="w-full h-full object-cover"
+      onError={() => {
+        if (imgIndex < images.length - 1) {
+          setImgIndex(imgIndex + 1);
+        }
+      }}
+    />
+  );
 }
 
 function useCountdown() {
@@ -124,7 +148,6 @@ export function DealOfDay() {
             </div>
           </div>
 
-          {/* Countdown */}
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-slate-400" />
             <span className="text-slate-400 text-xs">ينتهي خلال</span>
@@ -155,16 +178,11 @@ export function DealOfDay() {
             <div className="flex flex-col md:flex-row">
               {/* Image */}
               <div className="relative md:w-1/2 h-64 md:h-auto overflow-hidden bg-slate-800">
-                <img
-                  src={deal.image}
+                <CarImage
+                  images={deal.images}
                   alt={`${deal.brand} ${deal.model}`}
-                  className="w-full h-full object-cover"
-                  onError={(e) => {
-                    // صورة احتياطية لو الصورة ما اشتغلت
-                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80";
-                  }}
                 />
-                <div className="absolute inset-0 bg-gradient-to-l from-slate-900/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-l from-slate-900/60 to-transparent" />
 
                 {saving && saving > 0 && (
                   <div className="absolute top-4 right-4 bg-orange-500 text-white font-black text-sm px-4 py-2 rounded-xl shadow-lg shadow-orange-500/40">
@@ -189,7 +207,6 @@ export function DealOfDay() {
                   <h3 className="text-white text-2xl font-black mt-1 mb-1">{deal.model}</h3>
                   <p className="text-slate-400 text-sm mb-4">{deal.year} • {deal.mileage} • {deal.fuel}</p>
 
-                  {/* Price comparison */}
                   <div className="bg-slate-800/60 rounded-xl p-4 mb-4 border border-white/5">
                     <div className="flex justify-between items-center mb-2">
                       <span className="text-slate-400 text-sm">السوق المحلي الخليجي</span>
