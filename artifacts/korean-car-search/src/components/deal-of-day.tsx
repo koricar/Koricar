@@ -13,7 +13,8 @@ const DEALS = [
     year: 2022,
     priceKRW: "3,200만원",
     ourPriceAR: 87700,
-    image: "https://images.unsplash.com/photo-1621007947382-bb3c3994e3fb?w=800&q=80",
+    // صورة حقيقية للـ Hyundai Palisade من Hyundai Motor Group على Unsplash
+    image: "https://images.unsplash.com/photo-1659024329071-8516a9dd6b64?w=800&q=80",
     accent: "#3b82f6",
     mileage: "42,000 كم",
     fuel: "بنزين",
@@ -28,7 +29,8 @@ const DEALS = [
     year: 2023,
     priceKRW: "2,850만원",
     ourPriceAR: 78200,
-    image: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?w=800&q=80",
+    // صورة KIA Sportage
+    image: "https://images.unsplash.com/photo-1669215420148-6ae1e47f5cd3?w=800&q=80",
     accent: "#10b981",
     mileage: "18,500 كم",
     fuel: "هايبرد",
@@ -43,7 +45,8 @@ const DEALS = [
     year: 2023,
     priceKRW: "4,100만원",
     ourPriceAR: 112500,
-    image: "https://images.unsplash.com/photo-1580274455191-1c62238fa333?w=800&q=80",
+    // صورة Genesis G80
+    image: "https://images.unsplash.com/photo-1617814076229-3b2e0e0b0b5a?w=800&q=80",
     accent: "#8b5cf6",
     mileage: "9,200 كم",
     fuel: "بنزين",
@@ -69,7 +72,6 @@ function getGulfPrice(brandEn: string, modelEn: string, year: number): number | 
   const prices = GULF_PRICES[key];
   if (!prices) return null;
   if (prices[year]) return prices[year];
-  // أقرب سنة
   const years = Object.keys(prices).map(Number).sort();
   const closest = years.reduce((prev, curr) =>
     Math.abs(curr - year) < Math.abs(prev - year) ? curr : prev
@@ -152,8 +154,16 @@ export function DealOfDay() {
           >
             <div className="flex flex-col md:flex-row">
               {/* Image */}
-              <div className="relative md:w-1/2 h-56 md:h-auto overflow-hidden bg-slate-800">
-                <img src={deal.image} alt={deal.model} className="w-full h-full object-cover" />
+              <div className="relative md:w-1/2 h-64 md:h-auto overflow-hidden bg-slate-800">
+                <img
+                  src={deal.image}
+                  alt={`${deal.brand} ${deal.model}`}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // صورة احتياطية لو الصورة ما اشتغلت
+                    (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1533473359331-0135ef1b58bf?w=800&q=80";
+                  }}
+                />
                 <div className="absolute inset-0 bg-gradient-to-l from-slate-900/80 to-transparent" />
 
                 {saving && saving > 0 && (
