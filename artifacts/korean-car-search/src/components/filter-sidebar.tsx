@@ -1,5 +1,6 @@
+import { useState } from "react";
 import { useGetCarBrands, type SearchCarsParams } from "@workspace/api-client-react";
-import { Filter, ChevronDown, Check, Globe, ShieldCheck } from "lucide-react";
+import { Filter, ChevronDown, Check, Globe, ShieldCheck, ChevronLeft } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface FilterSidebarProps {
@@ -9,7 +10,13 @@ interface FilterSidebarProps {
   className?: string;
 }
 
-type ModelOption = { label: string; value: string };
+// ── نوع الموديل الجديد مع السنوات ─────────────────────────────────────────
+type ModelOption = {
+  label: string;
+  value: string;
+  yearFrom?: number;
+  yearTo?: number;
+};
 
 export type CountryCode = "SA" | "AE" | "KW" | "QA" | "BH" | "OM";
 
@@ -31,623 +38,566 @@ export const COUNTRY_RULES: Record<CountryCode, CountryRule> = {
 const uf = (fn: any) => fn as (key: string, value: any) => void;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// BRAND_MODELS — values must exactly match MODEL_GROUP_MAP keys in cars.ts
+// BRAND_MODELS — مع سنوات كل جيل
 // ─────────────────────────────────────────────────────────────────────────────
 const BRAND_MODELS: Record<string, ModelOption[]> = {
-  // ── HYUNDAI ──────────────────────────────────────────────────────────────
   "Hyundai": [
-    { label: "Palisade",               value: "팰리세이드" },
-    { label: "Palisade (New)",          value: "더 뉴 팰리세이드" },
-    { label: "Santa Fe MX5 (2023+)",    value: "싼타페 (MX5)" },
-    { label: "Santa Fe (New)",          value: "더 뉴 싼타페" },
-    { label: "Santa Fe TM",            value: "싼타페 TM" },
-    { label: "Grandeur GN7 (2022+)",   value: "그랜저 (GN7)" },
-    { label: "Grandeur Hybrid GN7",    value: "그랜저 하이브리드 (GN7)" },
-    { label: "Grandeur IG (New)",      value: "더 뉴 그랜저 IG" },
-    { label: "Grandeur HG",            value: "그랜저 HG" },
-    { label: "Sonata DN8",             value: "쏘나타 (DN8)" },
-    { label: "Sonata Hybrid DN8",      value: "쏘나타 하이브리드 (DN8)" },
-    { label: "Sonata LF",              value: "LF 쏘나타" },
-    { label: "Elantra CN7 (2020+)",    value: "아반떼 (CN7)" },
-    { label: "Elantra Hybrid CN7",     value: "아반떼 하이브리드 (CN7)" },
-    { label: "Elantra MD",             value: "아반떼 MD" },
-    { label: "Tucson NX4 (2021+)",     value: "투싼 (NX4)" },
-    { label: "Tucson TL (New)",        value: "더 뉴 투싼 TL" },
-    { label: "Kona OS",                value: "코나 (OS)" },
-    { label: "Kona SX2 (2023+)",       value: "코나 (SX2)" },
-    { label: "Ioniq 5",                value: "아이오닉 5" },
-    { label: "Ioniq 5 N",              value: "아이오닉 5 N" },
-    { label: "Ioniq 6",                value: "아이오닉 6" },
-    { label: "Ioniq 9",                value: "아이오닉 9" },
-    { label: "Staria",                 value: "스타리아" },
-    { label: "Staria Lounge",          value: "스타리아 라운지" },
-    { label: "Grand Starex (New)",     value: "더 뉴 그랜드 스타렉스" },
-    { label: "Casper",                 value: "캐스퍼" },
-    { label: "Casper Electric",        value: "캐스퍼 일렉트릭" },
-    { label: "Nexo (Hydrogen)",        value: "넥쏘" },
-    { label: "Venue",                  value: "베뉴" },
-    { label: "Porter 2",               value: "포터 2" },
+    { label: "Palisade (2019+)",              value: "팰리세이드",                yearFrom: 2019 },
+    { label: "Palisade New (2023+)",           value: "더 뉴 팰리세이드",         yearFrom: 2023 },
+    { label: "Santa Fe MX5 (2023+)",           value: "싼타페 (MX5)",             yearFrom: 2023 },
+    { label: "Santa Fe New (2020-2022)",       value: "더 뉴 싼타페",             yearFrom: 2020, yearTo: 2022 },
+    { label: "Santa Fe TM (2018-2022)",        value: "싼타페 TM",                yearFrom: 2018, yearTo: 2022 },
+    { label: "Grandeur GN7 (2022+)",           value: "그랜저 (GN7)",             yearFrom: 2022 },
+    { label: "Grandeur Hybrid GN7 (2022+)",    value: "그랜저 하이브리드 (GN7)", yearFrom: 2022 },
+    { label: "Grandeur IG New (2019-2022)",    value: "더 뉴 그랜저 IG",         yearFrom: 2019, yearTo: 2022 },
+    { label: "Grandeur HG (2011-2017)",        value: "그랜저 HG",                yearFrom: 2011, yearTo: 2017 },
+    { label: "Sonata DN8 (2019+)",             value: "쏘나타 (DN8)",             yearFrom: 2019 },
+    { label: "Sonata Hybrid DN8 (2020+)",      value: "쏘나타 하이브리드 (DN8)", yearFrom: 2020 },
+    { label: "Sonata LF (2014-2019)",          value: "LF 쏘나타",               yearFrom: 2014, yearTo: 2019 },
+    { label: "Elantra CN7 (2020+)",            value: "아반떼 (CN7)",             yearFrom: 2020 },
+    { label: "Elantra Hybrid CN7 (2020+)",     value: "아반떼 하이브리드 (CN7)", yearFrom: 2020 },
+    { label: "Elantra MD (2010-2015)",         value: "아반떼 MD",                yearFrom: 2010, yearTo: 2015 },
+    { label: "Tucson NX4 (2021+)",             value: "투싼 (NX4)",              yearFrom: 2021 },
+    { label: "Tucson TL New (2018-2021)",      value: "더 뉴 투싼 TL",           yearFrom: 2018, yearTo: 2021 },
+    { label: "Kona SX2 (2023+)",               value: "코나 (SX2)",              yearFrom: 2023 },
+    { label: "Kona OS (2017-2023)",            value: "코나 (OS)",               yearFrom: 2017, yearTo: 2023 },
+    { label: "Ioniq 5 (2021+)",                value: "아이오닉 5",               yearFrom: 2021 },
+    { label: "Ioniq 5 N (2023+)",              value: "아이오닉 5 N",             yearFrom: 2023 },
+    { label: "Ioniq 6 (2022+)",                value: "아이오닉 6",               yearFrom: 2022 },
+    { label: "Ioniq 9 (2024+)",                value: "아이오닉 9",               yearFrom: 2024 },
+    { label: "Staria (2021+)",                 value: "스타리아",                 yearFrom: 2021 },
+    { label: "Staria Lounge (2021+)",          value: "스타리아 라운지",          yearFrom: 2021 },
+    { label: "Grand Starex New (2018-2021)",   value: "더 뉴 그랜드 스타렉스",   yearFrom: 2018, yearTo: 2021 },
+    { label: "Casper (2021+)",                 value: "캐스퍼",                   yearFrom: 2021 },
+    { label: "Casper Electric (2024+)",        value: "캐스퍼 일렉트릭",          yearFrom: 2024 },
+    { label: "Nexo Hydrogen (2018+)",          value: "넥쏘",                    yearFrom: 2018 },
+    { label: "Venue (2019+)",                  value: "베뉴",                    yearFrom: 2019 },
+    { label: "Porter 2 (2018+)",               value: "포터 2",                  yearFrom: 2018 },
   ],
 
-  // ── KIA ──────────────────────────────────────────────────────────────────
   "Kia": [
-    { label: "Carnival 4th Gen",              value: "카니발 4세대" },
-    { label: "Carnival (New)",                value: "더 뉴 카니발" },
-    { label: "Carnival Limousine",            value: "카니발 리무진" },
-    { label: "Sorento 4th Gen (2020+)",       value: "쏘렌토 4세대" },
-    { label: "Sorento Hybrid 4th Gen",        value: "쏘렌토 하이브리드 4세대" },
-    { label: "Sorento PHEV 4th Gen",          value: "쏘렌토 플러그인 하이브리드 4세대" },
-    { label: "Sorento (New) 4th Gen",         value: "더 뉴 쏘렌토 4세대" },
-    { label: "Sportage 5th Gen (2021+)",      value: "스포티지 5세대" },
-    { label: "Sportage 5th Gen Hybrid",       value: "스포티지 5세대 하이브리드" },
-    { label: "Sportage 5th Gen PHEV",         value: "스포티지 5세대 플러그인 하이브리드" },
-    { label: "K8",                            value: "K8" },
-    { label: "K8 Hybrid",                     value: "K8 하이브리드" },
-    { label: "K5 3rd Gen",                    value: "K5 3세대" },
-    { label: "K5 Hybrid 3rd Gen",             value: "K5 하이브리드 3세대" },
-    { label: "K5 2nd Gen (New)",              value: "더 뉴 K5 2세대" },
-    { label: "K3",                            value: "K3" },
-    { label: "K3 2nd Gen (New)",              value: "더 뉴 K3 2세대" },
-    { label: "Seltos",                        value: "셀토스" },
-    { label: "Seltos (New)",                  value: "더 뉴 셀토스" },
-    { label: "Niro (All New)",                value: "디 올 뉴 니로" },
-    { label: "Niro Hybrid",                   value: "니로 하이브리드" },
-    { label: "Niro EV",                       value: "니로 EV" },
-    { label: "EV3",                           value: "EV3" },
-    { label: "EV6",                           value: "EV6" },
-    { label: "EV6 GT",                        value: "EV6 GT" },
-    { label: "EV9",                           value: "EV9" },
-    { label: "Stinger",                       value: "스팅어" },
-    { label: "Mohave",                        value: "모하비" },
-    { label: "Mohave (New)",                  value: "더 뉴 모하비" },
-    { label: "Mohave The Master",             value: "모하비 더 마스터" },
-    { label: "Morning",                       value: "모닝" },
-    { label: "Ray",                           value: "레이" },
-    { label: "Telluride",                     value: "텔루라이드" },
-    { label: "Soul",                          value: "쏘울" },
+    { label: "Carnival 4th Gen (2020+)",            value: "카니발 4세대",                      yearFrom: 2020 },
+    { label: "Carnival New (2023+)",                value: "더 뉴 카니발",                      yearFrom: 2023 },
+    { label: "Carnival Limousine (2020+)",          value: "카니발 리무진",                     yearFrom: 2020 },
+    { label: "Sorento 4th Gen (2020+)",             value: "쏘렌토 4세대",                      yearFrom: 2020 },
+    { label: "Sorento Hybrid 4th Gen (2020+)",      value: "쏘렌토 하이브리드 4세대",           yearFrom: 2020 },
+    { label: "Sorento PHEV 4th Gen (2021+)",        value: "쏘렌토 플러그인 하이브리드 4세대",  yearFrom: 2021 },
+    { label: "Sorento New 4th Gen (2023+)",         value: "더 뉴 쏘렌토 4세대",               yearFrom: 2023 },
+    { label: "Sportage 5th Gen (2021+)",            value: "스포티지 5세대",                    yearFrom: 2021 },
+    { label: "Sportage 5th Gen Hybrid (2021+)",     value: "스포티지 5세대 하이브리드",         yearFrom: 2021 },
+    { label: "Sportage 5th Gen PHEV (2022+)",       value: "스포티지 5세대 플러그인 하이브리드", yearFrom: 2022 },
+    { label: "K8 (2021+)",                          value: "K8",                               yearFrom: 2021 },
+    { label: "K8 Hybrid (2021+)",                   value: "K8 하이브리드",                    yearFrom: 2021 },
+    { label: "K5 3rd Gen (2019+)",                  value: "K5 3세대",                         yearFrom: 2019 },
+    { label: "K5 Hybrid 3rd Gen (2020+)",           value: "K5 하이브리드 3세대",              yearFrom: 2020 },
+    { label: "K5 2nd Gen New (2017-2019)",          value: "더 뉴 K5 2세대",                  yearFrom: 2017, yearTo: 2019 },
+    { label: "K3 (2018+)",                          value: "K3",                               yearFrom: 2018 },
+    { label: "K3 2nd Gen New (2018-2022)",          value: "더 뉴 K3 2세대",                  yearFrom: 2018, yearTo: 2022 },
+    { label: "Seltos (2019+)",                      value: "셀토스",                            yearFrom: 2019 },
+    { label: "Seltos New (2022+)",                  value: "더 뉴 셀토스",                     yearFrom: 2022 },
+    { label: "Niro All New (2022+)",                value: "디 올 뉴 니로",                   yearFrom: 2022 },
+    { label: "Niro Hybrid (2016-2022)",             value: "니로 하이브리드",                  yearFrom: 2016, yearTo: 2022 },
+    { label: "Niro EV (2018-2022)",                 value: "니로 EV",                          yearFrom: 2018, yearTo: 2022 },
+    { label: "EV3 (2024+)",                         value: "EV3",                              yearFrom: 2024 },
+    { label: "EV6 (2021+)",                         value: "EV6",                              yearFrom: 2021 },
+    { label: "EV6 GT (2022+)",                      value: "EV6 GT",                           yearFrom: 2022 },
+    { label: "EV9 (2023+)",                         value: "EV9",                              yearFrom: 2023 },
+    { label: "Stinger (2017+)",                     value: "스팅어",                            yearFrom: 2017 },
+    { label: "Mohave The Master (2019+)",           value: "모하비 더 마스터",                 yearFrom: 2019 },
+    { label: "Mohave New (2019+)",                  value: "더 뉴 모하비",                     yearFrom: 2019 },
+    { label: "Telluride (2019+)",                   value: "텔루라이드",                        yearFrom: 2019 },
+    { label: "Morning (2017+)",                     value: "모닝",                             yearFrom: 2017 },
+    { label: "Ray (2012+)",                         value: "레이",                             yearFrom: 2012 },
+    { label: "Soul (2019+)",                        value: "쏘울",                             yearFrom: 2019 },
   ],
 
-  // ── GENESIS ───────────────────────────────────────────────────────────────
   "Genesis": [
-    { label: "GV80",              value: "GV80" },
-    { label: "GV80 Coupe",        value: "GV80 쿠페" },
-    { label: "GV70",              value: "GV70" },
-    { label: "GV70 Electrified",  value: "GV70 전동화" },
-    { label: "GV60",              value: "GV60" },
-    { label: "GV60 Sport Plus",   value: "GV60 스포츠 플러스" },
-    { label: "GV90",              value: "GV90" },
-    { label: "G80 RG3 (2020+)",   value: "G80 (RG3)" },
-    { label: "G80 Electrified",   value: "G80 전동화" },
-    { label: "G80",               value: "G80" },
-    { label: "G90 RS4 (2022+)",   value: "G90 (RS4)" },
-    { label: "G90",               value: "G90" },
-    { label: "G70 (New)",         value: "더 뉴 G70" },
-    { label: "G70 2nd Gen",       value: "G70 2세대" },
-    { label: "EQ900",             value: "EQ900" },
+    { label: "GV80 (2020+)",              value: "GV80",          yearFrom: 2020 },
+    { label: "GV80 Coupe (2023+)",        value: "GV80 쿠페",     yearFrom: 2023 },
+    { label: "GV70 (2021+)",              value: "GV70",          yearFrom: 2021 },
+    { label: "GV70 Electrified (2022+)",  value: "GV70 전동화",   yearFrom: 2022 },
+    { label: "GV60 (2021+)",              value: "GV60",          yearFrom: 2021 },
+    { label: "GV60 Sport Plus (2022+)",   value: "GV60 스포츠 플러스", yearFrom: 2022 },
+    { label: "GV90 (2024+)",              value: "GV90",          yearFrom: 2024 },
+    { label: "G80 RG3 (2020+)",           value: "G80 (RG3)",     yearFrom: 2020 },
+    { label: "G80 Electrified (2022+)",   value: "G80 전동화",    yearFrom: 2022 },
+    { label: "G80 (2016-2020)",           value: "G80",           yearFrom: 2016, yearTo: 2020 },
+    { label: "G90 RS4 (2022+)",           value: "G90 (RS4)",     yearFrom: 2022 },
+    { label: "G90 (2017-2022)",           value: "G90",           yearFrom: 2017, yearTo: 2022 },
+    { label: "G70 2nd Gen (2021+)",       value: "G70 2세대",     yearFrom: 2021 },
+    { label: "G70 New (2019-2021)",       value: "더 뉴 G70",    yearFrom: 2019, yearTo: 2021 },
+    { label: "EQ900 (2015-2020)",         value: "EQ900",         yearFrom: 2015, yearTo: 2020 },
   ],
 
-  // ── SSANGYONG ─────────────────────────────────────────────────────────────
   "SsangYong": [
-    { label: "Rexton G4",         value: "렉스턴 G4" },
-    { label: "Rexton Sports",     value: "렉스턴 스포츠" },
-    { label: "Rexton Sports Khan",value: "렉스턴 스포츠 칸" },
-    { label: "Korando",           value: "코란도" },
-    { label: "Korando e-Motion",  value: "코란도 이모션" },
-    { label: "Tivoli",            value: "티볼리" },
-    { label: "Tivoli Air",        value: "티볼리 에어" },
-    { label: "Musso",             value: "무쏘" },
-    { label: "Actyon",            value: "액티언" },
+    { label: "Rexton G4 (2017+)",          value: "렉스턴 G4",       yearFrom: 2017 },
+    { label: "Rexton Sports (2018+)",      value: "렉스턴 스포츠",   yearFrom: 2018 },
+    { label: "Rexton Sports Khan (2019+)", value: "렉스턴 스포츠 칸", yearFrom: 2019 },
+    { label: "Korando (2019+)",            value: "코란도",           yearFrom: 2019 },
+    { label: "Korando e-Motion (2021+)",   value: "코란도 이모션",    yearFrom: 2021 },
+    { label: "Tivoli (2015+)",             value: "티볼리",           yearFrom: 2015 },
+    { label: "Tivoli Air (2016+)",         value: "티볼리 에어",      yearFrom: 2016 },
+    { label: "Musso (2018+)",              value: "무쏘",             yearFrom: 2018 },
+    { label: "Actyon (2012+)",             value: "액티언",           yearFrom: 2012 },
   ],
 
-  // ── KG MOBILITY ───────────────────────────────────────────────────────────
   "KG Mobility": [
-    { label: "Torres",            value: "토레스" },
-    { label: "Torres EVX",        value: "토레스 EVX" },
-    { label: "Rexton G4",         value: "렉스턴 G4" },
-    { label: "Rexton Sports",     value: "렉스턴 스포츠" },
-    { label: "Korando",           value: "코란도" },
-    { label: "Tivoli",            value: "티볼리" },
-    { label: "Musso",             value: "무쏘" },
-    { label: "Actyon Sports",     value: "액티언 스포츠" },
+    { label: "Torres (2022+)",         value: "토레스",       yearFrom: 2022 },
+    { label: "Torres EVX (2023+)",     value: "토레스 EVX",   yearFrom: 2023 },
+    { label: "Rexton G4 (2017+)",      value: "렉스턴 G4",   yearFrom: 2017 },
+    { label: "Rexton Sports (2018+)",  value: "렉스턴 스포츠", yearFrom: 2018 },
+    { label: "Korando (2019+)",        value: "코란도",       yearFrom: 2019 },
+    { label: "Tivoli (2015+)",         value: "티볼리",       yearFrom: 2015 },
+    { label: "Musso (2018+)",          value: "무쏘",         yearFrom: 2018 },
+    { label: "Actyon Sports (2012+)",  value: "액티언 스포츠", yearFrom: 2012 },
   ],
 
-  // ── RENAULT SAMSUNG ───────────────────────────────────────────────────────
   "Renault Samsung": [
-    { label: "QM6",       value: "QM6" },
-    { label: "QM6 LPe",   value: "QM6 LPe" },
-    { label: "SM6",       value: "SM6" },
-    { label: "XM3",       value: "XM3" },
-    { label: "SM3",       value: "SM3" },
-    { label: "SM5",       value: "SM5" },
-    { label: "SM7",       value: "SM7" },
+    { label: "QM6 (2016+)",     value: "QM6" },
+    { label: "QM6 LPe (2019+)", value: "QM6 LPe" },
+    { label: "SM6 (2016+)",     value: "SM6" },
+    { label: "XM3 (2020+)",     value: "XM3" },
+    { label: "SM3 (-2018)",     value: "SM3",  yearTo: 2018 },
+    { label: "SM5 (-2019)",     value: "SM5",  yearTo: 2019 },
+    { label: "SM7 (-2019)",     value: "SM7",  yearTo: 2019 },
   ],
 
-  // ── RENAULT KOREA ─────────────────────────────────────────────────────────
   "Renault Korea": [
-    { label: "Philante",  value: "필랑트" },
-    { label: "QM6",       value: "QM6" },
-    { label: "SM6",       value: "SM6" },
-    { label: "XM3",       value: "XM3" },
-    { label: "Arkana",    value: "아르카나" },
+    { label: "Philante (2023+)", value: "필랑트", yearFrom: 2023 },
+    { label: "QM6 (2016+)",     value: "QM6" },
+    { label: "SM6 (2016+)",     value: "SM6" },
+    { label: "XM3 (2020+)",     value: "XM3" },
+    { label: "Arkana (2021+)",  value: "아르카나", yearFrom: 2021 },
   ],
 
-  // ── CHEVROLET ─────────────────────────────────────────────────────────────
   "Chevrolet": [
-    { label: "Trailblazer",     value: "트레일블레이저" },
-    { label: "Trailblazer (New)",value: "더 뉴 트레일블레이저" },
-    { label: "Equinox",         value: "이쿼녹스" },
-    { label: "Equinox EV",      value: "이쿼녹스 EV" },
-    { label: "Trax",            value: "트랙스" },
-    { label: "Trax Crossover",  value: "트랙스 크로스오버" },
-    { label: "Spark",           value: "스파크" },
-    { label: "Malibu",          value: "말리부" },
-    { label: "Colorado",        value: "콜로라도" },
-    { label: "Traverse",        value: "트래버스" },
-    { label: "Blazer EV",       value: "블레이저 EV" },
-    { label: "Tahoe",           value: "타호" },
-    { label: "Orlando",         value: "올란도" },
-    { label: "Captiva",         value: "캡티바" },
+    { label: "Trailblazer (2020+)",      value: "트레일블레이저",      yearFrom: 2020 },
+    { label: "Trailblazer New (2023+)",  value: "더 뉴 트레일블레이저", yearFrom: 2023 },
+    { label: "Equinox (2022+)",          value: "이쿼녹스",            yearFrom: 2022 },
+    { label: "Equinox EV (2024+)",       value: "이쿼녹스 EV",         yearFrom: 2024 },
+    { label: "Trax (2012-2021)",         value: "트랙스",              yearFrom: 2012, yearTo: 2021 },
+    { label: "Trax Crossover (2022+)",   value: "트랙스 크로스오버",   yearFrom: 2022 },
+    { label: "Spark (2015+)",            value: "스파크",               yearFrom: 2015 },
+    { label: "Malibu (2015+)",           value: "말리부",               yearFrom: 2015 },
+    { label: "Colorado (2021+)",         value: "콜로라도",             yearFrom: 2021 },
+    { label: "Traverse (2017+)",         value: "트래버스",             yearFrom: 2017 },
+    { label: "Blazer EV (2023+)",        value: "블레이저 EV",          yearFrom: 2023 },
+    { label: "Tahoe (2021+)",            value: "타호",                 yearFrom: 2021 },
+    { label: "Orlando (2011-2018)",      value: "올란도",              yearFrom: 2011, yearTo: 2018 },
+    { label: "Captiva (2011-2018)",      value: "캡티바",              yearFrom: 2011, yearTo: 2018 },
   ],
 
-  // ── BMW ───────────────────────────────────────────────────────────────────
   "BMW": [
-    // 1 Series
-    { label: "1 Series F20 (2011-2019)", value: "1시리즈 (F20)" },
-    { label: "1 Series F40 (2019+)",     value: "1시리즈 (F40)" },
-    // 2 Series
-    { label: "2 Series Gran Coupe F44",  value: "2시리즈 그란쿠페 (F44)" },
-    { label: "2 Series Coupe G42",       value: "2시리즈 (G42)" },
-    { label: "2 Series Active Tourer F45",value: "2시리즈 액티브투어러 (F45)" },
-    // 3 Series
-    { label: "3 Series E90 (2005-2011)", value: "3시리즈 (E90)" },
-    { label: "3 Series F30 (2012-2018)", value: "3시리즈 (F30)" },
-    { label: "3 Series G20 (2019+)",     value: "3시리즈 (G20)" },
-    // 4 Series
-    { label: "4 Series F32 (2013-2020)", value: "4시리즈 (F32)" },
-    { label: "4 Series G22 (2020+)",     value: "4시리즈 (G22)" },
-    { label: "4 Series Gran Coupe F36",  value: "4시리즈 그란쿠페 (F36)" },
-    { label: "4 Series Gran Coupe G26",  value: "4시리즈 그란쿠페 (G26)" },
-    // 5 Series
-    { label: "5 Series F10 (2010-2016)", value: "5시리즈 (F10)" },
-    { label: "5 Series G30 (2017-2023)", value: "5시리즈 (G30)" },
-    { label: "5 Series G60 (2023+)",     value: "5시리즈 (G60)" },
-    // 6 Series
-    { label: "6 Series F12 Coupe/Cab",   value: "6시리즈 (F12)" },
-    { label: "6 Series Gran Turismo G32",value: "6시리즈 그란투리스모 (G32)" },
-    // 7 Series
-    { label: "7 Series F01 (2009-2015)", value: "7시리즈 (F01)" },
-    { label: "7 Series G11 (2015-2022)", value: "7시리즈 (G11)" },
-    { label: "7 Series G70 (2022+)",     value: "7시리즈 (G70)" },
-    // 8 Series
-    { label: "8 Series G15 (2018+)",     value: "8시리즈 (G15)" },
-    { label: "8 Series Gran Coupe G16",  value: "8시리즈 그란쿠페 (G16)" },
-    // X Series
-    { label: "X1 E84 (2009-2015)",       value: "X1 (E84)" },
-    { label: "X1 F48 (2015-2022)",       value: "X1 (F48)" },
-    { label: "X1 U11 (2022+)",           value: "X1 (U11)" },
-    { label: "X2 F39 (2017-2023)",       value: "X2 (F39)" },
-    { label: "X3 F25 (2010-2017)",       value: "X3 (F25)" },
-    { label: "X3 G01 (2017+)",           value: "X3 (G01)" },
-    { label: "X4 F26 (2014-2018)",       value: "X4 (F26)" },
-    { label: "X4 G02 (2018+)",           value: "X4 (G02)" },
-    { label: "X5 F15 (2013-2018)",       value: "X5 (F15)" },
-    { label: "X5 G05 (2018+)",           value: "X5 (G05)" },
-    { label: "X6 F16 (2014-2019)",       value: "X6 (F16)" },
-    { label: "X6 G06 (2019+)",           value: "X6 (G06)" },
-    { label: "X7 G07 (2019+)",           value: "X7 (G07)" },
-    // M Series
-    { label: "M2 F87",                   value: "M2 (F87)" },
-    { label: "M2 G87 (2022+)",           value: "M2 (G87)" },
-    { label: "M3 F80",                   value: "M3 (F80)" },
-    { label: "M3 G80 (2020+)",           value: "M3 (G80)" },
-    { label: "M4 F82",                   value: "M4 (F82)" },
-    { label: "M4 G82 (2020+)",           value: "M4 (G82)" },
-    { label: "M5 F90",                   value: "M5 (F90)" },
-    { label: "M5 G90 (2024+)",           value: "M5 (G90)" },
-    { label: "M8 F92",                   value: "M8 (F92)" },
-    // Electric / i Series
-    { label: "i3",                       value: "i3" },
-    { label: "i4",                       value: "i4" },
-    { label: "i5",                       value: "i5" },
-    { label: "i7",                       value: "i7" },
-    { label: "i8",                       value: "i8" },
-    { label: "iX",                       value: "iX" },
-    { label: "iX3",                      value: "iX3" },
-    { label: "XM",                       value: "XM" },
-    { label: "Z4 G29",                   value: "Z4 (G29)" },
+    { label: "1 Series F20 (2011-2019)",     value: "1시리즈 (F20)",       yearFrom: 2011, yearTo: 2019 },
+    { label: "1 Series F40 (2019+)",         value: "1시리즈 (F40)",       yearFrom: 2019 },
+    { label: "2 Series Gran Coupe F44",      value: "2시리즈 그란쿠페 (F44)" },
+    { label: "2 Series Coupe G42 (2021+)",   value: "2시리즈 (G42)",       yearFrom: 2021 },
+    { label: "3 Series E90 (2005-2012)",     value: "3시리즈 (E90)",       yearFrom: 2005, yearTo: 2012 },
+    { label: "3 Series F30 (2012-2019)",     value: "3시리즈 (F30)",       yearFrom: 2012, yearTo: 2019 },
+    { label: "3 Series G20 (2019+)",         value: "3시리즈 (G20)",       yearFrom: 2019 },
+    { label: "4 Series F32 (2013-2020)",     value: "4시리즈 (F32)",       yearFrom: 2013, yearTo: 2020 },
+    { label: "4 Series G22 (2020+)",         value: "4시리즈 (G22)",       yearFrom: 2020 },
+    { label: "4 Series Gran Coupe F36",      value: "4시리즈 그란쿠페 (F36)", yearFrom: 2013, yearTo: 2021 },
+    { label: "4 Series Gran Coupe G26 (2021+)", value: "4시리즈 그란쿠페 (G26)", yearFrom: 2021 },
+    { label: "5 Series F10 (2010-2017)",     value: "5시리즈 (F10)",       yearFrom: 2010, yearTo: 2017 },
+    { label: "5 Series G30 (2017-2023)",     value: "5시리즈 (G30)",       yearFrom: 2017, yearTo: 2023 },
+    { label: "5 Series G60 (2023+)",         value: "5시리즈 (G60)",       yearFrom: 2023 },
+    { label: "6 Series F12 Coupe/Cab",       value: "6시리즈 (F12)",       yearFrom: 2011, yearTo: 2018 },
+    { label: "6 Series Gran Turismo G32",    value: "6시리즈 그란투리스모 (G32)", yearFrom: 2017, yearTo: 2023 },
+    { label: "7 Series F01 (2009-2015)",     value: "7시리즈 (F01)",       yearFrom: 2009, yearTo: 2015 },
+    { label: "7 Series G11 (2015-2022)",     value: "7시리즈 (G11)",       yearFrom: 2015, yearTo: 2022 },
+    { label: "7 Series G70 (2022+)",         value: "7시리즈 (G70)",       yearFrom: 2022 },
+    { label: "8 Series G15 (2018+)",         value: "8시리즈 (G15)",       yearFrom: 2018 },
+    { label: "8 Series Gran Coupe G16",      value: "8시리즈 그란쿠페 (G16)", yearFrom: 2019 },
+    { label: "X1 E84 (2009-2015)",           value: "X1 (E84)",            yearFrom: 2009, yearTo: 2015 },
+    { label: "X1 F48 (2015-2022)",           value: "X1 (F48)",            yearFrom: 2015, yearTo: 2022 },
+    { label: "X1 U11 (2022+)",               value: "X1 (U11)",            yearFrom: 2022 },
+    { label: "X2 F39 (2017-2023)",           value: "X2 (F39)",            yearFrom: 2017, yearTo: 2023 },
+    { label: "X3 F25 (2010-2017)",           value: "X3 (F25)",            yearFrom: 2010, yearTo: 2017 },
+    { label: "X3 G01 (2017-2024)",           value: "X3 (G01)",            yearFrom: 2017, yearTo: 2024 },
+    { label: "X3 G45 (2024+)",               value: "X3 (G45)",            yearFrom: 2024 },
+    { label: "X4 F26 (2014-2018)",           value: "X4 (F26)",            yearFrom: 2014, yearTo: 2018 },
+    { label: "X4 G02 (2018+)",               value: "X4 (G02)",            yearFrom: 2018 },
+    { label: "X5 F15 (2013-2018)",           value: "X5 (F15)",            yearFrom: 2013, yearTo: 2018 },
+    { label: "X5 G05 (2018+)",               value: "X5 (G05)",            yearFrom: 2018 },
+    { label: "X6 F16 (2014-2019)",           value: "X6 (F16)",            yearFrom: 2014, yearTo: 2019 },
+    { label: "X6 G06 (2019+)",               value: "X6 (G06)",            yearFrom: 2019 },
+    { label: "X7 G07 (2019+)",               value: "X7 (G07)",            yearFrom: 2019 },
+    { label: "M2 F87 (2015-2021)",           value: "M2 (F87)",            yearFrom: 2015, yearTo: 2021 },
+    { label: "M2 G87 (2022+)",               value: "M2 (G87)",            yearFrom: 2022 },
+    { label: "M3 F80 (2014-2020)",           value: "M3 (F80)",            yearFrom: 2014, yearTo: 2020 },
+    { label: "M3 G80 (2020+)",               value: "M3 (G80)",            yearFrom: 2020 },
+    { label: "M4 F82 (2014-2020)",           value: "M4 (F82)",            yearFrom: 2014, yearTo: 2020 },
+    { label: "M4 G82 (2020+)",               value: "M4 (G82)",            yearFrom: 2020 },
+    { label: "M5 F90 (2017-2024)",           value: "M5 (F90)",            yearFrom: 2017, yearTo: 2024 },
+    { label: "M5 G90 (2024+)",               value: "M5 (G90)",            yearFrom: 2024 },
+    { label: "M8 F92 (2018+)",               value: "M8 (F92)",            yearFrom: 2018 },
+    { label: "i3 (2013-2022)",               value: "i3",                  yearFrom: 2013, yearTo: 2022 },
+    { label: "i4 (2021+)",                   value: "i4",                  yearFrom: 2021 },
+    { label: "i5 (2023+)",                   value: "i5",                  yearFrom: 2023 },
+    { label: "i7 (2022+)",                   value: "i7",                  yearFrom: 2022 },
+    { label: "i8 (2014-2020)",               value: "i8",                  yearFrom: 2014, yearTo: 2020 },
+    { label: "iX (2021+)",                   value: "iX",                  yearFrom: 2021 },
+    { label: "iX3 (2020+)",                  value: "iX3",                 yearFrom: 2020 },
+    { label: "XM (2022+)",                   value: "XM",                  yearFrom: 2022 },
+    { label: "Z4 G29 (2018+)",               value: "Z4 (G29)",            yearFrom: 2018 },
   ],
 
-  // ── MERCEDES-BENZ ─────────────────────────────────────────────────────────
   "Mercedes-Benz": [
-    { label: "A-Class W176",          value: "A클래스 (W176)" },
-    { label: "A-Class W177 (2018+)",  value: "A클래스 (W177)" },
-    { label: "C-Class W204",          value: "C클래스 (W204)" },
-    { label: "C-Class W205 (2014+)",  value: "C클래스 (W205)" },
-    { label: "C-Class W206 (2021+)",  value: "C클래스 (W206)" },
-    { label: "E-Class W212",          value: "E클래스 (W212)" },
-    { label: "E-Class W213 (2016+)",  value: "E클래스 (W213)" },
-    { label: "E-Class W214 (2024+)",  value: "E클래스 (W214)" },
-    { label: "S-Class W221",          value: "S클래스 (W221)" },
-    { label: "S-Class W222 (2013+)",  value: "S클래스 (W222)" },
-    { label: "S-Class W223 (2021+)",  value: "S클래스 (W223)" },
-    { label: "G-Class W463",          value: "G클래스 (W463)" },
-    { label: "CLA C117",              value: "CLA (C117)" },
-    { label: "CLA C118 (2019+)",      value: "CLA (C118)" },
-    { label: "CLS C257 (2018+)",      value: "CLS (C257)" },
-    { label: "CLE",                   value: "CLE클래스" },
-    { label: "GLA X156",              value: "GLA (X156)" },
-    { label: "GLA H247 (2020+)",      value: "GLA (H247)" },
-    { label: "GLB X247 (2019+)",      value: "GLB클래스" },
-    { label: "GLC X253 (2015-2022)",  value: "GLC (X253)" },
-    { label: "GLC X254 (2023+)",      value: "GLC (X254)" },
-    { label: "GLC Coupe C253",        value: "GLC쿠페 (C253)" },
-    { label: "GLE W166",              value: "GLE (W166)" },
-    { label: "GLE V167 (2019+)",      value: "GLE (V167)" },
-    { label: "GLE Coupe",             value: "GLE쿠페" },
-    { label: "GLS X166",              value: "GLS (X166)" },
-    { label: "GLS X167 (2019+)",      value: "GLS (X167)" },
-    { label: "EQA",                   value: "EQA" },
-    { label: "EQB",                   value: "EQB" },
-    { label: "EQC",                   value: "EQC" },
-    { label: "EQE",                   value: "EQE" },
-    { label: "EQS",                   value: "EQS" },
-    { label: "Maybach S-Class",       value: "마이바흐 S클래스" },
-    { label: "AMG GT",                value: "AMG GT" },
-    { label: "SL-Class",              value: "SL클래스" },
+    { label: "A-Class W176 (2012-2018)",  value: "A클래스 (W176)",  yearFrom: 2012, yearTo: 2018 },
+    { label: "A-Class W177 (2018+)",      value: "A클래스 (W177)",  yearFrom: 2018 },
+    { label: "C-Class W204 (2007-2014)",  value: "C클래스 (W204)",  yearFrom: 2007, yearTo: 2014 },
+    { label: "C-Class W205 (2014-2021)",  value: "C클래스 (W205)",  yearFrom: 2014, yearTo: 2021 },
+    { label: "C-Class W206 (2021+)",      value: "C클래스 (W206)",  yearFrom: 2021 },
+    { label: "E-Class W212 (2009-2016)",  value: "E클래스 (W212)",  yearFrom: 2009, yearTo: 2016 },
+    { label: "E-Class W213 (2016-2024)",  value: "E클래스 (W213)",  yearFrom: 2016, yearTo: 2024 },
+    { label: "E-Class W214 (2024+)",      value: "E클래스 (W214)",  yearFrom: 2024 },
+    { label: "S-Class W221 (2005-2013)",  value: "S클래스 (W221)",  yearFrom: 2005, yearTo: 2013 },
+    { label: "S-Class W222 (2013-2021)",  value: "S클래스 (W222)",  yearFrom: 2013, yearTo: 2021 },
+    { label: "S-Class W223 (2021+)",      value: "S클래스 (W223)",  yearFrom: 2021 },
+    { label: "G-Class W463 (2018+)",      value: "G클래스 (W463)",  yearFrom: 2018 },
+    { label: "CLA C117 (2013-2019)",      value: "CLA (C117)",      yearFrom: 2013, yearTo: 2019 },
+    { label: "CLA C118 (2019+)",          value: "CLA (C118)",      yearFrom: 2019 },
+    { label: "CLS C257 (2018+)",          value: "CLS (C257)",      yearFrom: 2018 },
+    { label: "CLE (2024+)",               value: "CLE클래스",        yearFrom: 2024 },
+    { label: "GLA X156 (2013-2020)",      value: "GLA (X156)",      yearFrom: 2013, yearTo: 2020 },
+    { label: "GLA H247 (2020+)",          value: "GLA (H247)",      yearFrom: 2020 },
+    { label: "GLB X247 (2019+)",          value: "GLB클래스",        yearFrom: 2019 },
+    { label: "GLC X253 (2015-2022)",      value: "GLC (X253)",      yearFrom: 2015, yearTo: 2022 },
+    { label: "GLC X254 (2023+)",          value: "GLC (X254)",      yearFrom: 2023 },
+    { label: "GLC Coupe C253 (2016+)",    value: "GLC쿠페 (C253)",  yearFrom: 2016 },
+    { label: "GLE W166 (2015-2019)",      value: "GLE (W166)",      yearFrom: 2015, yearTo: 2019 },
+    { label: "GLE V167 (2019+)",          value: "GLE (V167)",      yearFrom: 2019 },
+    { label: "GLE Coupe (2020+)",         value: "GLE쿠페",          yearFrom: 2020 },
+    { label: "GLS X166 (2016-2019)",      value: "GLS (X166)",      yearFrom: 2016, yearTo: 2019 },
+    { label: "GLS X167 (2019+)",          value: "GLS (X167)",      yearFrom: 2019 },
+    { label: "EQA (2021+)",               value: "EQA",              yearFrom: 2021 },
+    { label: "EQB (2021+)",               value: "EQB",              yearFrom: 2021 },
+    { label: "EQC (2019+)",               value: "EQC",              yearFrom: 2019 },
+    { label: "EQE (2022+)",               value: "EQE",              yearFrom: 2022 },
+    { label: "EQS (2021+)",               value: "EQS",              yearFrom: 2021 },
+    { label: "Maybach S-Class (2020+)",   value: "마이바흐 S클래스", yearFrom: 2020 },
+    { label: "AMG GT (2014+)",            value: "AMG GT",           yearFrom: 2014 },
+    { label: "SL-Class (2021+)",          value: "SL클래스",          yearFrom: 2021 },
   ],
 
-  // ── AUDI ──────────────────────────────────────────────────────────────────
   "Audi": [
-    { label: "A3",          value: "A3" },
-    { label: "A4",          value: "A4" },
-    { label: "A5",          value: "A5" },
-    { label: "A6",          value: "A6" },
-    { label: "A7",          value: "A7" },
-    { label: "A8",          value: "A8" },
-    { label: "Q2",          value: "Q2" },
-    { label: "Q3",          value: "Q3" },
-    { label: "Q4 e-tron",   value: "Q4 e-tron" },
-    { label: "Q5",          value: "Q5" },
-    { label: "Q7",          value: "Q7" },
-    { label: "Q8",          value: "Q8" },
-    { label: "Q8 e-tron",   value: "Q8 e-tron" },
-    { label: "e-tron",      value: "e-tron" },
-    { label: "e-tron GT",   value: "e-tron GT" },
-    { label: "TT",          value: "TT" },
-    { label: "R8",          value: "R8" },
-    { label: "RS3",         value: "RS3" },
-    { label: "RS4",         value: "RS4" },
-    { label: "RS5",         value: "RS5" },
-    { label: "RS6",         value: "RS6" },
-    { label: "RS7",         value: "RS7" },
-    { label: "SQ5",         value: "SQ5" },
-    { label: "SQ7",         value: "SQ7" },
-    { label: "SQ8",         value: "SQ8" },
+    { label: "A3 (2013+)",         value: "A3",         yearFrom: 2013 },
+    { label: "A4 (2015+)",         value: "A4",         yearFrom: 2015 },
+    { label: "A5 (2016+)",         value: "A5",         yearFrom: 2016 },
+    { label: "A6 (2018+)",         value: "A6",         yearFrom: 2018 },
+    { label: "A7 (2018+)",         value: "A7",         yearFrom: 2018 },
+    { label: "A8 (2017+)",         value: "A8",         yearFrom: 2017 },
+    { label: "Q2 (2016+)",         value: "Q2",         yearFrom: 2016 },
+    { label: "Q3 (2018+)",         value: "Q3",         yearFrom: 2018 },
+    { label: "Q4 e-tron (2021+)",  value: "Q4 e-tron",  yearFrom: 2021 },
+    { label: "Q5 (2017+)",         value: "Q5",         yearFrom: 2017 },
+    { label: "Q7 (2015+)",         value: "Q7",         yearFrom: 2015 },
+    { label: "Q8 (2018+)",         value: "Q8",         yearFrom: 2018 },
+    { label: "Q8 e-tron (2022+)",  value: "Q8 e-tron",  yearFrom: 2022 },
+    { label: "e-tron (2018+)",     value: "e-tron",     yearFrom: 2018 },
+    { label: "e-tron GT (2021+)",  value: "e-tron GT",  yearFrom: 2021 },
+    { label: "TT (2014+)",         value: "TT",         yearFrom: 2014 },
+    { label: "R8 (2015+)",         value: "R8",         yearFrom: 2015 },
+    { label: "RS3 (2021+)",        value: "RS3",        yearFrom: 2021 },
+    { label: "RS4 (2017+)",        value: "RS4",        yearFrom: 2017 },
+    { label: "RS5 (2017+)",        value: "RS5",        yearFrom: 2017 },
+    { label: "RS6 (2019+)",        value: "RS6",        yearFrom: 2019 },
+    { label: "RS7 (2019+)",        value: "RS7",        yearFrom: 2019 },
+    { label: "SQ5 (2017+)",        value: "SQ5",        yearFrom: 2017 },
+    { label: "SQ7 (2017+)",        value: "SQ7",        yearFrom: 2017 },
+    { label: "SQ8 (2019+)",        value: "SQ8",        yearFrom: 2019 },
   ],
 
-  // ── VOLKSWAGEN ────────────────────────────────────────────────────────────
   "Volkswagen": [
-    { label: "Golf",          value: "골프" },
-    { label: "Golf GTI",      value: "골프 GTI" },
-    { label: "Golf R",        value: "골프 R" },
-    { label: "Tiguan",        value: "티구안" },
-    { label: "Tiguan Allspace",value: "티구안 올스페이스" },
-    { label: "Passat",        value: "파사트" },
-    { label: "Touareg",       value: "투아렉" },
-    { label: "Arteon",        value: "아테온" },
-    { label: "ID.4",          value: "ID.4" },
-    { label: "ID.6",          value: "ID.6" },
+    { label: "Golf 8 (2019+)",          value: "골프",      yearFrom: 2019 },
+    { label: "Golf GTI (2021+)",        value: "골프 GTI",  yearFrom: 2021 },
+    { label: "Golf R (2021+)",          value: "골프 R",    yearFrom: 2021 },
+    { label: "Tiguan 2nd (2016+)",      value: "티구안",    yearFrom: 2016 },
+    { label: "Tiguan Allspace (2017+)", value: "티구안 올스페이스", yearFrom: 2017 },
+    { label: "Passat (2019+)",          value: "파사트",    yearFrom: 2019 },
+    { label: "Touareg 3rd (2018+)",     value: "투아렉",    yearFrom: 2018 },
+    { label: "Arteon (2017+)",          value: "아테온",    yearFrom: 2017 },
+    { label: "ID.4 (2020+)",            value: "ID.4",      yearFrom: 2020 },
+    { label: "ID.6 (2021+)",            value: "ID.6",      yearFrom: 2021 },
   ],
 
-  // ── TOYOTA ────────────────────────────────────────────────────────────────
   "Toyota": [
-    { label: "Camry",                   value: "캠리" },
-    { label: "RAV4",                    value: "RAV4" },
-    { label: "RAV4 Hybrid",             value: "RAV4 하이브리드" },
-    { label: "Prius",                   value: "프리우스" },
-    { label: "Crown Crossover",         value: "크라운 크로스오버" },
-    { label: "Alphard",                 value: "알파드" },
-    { label: "Vellfire",                value: "벨파이어" },
-    { label: "Sienna",                  value: "시에나" },
-    { label: "Land Cruiser",            value: "랜드크루저" },
-    { label: "Land Cruiser Prado",      value: "랜드크루저 프라도" },
-    { label: "Highlander",              value: "하이랜더" },
-    { label: "GR86",                    value: "GR86" },
-    { label: "GR Supra",                value: "GR 수프라" },
+    { label: "Camry (2017+)",             value: "캠리",               yearFrom: 2017 },
+    { label: "RAV4 (2018+)",              value: "RAV4",               yearFrom: 2018 },
+    { label: "RAV4 Hybrid (2018+)",       value: "RAV4 하이브리드",   yearFrom: 2018 },
+    { label: "Prius (2022+)",             value: "프리우스",            yearFrom: 2022 },
+    { label: "Crown Crossover (2022+)",   value: "크라운 크로스오버", yearFrom: 2022 },
+    { label: "Alphard (2023+)",           value: "알파드",              yearFrom: 2023 },
+    { label: "Vellfire (2023+)",          value: "벨파이어",            yearFrom: 2023 },
+    { label: "Sienna (2020+)",            value: "시에나",              yearFrom: 2020 },
+    { label: "Land Cruiser (2021+)",      value: "랜드크루저",          yearFrom: 2021 },
+    { label: "Land Cruiser Prado",        value: "랜드크루저 프라도" },
+    { label: "Highlander (2019+)",        value: "하이랜더",            yearFrom: 2019 },
+    { label: "GR86 (2021+)",              value: "GR86",               yearFrom: 2021 },
+    { label: "GR Supra (2019+)",          value: "GR 수프라",           yearFrom: 2019 },
   ],
 
-  // ── LEXUS ─────────────────────────────────────────────────────────────────
   "Lexus": [
-    { label: "ES300h 7th Gen",    value: "ES300h 7세대" },
-    { label: "IS300h",            value: "IS300h" },
-    { label: "IS250",             value: "IS250" },
-    { label: "LS500h 5th Gen",    value: "LS500h 5세대" },
-    { label: "LS460",             value: "LS460" },
-    { label: "UX250h",            value: "UX250h" },
-    { label: "CT200h",            value: "CT200h" },
-    { label: "NX300h",            value: "NX300h" },
-    { label: "NX350h 2nd Gen",    value: "NX350h 2세대" },
-    { label: "NX450h+ 2nd Gen",   value: "NX450h+ 2세대" },
-    { label: "RX350",             value: "RX350" },
-    { label: "RX450h 4th Gen",    value: "RX450h 4세대" },
-    { label: "LX600",             value: "LX600" },
-    { label: "LX570",             value: "LX570" },
-    { label: "LC500",             value: "LC500" },
-    { label: "LC500h",            value: "LC500h" },
+    { label: "ES300h 7th Gen (2018+)",  value: "ES300h 7세대",  yearFrom: 2018 },
+    { label: "IS300h (2013+)",          value: "IS300h",         yearFrom: 2013 },
+    { label: "IS250 (-2020)",           value: "IS250",          yearTo: 2020 },
+    { label: "LS500h 5th Gen (2017+)",  value: "LS500h 5세대",  yearFrom: 2017 },
+    { label: "LS460 (-2017)",           value: "LS460",          yearTo: 2017 },
+    { label: "UX250h (2018+)",          value: "UX250h",         yearFrom: 2018 },
+    { label: "CT200h (-2022)",          value: "CT200h",         yearTo: 2022 },
+    { label: "NX300h (-2021)",          value: "NX300h",         yearTo: 2021 },
+    { label: "NX350h 2nd Gen (2021+)",  value: "NX350h 2세대",  yearFrom: 2021 },
+    { label: "NX450h+ 2nd Gen (2021+)", value: "NX450h+ 2세대", yearFrom: 2021 },
+    { label: "RX350 (2022+)",           value: "RX350",          yearFrom: 2022 },
+    { label: "RX450h 4th Gen (2015+)",  value: "RX450h 4세대",  yearFrom: 2015 },
+    { label: "LX600 (2021+)",           value: "LX600",          yearFrom: 2021 },
+    { label: "LX570 (-2021)",           value: "LX570",          yearTo: 2021 },
+    { label: "LC500 (2017+)",           value: "LC500",          yearFrom: 2017 },
+    { label: "LC500h (2017+)",          value: "LC500h",         yearFrom: 2017 },
   ],
 
-  // ── PORSCHE ───────────────────────────────────────────────────────────────
   "Porsche": [
-    { label: "Cayenne",               value: "카이엔" },
-    { label: "Cayenne Coupe",         value: "카이엔 쿠페" },
-    { label: "Panamera",              value: "파나메라" },
-    { label: "Taycan",                value: "타이칸" },
-    { label: "Taycan Cross Turismo",  value: "타이칸 크로스 투리스모" },
-    { label: "Macan",                 value: "마칸" },
-    { label: "Macan EV",              value: "마칸 EV" },
-    { label: "911",                   value: "911" },
-    { label: "Boxster",               value: "박스터" },
-    { label: "Cayman",                value: "케이맨" },
+    { label: "Cayenne (2018+)",              value: "카이엔",                  yearFrom: 2018 },
+    { label: "Cayenne Coupe (2019+)",        value: "카이엔 쿠페",             yearFrom: 2019 },
+    { label: "Panamera (2016+)",             value: "파나메라",                yearFrom: 2016 },
+    { label: "Taycan (2019+)",               value: "타이칸",                  yearFrom: 2019 },
+    { label: "Taycan Cross Turismo (2021+)", value: "타이칸 크로스 투리스모", yearFrom: 2021 },
+    { label: "Macan (2014+)",                value: "마칸",                    yearFrom: 2014 },
+    { label: "Macan EV (2024+)",             value: "마칸 EV",                 yearFrom: 2024 },
+    { label: "911 (2019+)",                  value: "911",                     yearFrom: 2019 },
+    { label: "Boxster (2012+)",              value: "박스터",                  yearFrom: 2012 },
+    { label: "Cayman (2012+)",               value: "케이맨",                  yearFrom: 2012 },
   ],
 
-  // ── VOLVO ─────────────────────────────────────────────────────────────────
   "Volvo": [
-    { label: "XC40",              value: "XC40" },
-    { label: "XC40 Recharge",     value: "XC40 리차지" },
-    { label: "XC60",              value: "XC60" },
-    { label: "XC90",              value: "XC90" },
-    { label: "XC90 Recharge",     value: "XC90 리차지" },
-    { label: "C40 Recharge",      value: "C40 리차지" },
-    { label: "S60",               value: "S60" },
-    { label: "S90",               value: "S90" },
-    { label: "V60",               value: "V60" },
-    { label: "V60 Cross Country", value: "V60 크로스컨트리" },
-    { label: "V90",               value: "V90" },
-    { label: "V90 Cross Country", value: "V90 크로스컨트리" },
-    { label: "EX30",              value: "EX30" },
-    { label: "EX40",              value: "EX40" },
-    { label: "EX90",              value: "EX90" },
+    { label: "XC90 (2014+)",            value: "XC90",         yearFrom: 2014 },
+    { label: "XC90 Recharge (2021+)",   value: "XC90 리차지",  yearFrom: 2021 },
+    { label: "XC60 (2017+)",            value: "XC60",         yearFrom: 2017 },
+    { label: "XC40 (2017+)",            value: "XC40",         yearFrom: 2017 },
+    { label: "XC40 Recharge (2020+)",   value: "XC40 리차지",  yearFrom: 2020 },
+    { label: "C40 Recharge (2021+)",    value: "C40 리차지",   yearFrom: 2021 },
+    { label: "EX90 (2024+)",            value: "EX90",         yearFrom: 2024 },
+    { label: "EX40 (2023+)",            value: "EX40",         yearFrom: 2023 },
+    { label: "EX30 (2023+)",            value: "EX30",         yearFrom: 2023 },
+    { label: "S60 (2018+)",             value: "S60",          yearFrom: 2018 },
+    { label: "S90 (2016+)",             value: "S90",          yearFrom: 2016 },
+    { label: "V60 (2018+)",             value: "V60",          yearFrom: 2018 },
+    { label: "V60 Cross Country",       value: "V60 크로스컨트리" },
+    { label: "V90 (2016+)",             value: "V90",          yearFrom: 2016 },
+    { label: "V90 Cross Country",       value: "V90 크로스컨트리" },
   ],
 
-  // ── LAND ROVER ────────────────────────────────────────────────────────────
   "Land Rover": [
-    { label: "Range Rover",             value: "레인지로버" },
-    { label: "Range Rover Sport",       value: "레인지로버 스포츠" },
-    { label: "Range Rover Evoque",      value: "레인지로버 이보크" },
-    { label: "Range Rover Velar",       value: "레인지로버 벨라" },
-    { label: "Discovery",               value: "디스커버리" },
-    { label: "Discovery Sport",         value: "디스커버리 스포츠" },
-    { label: "Defender",                value: "디펜더" },
+    { label: "Range Rover (2021+)",          value: "레인지로버",          yearFrom: 2021 },
+    { label: "Range Rover Sport (2022+)",    value: "레인지로버 스포츠",   yearFrom: 2022 },
+    { label: "Range Rover Evoque (2019+)",   value: "레인지로버 이보크",   yearFrom: 2019 },
+    { label: "Range Rover Velar (2017+)",    value: "레인지로버 벨라",     yearFrom: 2017 },
+    { label: "Defender (2020+)",             value: "디펜더",               yearFrom: 2020 },
+    { label: "Discovery (2016+)",            value: "디스커버리",           yearFrom: 2016 },
+    { label: "Discovery Sport (2014+)",      value: "디스커버리 스포츠",   yearFrom: 2014 },
   ],
 
-  // ── JAGUAR ────────────────────────────────────────────────────────────────
   "Jaguar": [
-    { label: "F-Pace",  value: "F-페이스" },
-    { label: "E-Pace",  value: "E-페이스" },
-    { label: "XE",      value: "XE" },
-    { label: "XF",      value: "XF" },
-    { label: "XJ",      value: "XJ" },
-    { label: "F-Type",  value: "F-타입" },
-    { label: "I-Pace",  value: "I-페이스" },
+    { label: "F-Pace (2016+)", value: "F-페이스", yearFrom: 2016 },
+    { label: "E-Pace (2017+)", value: "E-페이스", yearFrom: 2017 },
+    { label: "I-Pace (2018+)", value: "I-페이스", yearFrom: 2018 },
+    { label: "XE (2015+)",     value: "XE",        yearFrom: 2015 },
+    { label: "XF (2015+)",     value: "XF",        yearFrom: 2015 },
+    { label: "XJ (-2019)",     value: "XJ",        yearTo: 2019 },
+    { label: "F-Type (2013+)", value: "F-타입",    yearFrom: 2013 },
   ],
 
-  // ── MINI ──────────────────────────────────────────────────────────────────
   "MINI": [
-    { label: "Cooper",      value: "미니쿠퍼" },
-    { label: "Countryman",  value: "컨트리맨" },
-    { label: "Clubman",     value: "클럽맨" },
-    { label: "Aceman",      value: "에이스맨" },
+    { label: "Cooper (2014+)",      value: "미니쿠퍼",  yearFrom: 2014 },
+    { label: "Countryman (2017+)",  value: "컨트리맨",  yearFrom: 2017 },
+    { label: "Clubman (2015+)",     value: "클럽맨",    yearFrom: 2015 },
+    { label: "Aceman (2024+)",      value: "에이스맨",  yearFrom: 2024 },
   ],
 
-  // ── FORD ──────────────────────────────────────────────────────────────────
   "Ford": [
-    { label: "Mustang",       value: "머스탱" },
-    { label: "Mustang Mach-E",value: "머스탱 마하-E" },
-    { label: "Explorer",      value: "익스플로러" },
-    { label: "F-150",         value: "F-150" },
-    { label: "Bronco",        value: "브롱코" },
-    { label: "Edge",          value: "엣지" },
+    { label: "Mustang (2015+)",         value: "머스탱",        yearFrom: 2015 },
+    { label: "Mustang Mach-E (2020+)",  value: "머스탱 마하-E", yearFrom: 2020 },
+    { label: "Explorer (2019+)",        value: "익스플로러",    yearFrom: 2019 },
+    { label: "F-150 (2021+)",           value: "F-150",         yearFrom: 2021 },
+    { label: "Bronco (2021+)",          value: "브롱코",         yearFrom: 2021 },
+    { label: "Edge (2015+)",            value: "엣지",           yearFrom: 2015 },
   ],
 
-  // ── JEEP ──────────────────────────────────────────────────────────────────
   "Jeep": [
-    { label: "Grand Cherokee", value: "그랜드체로키" },
-    { label: "Wrangler",       value: "랭글러" },
-    { label: "Compass",        value: "컴패스" },
-    { label: "Renegade",       value: "레니게이드" },
+    { label: "Grand Cherokee (2021+)", value: "그랜드체로키", yearFrom: 2021 },
+    { label: "Wrangler (2018+)",       value: "랭글러",        yearFrom: 2018 },
+    { label: "Compass (2017+)",        value: "컴패스",        yearFrom: 2017 },
+    { label: "Renegade (2014+)",       value: "레니게이드",    yearFrom: 2014 },
   ],
 
-  // ── LINCOLN ───────────────────────────────────────────────────────────────
   "Lincoln": [
-    { label: "Navigator",   value: "네비게이터" },
-    { label: "Aviator",     value: "에비에이터" },
-    { label: "Nautilus",    value: "노틸러스" },
-    { label: "Corsair",     value: "코르세어" },
-    { label: "Continental", value: "컨티넨탈" },
+    { label: "Navigator (2018+)",   value: "네비게이터", yearFrom: 2018 },
+    { label: "Aviator (2019+)",     value: "에비에이터", yearFrom: 2019 },
+    { label: "Nautilus (2018+)",    value: "노틸러스",   yearFrom: 2018 },
+    { label: "Corsair (2019+)",     value: "코르세어",   yearFrom: 2019 },
+    { label: "Continental (-2020)", value: "컨티넨탈",   yearTo: 2020 },
   ],
 
-  // ── CADILLAC ──────────────────────────────────────────────────────────────
   "Cadillac": [
-    { label: "Escalade",  value: "에스컬레이드" },
-    { label: "XT4",       value: "XT4" },
-    { label: "XT5",       value: "XT5" },
-    { label: "XT6",       value: "XT6" },
-    { label: "CT5",       value: "CT5" },
-    { label: "CT6",       value: "CT6" },
-    { label: "Lyriq",     value: "리릭" },
+    { label: "Escalade (2021+)", value: "에스컬레이드", yearFrom: 2021 },
+    { label: "XT4 (2018+)",      value: "XT4",          yearFrom: 2018 },
+    { label: "XT5 (2016+)",      value: "XT5",          yearFrom: 2016 },
+    { label: "XT6 (2019+)",      value: "XT6",          yearFrom: 2019 },
+    { label: "CT5 (2019+)",      value: "CT5",          yearFrom: 2019 },
+    { label: "CT6 (2016+)",      value: "CT6",          yearFrom: 2016 },
+    { label: "Lyriq (2022+)",    value: "리릭",          yearFrom: 2022 },
   ],
 
-  // ── INFINITI ──────────────────────────────────────────────────────────────
   "Infiniti": [
-    { label: "QX80",  value: "QX80" },
-    { label: "QX60",  value: "QX60" },
-    { label: "QX50",  value: "QX50" },
-    { label: "QX70",  value: "QX70" },
-    { label: "Q50",   value: "Q50" },
-    { label: "Q60",   value: "Q60" },
-    { label: "Q70",   value: "Q70" },
+    { label: "QX80 (2010+)", value: "QX80" },
+    { label: "QX60 (2012+)", value: "QX60", yearFrom: 2012 },
+    { label: "QX50 (2017+)", value: "QX50", yearFrom: 2017 },
+    { label: "QX70 (-2017)", value: "QX70", yearTo: 2017 },
+    { label: "Q50 (2013+)",  value: "Q50",  yearFrom: 2013 },
+    { label: "Q60 (2016+)",  value: "Q60",  yearFrom: 2016 },
+    { label: "Q70 (-2019)",  value: "Q70",  yearTo: 2019 },
   ],
 
-  // ── TESLA ─────────────────────────────────────────────────────────────────
   "Tesla": [
-    { label: "Model S",     value: "모델 S" },
-    { label: "Model 3",     value: "모델 3" },
-    { label: "Model X",     value: "모델 X" },
-    { label: "Model Y",     value: "모델 Y" },
-    { label: "Cybertruck",  value: "사이버트럭" },
+    { label: "Model S (2019+)",    value: "모델 S",     yearFrom: 2019 },
+    { label: "Model 3 (2019+)",    value: "모델 3",     yearFrom: 2019 },
+    { label: "Model X (2019+)",    value: "모델 X",     yearFrom: 2019 },
+    { label: "Model Y (2020+)",    value: "모델 Y",     yearFrom: 2020 },
+    { label: "Cybertruck (2023+)", value: "사이버트럭",  yearFrom: 2023 },
   ],
 
-  // ── HONDA ─────────────────────────────────────────────────────────────────
   "Honda": [
-    { label: "Accord",    value: "어코드" },
-    { label: "Civic",     value: "시빅" },
-    { label: "CR-V",      value: "CR-V" },
-    { label: "Pilot",     value: "파일럿" },
-    { label: "Odyssey",   value: "오딧세이" },
-    { label: "HR-V",      value: "HR-V" },
+    { label: "Accord (2017+)",  value: "어코드",   yearFrom: 2017 },
+    { label: "Civic (2021+)",   value: "시빅",     yearFrom: 2021 },
+    { label: "CR-V (2016+)",    value: "CR-V",     yearFrom: 2016 },
+    { label: "Pilot (2022+)",   value: "파일럿",   yearFrom: 2022 },
+    { label: "Odyssey (2017+)", value: "오딧세이", yearFrom: 2017 },
+    { label: "HR-V (2021+)",    value: "HR-V",     yearFrom: 2021 },
   ],
 
-  // ── NISSAN ────────────────────────────────────────────────────────────────
   "Nissan": [
-    { label: "Patrol",    value: "패트롤" },
-    { label: "Murano",    value: "무라노" },
-    { label: "Qashqai",   value: "캐시카이" },
-    { label: "X-Trail",   value: "엑스트레일" },
-    { label: "Juke",      value: "쥬크" },
-    { label: "370Z",      value: "370Z" },
-    { label: "GT-R",      value: "GT-R" },
+    { label: "Patrol (2010+)",   value: "패트롤",   yearFrom: 2010 },
+    { label: "Murano (2014+)",   value: "무라노",   yearFrom: 2014 },
+    { label: "Qashqai (2021+)",  value: "캐시카이", yearFrom: 2021 },
+    { label: "X-Trail (2021+)",  value: "엑스트레일", yearFrom: 2021 },
+    { label: "Juke (2019+)",     value: "쥬크",     yearFrom: 2019 },
+    { label: "370Z (-2022)",     value: "370Z",     yearTo: 2022 },
+    { label: "GT-R (2007+)",     value: "GT-R",     yearFrom: 2007 },
   ],
 
-  // ── MASERATI ──────────────────────────────────────────────────────────────
   "Maserati": [
-    { label: "Ghibli",        value: "기블리" },
-    { label: "Levante",       value: "레반떼" },
-    { label: "Quattroporte",  value: "콰트로포르테" },
-    { label: "Grecale",       value: "그레칼레" },
-    { label: "MC20",          value: "MC20" },
+    { label: "Ghibli (2013+)",        value: "기블리",       yearFrom: 2013 },
+    { label: "Levante (2016+)",       value: "레반떼",       yearFrom: 2016 },
+    { label: "Quattroporte (2013+)",  value: "콰트로포르테", yearFrom: 2013 },
+    { label: "Grecale (2022+)",       value: "그레칼레",     yearFrom: 2022 },
+    { label: "MC20 (2020+)",          value: "MC20",         yearFrom: 2020 },
   ],
 
-  // ── FERRARI ───────────────────────────────────────────────────────────────
   "Ferrari": [
-    { label: "Roma",        value: "로마" },
-    { label: "SF90",        value: "SF90" },
-    { label: "488",         value: "488" },
-    { label: "296 GTB",     value: "296 GTB" },
-    { label: "Portofino",   value: "포르토피노" },
+    { label: "Roma (2019+)",      value: "로마",       yearFrom: 2019 },
+    { label: "SF90 (2019+)",      value: "SF90",       yearFrom: 2019 },
+    { label: "488 (2015-2019)",   value: "488",        yearFrom: 2015, yearTo: 2019 },
+    { label: "296 GTB (2021+)",   value: "296 GTB",    yearFrom: 2021 },
+    { label: "Portofino (2017+)", value: "포르토피노", yearFrom: 2017 },
   ],
 
-  // ── LAMBORGHINI ───────────────────────────────────────────────────────────
   "Lamborghini": [
-    { label: "Urus",        value: "우루스" },
-    { label: "Huracan",     value: "우라칸" },
-    { label: "Aventador",   value: "아벤타도르" },
+    { label: "Urus (2018+)",        value: "우루스",    yearFrom: 2018 },
+    { label: "Huracan (2014+)",     value: "우라칸",    yearFrom: 2014 },
+    { label: "Aventador (2011+)",   value: "아벤타도르", yearFrom: 2011 },
   ],
 
-  // ── MAZDA ─────────────────────────────────────────────────────────────────
   "Mazda": [
-    { label: "CX-5",    value: "CX-5" },
-    { label: "CX-8",    value: "CX-8" },
-    { label: "CX-60",   value: "CX-60" },
-    { label: "MX-5",    value: "MX-5" },
-    { label: "Mazda 3", value: "마쯔다 3" },
+    { label: "CX-5 (2017+)",   value: "CX-5",    yearFrom: 2017 },
+    { label: "CX-8 (2017+)",   value: "CX-8",    yearFrom: 2017 },
+    { label: "CX-60 (2022+)",  value: "CX-60",   yearFrom: 2022 },
+    { label: "MX-5 (2015+)",   value: "MX-5",    yearFrom: 2015 },
+    { label: "Mazda 3 (2018+)",value: "마쯔다 3", yearFrom: 2018 },
   ],
 
-  // ── SUBARU ────────────────────────────────────────────────────────────────
   "Subaru": [
-    { label: "Outback",     value: "아웃백" },
-    { label: "Forester",    value: "포레스터" },
-    { label: "Impreza",     value: "임프레자" },
-    { label: "Legacy",      value: "레거시" },
-    { label: "Crosstrek",   value: "크로스트렉" },
+    { label: "Outback (2019+)",    value: "아웃백",    yearFrom: 2019 },
+    { label: "Forester (2018+)",   value: "포레스터",  yearFrom: 2018 },
+    { label: "Impreza (2016+)",    value: "임프레자",  yearFrom: 2016 },
+    { label: "Legacy (2019+)",     value: "레거시",    yearFrom: 2019 },
+    { label: "Crosstrek (2017+)",  value: "크로스트렉", yearFrom: 2017 },
   ],
 
-  // ── ALFA ROMEO ────────────────────────────────────────────────────────────
   "Alfa Romeo": [
-    { label: "Giulia",    value: "줄리아" },
-    { label: "Stelvio",   value: "스텔비오" },
-    { label: "Tonale",    value: "토날레" },
+    { label: "Giulia (2016+)",   value: "줄리아",   yearFrom: 2016 },
+    { label: "Stelvio (2017+)",  value: "스텔비오", yearFrom: 2017 },
+    { label: "Tonale (2022+)",   value: "토날레",   yearFrom: 2022 },
   ],
 
-  // ── MITSUBISHI ────────────────────────────────────────────────────────────
   "Mitsubishi": [
-    { label: "Outlander",     value: "아웃랜더" },
-    { label: "Eclipse Cross", value: "이클립스 크로스" },
-    { label: "Pajero",        value: "파제로" },
+    { label: "Outlander (2021+)",     value: "아웃랜더",      yearFrom: 2021 },
+    { label: "Eclipse Cross (2017+)", value: "이클립스 크로스", yearFrom: 2017 },
+    { label: "Pajero (-2021)",        value: "파제로",         yearTo: 2021 },
   ],
 
-  // ── BENTLEY ───────────────────────────────────────────────────────────────
   "Bentley": [
-    { label: "Continental GT",  value: "컨티넨탈 GT" },
-    { label: "Bentayga",        value: "벤테이가" },
-    { label: "Flying Spur",     value: "플라잉 스퍼" },
+    { label: "Continental GT (2017+)", value: "컨티넨탈 GT", yearFrom: 2017 },
+    { label: "Bentayga (2015+)",       value: "벤테이가",     yearFrom: 2015 },
+    { label: "Flying Spur (2019+)",    value: "플라잉 스퍼",  yearFrom: 2019 },
   ],
 
-  // ── GMC ───────────────────────────────────────────────────────────────────
   "GMC": [
-    { label: "Sierra",      value: "시에라" },
-    { label: "Acadia",      value: "아카디아" },
-    { label: "Yukon",       value: "유콘" },
-    { label: "Canyon",      value: "캐니언" },
+    { label: "Sierra (2019+)",   value: "시에라",   yearFrom: 2019 },
+    { label: "Acadia (2017+)",   value: "아카디아", yearFrom: 2017 },
+    { label: "Yukon (2021+)",    value: "유콘",     yearFrom: 2021 },
+    { label: "Canyon (2021+)",   value: "캐니언",   yearFrom: 2021 },
   ],
 
-  // ── DODGE ─────────────────────────────────────────────────────────────────
   "Dodge": [
-    { label: "Challenger",  value: "챌린저" },
-    { label: "Charger",     value: "차저" },
-    { label: "Durango",     value: "듀랑고" },
-    { label: "RAM",         value: "램" },
+    { label: "Challenger (2008+)", value: "챌린저", yearFrom: 2008 },
+    { label: "Charger (2011+)",    value: "차저",   yearFrom: 2011 },
+    { label: "Durango (2011+)",    value: "듀랑고", yearFrom: 2011 },
+    { label: "RAM (2018+)",        value: "램",     yearFrom: 2018 },
   ],
 
-  // ── POLESTAR ──────────────────────────────────────────────────────────────
   "Polestar": [
-    { label: "Polestar 2",  value: "폴스타 2" },
-    { label: "Polestar 3",  value: "폴스타 3" },
-    { label: "Polestar 4",  value: "폴스타 4" },
+    { label: "Polestar 2 (2020+)", value: "폴스타 2", yearFrom: 2020 },
+    { label: "Polestar 3 (2023+)", value: "폴스타 3", yearFrom: 2023 },
+    { label: "Polestar 4 (2024+)", value: "폴스타 4", yearFrom: 2024 },
   ],
 
-  // ── FIAT ──────────────────────────────────────────────────────────────────
   "Fiat": [
-    { label: "500",         value: "500" },
-    { label: "500X",        value: "500X" },
+    { label: "500 (2007+)",  value: "500" },
+    { label: "500X (2014+)", value: "500X", yearFrom: 2014 },
   ],
 
-  // ── HUMMER ────────────────────────────────────────────────────────────────
   "Hummer": [
-    { label: "H2",          value: "허머 H2" },
-    { label: "H3",          value: "허머 H3" },
-    { label: "Hummer EV",   value: "GMC 허머 EV" },
+    { label: "H2 (-2009)",      value: "허머 H2",   yearTo: 2009 },
+    { label: "H3 (-2010)",      value: "허머 H3",   yearTo: 2010 },
+    { label: "Hummer EV (2021+)", value: "GMC 허머 EV", yearFrom: 2021 },
   ],
 
-  // ── SAAB ──────────────────────────────────────────────────────────────────
   "Saab": [
-    { label: "9-3",         value: "사브 9-3" },
-    { label: "9-5",         value: "사브 9-5" },
+    { label: "9-3 (-2011)", value: "사브 9-3", yearTo: 2011 },
+    { label: "9-5 (-2011)", value: "사브 9-5", yearTo: 2011 },
   ],
 
-  // ── LOTUS ─────────────────────────────────────────────────────────────────
   "Lotus": [
-    { label: "Elise",       value: "엘리스" },
-    { label: "Evora",       value: "에보라" },
-    { label: "Emira",       value: "에미라" },
-    { label: "Eletre",      value: "일레트르" },
+    { label: "Elise (-2021)",  value: "엘리스",  yearTo: 2021 },
+    { label: "Evora (-2021)",  value: "에보라",  yearTo: 2021 },
+    { label: "Emira (2021+)",  value: "에미라",  yearFrom: 2021 },
+    { label: "Eletre (2023+)", value: "일레트르", yearFrom: 2023 },
   ],
 
-  // ── BYD ───────────────────────────────────────────────────────────────────
   "BYD": [
-    { label: "Atto 3",      value: "아토 3" },
-    { label: "Seal",        value: "씰" },
-    { label: "Dolphin",     value: "돌핀" },
-    { label: "Han",         value: "한" },
-    { label: "Tang",        value: "탕" },
+    { label: "Atto 3 (2021+)", value: "아토 3", yearFrom: 2021 },
+    { label: "Seal (2022+)",   value: "씰",     yearFrom: 2022 },
+    { label: "Dolphin (2021+)",value: "돌핀",   yearFrom: 2021 },
+    { label: "Han (2020+)",    value: "한",     yearFrom: 2020 },
+    { label: "Tang (2018+)",   value: "탕",     yearFrom: 2018 },
   ],
 
-  // ── MAYBACH ───────────────────────────────────────────────────────────────
   "Maybach": [
-    { label: "S-Class",     value: "마이바흐 S클래스" },
-    { label: "GLS",         value: "마이바흐 GLS" },
+    { label: "S-Class (2020+)", value: "마이바흐 S클래스", yearFrom: 2020 },
+    { label: "GLS (2020+)",     value: "마이바흐 GLS",     yearFrom: 2020 },
   ],
 
-  // ── DAEWOO / GM대우 ───────────────────────────────────────────────────────
   "Daewoo": [
     { label: "Damas",           value: "다마스" },
     { label: "New Damas",       value: "뉴 다마스" },
@@ -658,7 +608,7 @@ const BRAND_MODELS: Record<string, ModelOption[]> = {
     { label: "Gentra",          value: "젠트라" },
     { label: "Lacetti",         value: "라세티" },
     { label: "Lacetti Premier", value: "라세티 프리미어" },
-    { label: "Cruze",           value: "크루즈" },
+    { label: "Cruze (2011+)",   value: "크루즈", yearFrom: 2011 },
     { label: "Rezzo",           value: "레조" },
     { label: "Winstorm",        value: "윈스톰" },
     { label: "Alpheon",         value: "알페온" },
@@ -666,21 +616,26 @@ const BRAND_MODELS: Record<string, ModelOption[]> = {
     { label: "Veritas",         value: "베리타스" },
   ],
 
-  // ── ROLLS-ROYCE ───────────────────────────────────────────────────────────
   "Rolls-Royce": [
-    { label: "Phantom",   value: "팬텀" },
-    { label: "Ghost",     value: "고스트" },
-    { label: "Cullinan",  value: "컬리넌" },
-    { label: "Wraith",    value: "레이스" },
+    { label: "Phantom (2017+)",  value: "팬텀",   yearFrom: 2017 },
+    { label: "Ghost (2020+)",    value: "고스트", yearFrom: 2020 },
+    { label: "Cullinan (2018+)", value: "컬리넌", yearFrom: 2018 },
+    { label: "Wraith (-2022)",   value: "레이스", yearTo: 2022 },
   ],
 };
 
+// ─────────────────────────────────────────────────────────────────────────────
+// FilterSidebar Component
+// ─────────────────────────────────────────────────────────────────────────────
 export function FilterSidebar({ filters, updateFilter, resetFilters, className }: FilterSidebarProps) {
   const { data: brandsData, isLoading: isLoadingBrands } = useGetCarBrands();
   const u = uf(updateFilter);
 
+  // ── حالة الموديل المختار (للحصول على سنواته)
+  const [selectedModelEntry, setSelectedModelEntry] = useState<ModelOption | null>(null);
+
   const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: 15 }, (_, i) => currentYear - i);
+  const years = Array.from({ length: 20 }, (_, i) => currentYear - i);
 
   const fuelTypes = [
     { id: "gasoline", label: "بنزين" },
@@ -705,6 +660,27 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
   const handleBrandChange = (brand: string) => {
     u("brand", brand || undefined);
     u("model", undefined);
+    setSelectedModelEntry(null);
+    updateFilter("yearFrom", undefined);
+    updateFilter("yearTo", undefined);
+  };
+
+  // ── عند اختيار موديل من القائمة، نضبط السنوات تلقائياً
+  const handleModelChange = (value: string) => {
+    if (!value) {
+      u("model", undefined);
+      setSelectedModelEntry(null);
+      updateFilter("yearFrom", undefined);
+      updateFilter("yearTo", undefined);
+      return;
+    }
+    const entry = brandModels.find((m) => m.value === value) ?? null;
+    u("model", value);
+    setSelectedModelEntry(entry);
+    if (entry?.yearFrom) updateFilter("yearFrom", entry.yearFrom);
+    else updateFilter("yearFrom", undefined);
+    if (entry?.yearTo) updateFilter("yearTo", entry.yearTo);
+    else updateFilter("yearTo", undefined);
   };
 
   const handleCountryChange = (country: string) => {
@@ -717,29 +693,37 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
     if (mode === "compatible" && selectedCountry) {
       updateFilter("yearFrom", COUNTRY_RULES[selectedCountry].minYear);
     } else {
-      updateFilter("yearFrom", undefined);
+      updateFilter("yearFrom", selectedModelEntry?.yearFrom ?? undefined);
     }
   };
 
-  const toggleFuel  = (type: any) => updateFilter("fuelType", filters.fuelType  === type ? undefined : type);
-  const toggleBody  = (type: any) => updateFilter("bodyType", filters.bodyType  === type ? undefined : type);
-  const toggleColor = (key: string) => updateFilter("color",  filters.color     === key  ? undefined : (key as any));
+  const toggleFuel  = (type: any) => updateFilter("fuelType", filters.fuelType === type ? undefined : type);
+  const toggleBody  = (type: any) => updateFilter("bodyType", filters.bodyType === type ? undefined : type);
+  const toggleColor = (key: string) => updateFilter("color", filters.color === key ? undefined : (key as any));
 
   const colors = [
-    { key: "white",     ar: "أبيض",       css: "#F8F8F8", border: "#D1D5DB" },
-    { key: "silver",    ar: "فضي",         css: "#C0C0C0", border: "#9CA3AF" },
-    { key: "gray",      ar: "رمادي",       css: "#6B7280", border: "#4B5563" },
-    { key: "black",     ar: "أسود",        css: "#1A1A1A", border: "#374151" },
-    { key: "red",       ar: "أحمر",        css: "#EF4444", border: "#DC2626" },
-    { key: "orange",    ar: "برتقالي",     css: "#F97316", border: "#EA580C" },
-    { key: "yellow",    ar: "أصفر",        css: "#EAB308", border: "#CA8A04" },
-    { key: "green",     ar: "أخضر",        css: "#22C55E", border: "#16A34A" },
-    { key: "lime",      ar: "أخضر فاتح",  css: "#84CC16", border: "#65A30D" },
-    { key: "lightblue", ar: "أزرق فاتح",  css: "#60A5FA", border: "#3B82F6" },
-    { key: "brown",     ar: "بني",         css: "#92400E", border: "#78350F" },
+    { key: "white",     ar: "أبيض",      css: "#F8F8F8", border: "#D1D5DB" },
+    { key: "silver",    ar: "فضي",        css: "#C0C0C0", border: "#9CA3AF" },
+    { key: "gray",      ar: "رمادي",      css: "#6B7280", border: "#4B5563" },
+    { key: "black",     ar: "أسود",       css: "#1A1A1A", border: "#374151" },
+    { key: "red",       ar: "أحمر",       css: "#EF4444", border: "#DC2626" },
+    { key: "orange",    ar: "برتقالي",    css: "#F97316", border: "#EA580C" },
+    { key: "yellow",    ar: "أصفر",       css: "#EAB308", border: "#CA8A04" },
+    { key: "green",     ar: "أخضر",       css: "#22C55E", border: "#16A34A" },
+    { key: "lime",      ar: "أخضر فاتح", css: "#84CC16", border: "#65A30D" },
+    { key: "lightblue", ar: "أزرق فاتح", css: "#60A5FA", border: "#3B82F6" },
+    { key: "brown",     ar: "بني",        css: "#92400E", border: "#78350F" },
   ];
-
   const lightColors = ["white", "silver", "yellow", "lime"];
+
+  // ── badge السنوات للموديل المختار
+  const modelYearBadge = selectedModelEntry
+    ? selectedModelEntry.yearTo
+      ? `${selectedModelEntry.yearFrom ?? ""}–${selectedModelEntry.yearTo}`
+      : selectedModelEntry.yearFrom
+        ? `${selectedModelEntry.yearFrom}+`
+        : null
+    : null;
 
   return (
     <div className={cn("bg-card rounded-2xl border border-border shadow-sm p-6 flex flex-col gap-6", className)}>
@@ -750,7 +734,13 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
           <Filter className="w-5 h-5 text-primary" />
           التصفية
         </h3>
-        <button onClick={resetFilters} className="text-sm font-semibold text-muted-foreground hover:text-destructive transition-colors">
+        <button
+          onClick={() => {
+            setSelectedModelEntry(null);
+            resetFilters();
+          }}
+          className="text-sm font-semibold text-muted-foreground hover:text-destructive transition-colors"
+        >
           مسح الكل
         </button>
       </div>
@@ -781,9 +771,7 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
               onClick={() => handleCompatibleToggle("all")}
               className={cn(
                 "py-2.5 px-3 rounded-xl text-sm font-semibold transition-all border-2 flex items-center justify-center gap-1.5",
-                !compatibleOnly
-                  ? "border-primary bg-primary/10 text-primary"
-                  : "border-border bg-background text-muted-foreground hover:border-primary/40"
+                !compatibleOnly ? "border-primary bg-primary/10 text-primary" : "border-border bg-background text-muted-foreground hover:border-primary/40"
               )}
             >
               <Globe className="w-3.5 h-3.5" />
@@ -793,9 +781,7 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
               onClick={() => handleCompatibleToggle("compatible")}
               className={cn(
                 "py-2.5 px-3 rounded-xl text-sm font-semibold transition-all border-2 flex items-center justify-center gap-1.5",
-                compatibleOnly
-                  ? "border-green-500 bg-green-500/10 text-green-600"
-                  : "border-border bg-background text-muted-foreground hover:border-green-400/40"
+                compatibleOnly ? "border-green-500 bg-green-500/10 text-green-600" : "border-border bg-background text-muted-foreground hover:border-green-400/40"
               )}
             >
               <ShieldCheck className="w-3.5 h-3.5" />
@@ -810,7 +796,6 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
             <span>يعرض فقط سيارات {COUNTRY_RULES[selectedCountry].minYear}+ المتوافقة مع {COUNTRY_RULES[selectedCountry].flag} {COUNTRY_RULES[selectedCountry].label}</span>
           </div>
         )}
-
         {selectedCountry && !compatibleOnly && (
           <div className="bg-amber-50 border border-amber-300 rounded-xl px-3 py-2 text-xs text-amber-800 flex items-start gap-2">
             <span className="mt-0.5">⚠️</span>
@@ -838,20 +823,35 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
         </div>
       </div>
 
-      {/* Model */}
+      {/* Model — مع badge السنوات */}
       <div className="space-y-3">
-        <label className="text-sm font-bold text-foreground">الموديل</label>
+        <label className="text-sm font-bold text-foreground flex items-center justify-between">
+          <span>الموديل والجيل</span>
+          {modelYearBadge && (
+            <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary">
+              {modelYearBadge}
+            </span>
+          )}
+        </label>
+
         {hasModelList ? (
           <div className="relative">
             <select
               className="w-full appearance-none bg-background border-2 border-border rounded-xl px-4 py-3 text-sm font-medium focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/10 transition-all cursor-pointer"
               value={(filters as any).model || ""}
-              onChange={(e) => u("model", e.target.value || undefined)}
+              onChange={(e) => handleModelChange(e.target.value)}
             >
               <option value="">كل الموديلات</option>
-              {brandModels.map((m) => (
-                <option key={m.value} value={m.value}>{m.label}</option>
-              ))}
+              {brandModels.map((m) => {
+                const yr = m.yearTo
+                  ? `${m.yearFrom ?? ""}–${m.yearTo}`
+                  : m.yearFrom ? `${m.yearFrom}+` : "";
+                return (
+                  <option key={m.value} value={m.value}>
+                    {m.label.replace(/\s*\(.*\)$/, "")} {yr ? `(${yr})` : ""}
+                  </option>
+                );
+              })}
             </select>
             <ChevronDown className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground pointer-events-none" />
           </div>
@@ -864,11 +864,31 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
             onChange={(e) => u("model", e.target.value || undefined)}
           />
         )}
+
+        {/* إشعار السنوات التلقائية */}
+        {selectedModelEntry && modelYearBadge && (
+          <div className="bg-primary/5 border border-primary/20 rounded-xl px-3 py-2 text-xs text-primary flex items-center justify-between">
+            <span>✅ تم ضبط السنوات تلقائياً: <strong>{modelYearBadge}</strong></span>
+            <button
+              onClick={() => {
+                updateFilter("yearFrom", undefined);
+                updateFilter("yearTo", undefined);
+              }}
+              className="text-muted-foreground hover:text-destructive mr-1"
+              title="مسح السنوات"
+            >
+              ✕
+            </button>
+          </div>
+        )}
       </div>
 
-      {/* Year */}
+      {/* Year — يبقى للتعديل اليدوي */}
       <div className="space-y-3">
-        <label className="text-sm font-bold text-foreground">سنة الصنع</label>
+        <label className="text-sm font-bold text-foreground flex items-center gap-1">
+          سنة الصنع
+          <span className="text-xs text-muted-foreground font-normal">(يمكن التعديل)</span>
+        </label>
         <div className="grid grid-cols-2 gap-3">
           {(["yearFrom", "yearTo"] as const).map((key, i) => (
             <div key={key} className="relative">
