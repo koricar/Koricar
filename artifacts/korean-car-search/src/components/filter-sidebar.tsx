@@ -1,37 +1,14 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { SearchCarsParams } from "@workspace/api-client-react";
 import { ChevronRight, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export type CountryCode =
-  | "SA" | "AE" | "KW" | "QA" | "BH"
-  | "OM" | "IQ" | "LY" | "YE" | "EG" | "MA";
-
-export const COUNTRY_RULES = {
-  SA: { minYear: 2010, label: "السعودية", flag: "🇸🇦" },
-  AE: { minYear: 2010, label: "الإمارات", flag: "🇦🇪" },
-  KW: { minYear: 2008, label: "الكويت", flag: "🇰🇼" },
-  QA: { minYear: 2010, label: "قطر", flag: "🇶🇦" },
-  BH: { minYear: 2008, label: "البحرين", flag: "🇧🇭" },
-  OM: { minYear: 2008, label: "عُمان", flag: "🇴🇲" },
-  IQ: { minYear: 2005, label: "العراق", flag: "🇮🇶" },
-  LY: { minYear: 2005, label: "ليبيا", flag: "🇱🇾" },
-  YE: { minYear: 2005, label: "اليمن", flag: "🇾🇪" },
-  EG: { minYear: 2008, label: "مصر", flag: "🇪🇬" },
-  MA: { minYear: 2008, label: "المغرب", flag: "🇲🇦" },
-} as const;
-
 interface FilterSidebarProps {
   filters: SearchCarsParams;
-  updateFilter: <K extends keyof SearchCarsParams>(
-    key: K,
-    value: SearchCarsParams[K]
-  ) => void;
+  updateFilter: <K extends keyof SearchCarsParams>(key: K, value: SearchCarsParams[K]) => void;
   resetFilters: () => void;
   className?: string;
 }
-
-type Step = "brand" | "modelGroup" | "model" | "filters";
 
 const BRANDS = [
   { en: "Hyundai", ar: "هيونداي" },
@@ -41,212 +18,166 @@ const BRANDS = [
   { en: "Mercedes-Benz", ar: "مرسيدس" },
 ];
 
-const API_BASE = import.meta.env.VITE_API_URL;
+const API_BASE = import.meta.env.VITE_API_URL ?? "";
 
-const YEARS = Array.from({ length: 26 }, (_, i) => 2025 - i);
-
-export function FilterSidebar({
-  filters,
-  updateFilter,
-  resetFilters,
-  className,
-}: FilterSidebarProps) {
-
-  const [step, setStep] = useState<Step>("brand");
+export function FilterSidebar({ filters, updateFilter, resetFilters, className }: FilterSidebarProps) {
 
   const [selectedBrand, setSelectedBrand] = useState<any>(null);
-  const [selectedModelGroup, setSelectedModelGroup] = useState<any>(null);
-  const [selectedModel, setSelectedModel] = useState<any>(null);
-
   const [modelGroups, setModelGroups] = useState<any[]>([]);
   const [models, setModels] = useState<any[]>([]);
+  const [selectedModelGroup, setSelectedModelGroup] = useState<any>(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(false);
 
-  const controllerRef = useRef<AbortController | null>(null);
-
-  // ✅ حفظ الفلاتر
-  useEffect(() => {
-    sessionStorage.setItem("car_filters", JSON.stringify(filters));
-  }, [filters]);
-
-  // ✅ جلب محفوظ
-  useEffect(() => {
-    const saved = sessionStorage.getItem("car_filters");
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        Object.entries(parsed).forEach(([k, v]) => {
-          updateFilter(k as any, v as any);
-        });
-      } catch {}
-    }
-  }, []);
-
-  // ───── Fetch helper ─────
-  const safeFetch = async (url: string) => {
-    if (!API_BASE) {
-      console.warn("API_BASE not set");
-      return null;
-    }
-
-    controllerRef.current?.abort();
-    const controller = new AbortController();
-    controllerRef.current = controller;
-
-    try {
-      setLoading(true);
-      const res = await fetch(url, { signal: controller.signal });
-      const data = await res.json();
-      setLoading(false);
-      return data;
-    } catch (e: any) {
-      if (e.name !== "AbortError") {
-        setError(true);
-        setLoading(false);
-      }
-      return null;
-    }
-  };
-
-  // ───── جلب modelGroups ─────
+  // جلب الموديلات
   useEffect(() => {
     if (!selectedBrand) return;
+    setLoading(true);
 
-    safeFetch(`${API_BASE}/api/cars/filters?brand=${selectedBrand.en}`)
-      .then((d) => setModelGroups(d?.modelGroups || []));
+    fetch(`${API_BASE}/api/cars/filters?brand=${selectedBrand.en}`)
+      .then(r => r.json())
+      .then(d => {
+        setModelGroups(d.modelGroups || []);
+        setLoading(false);
+      });
   }, [selectedBrand]);
 
-  // ───── جلب models ─────
+  // جلب الأجيال
   useEffect(() => {
     if (!selectedModelGroup || !selectedBrand) return;
+    setLoading(true);
 
-    safeFetch(
-      `${API_BASE}/api/cars/filters?brand=${selectedBrand.en}&modelGroup=${selectedModelGroup.value}`
-    ).then((d) => setModels(d?.models || []));
+    fetch(`${API_BASE}/api/cars/filters?brand=${selectedBrand.en}&modelGroup=${selectedModelGroup.value}`)
+      .then(r => r.json())
+      .then(d => {
+        setModels(d.models || []);
+        setLoading(false);
+      });
   }, [selectedModelGroup]);
 
-  const apply = (model?: any) => {
-    if (!selectedBrand) return;
-
-    updateFilter("brand", selectedBrand.en);
-    updateFilter("model", model?.value || selectedModelGroup?.value);
-
-    setStep("filters");
-  };
-
-  const resetAll = () => {
-    resetFilters();
-    sessionStorage.removeItem("car_filters");
-    setStep("brand");
-    setSelectedBrand(null);
-    setSelectedModelGroup(null);
-    setSelectedModel(null);
-  };
-
   return (
-    <div className={cn("bg-white rounded-2xl p-4", className)}>
+    <div className={cn("bg-white rounded-2xl border p-4 space-y-5", className)}>
 
       {/* HEADER */}
-      <div className="flex justify-between mb-3">
+      <div className="flex justify-between items-center">
         <h3 className="font-bold">البحث</h3>
-        <button onClick={resetAll}>
-          <X />
-        </button>
+        <button onClick={resetFilters} className="text-red-500 text-sm">مسح</button>
       </div>
 
-      {/* STEP 1 */}
-      {step === "brand" && (
+      {/* BRAND */}
+      <div>
+        <p className="text-sm mb-2">الماركة</p>
         <div className="grid grid-cols-2 gap-2">
-          {BRANDS.map((b) => (
+          {BRANDS.map(b => (
             <button
               key={b.en}
               onClick={() => {
                 setSelectedBrand(b);
-                setStep("modelGroup");
+                updateFilter("brand", b.en);
+                setSelectedModelGroup(null);
               }}
-              className="border p-2 rounded"
+              className={cn(
+                "border rounded-xl py-2 text-sm",
+                filters.brand === b.en ? "bg-blue-100 border-blue-500" : ""
+              )}
             >
               {b.ar}
             </button>
           ))}
         </div>
-      )}
+      </div>
 
-      {/* STEP 2 */}
-      {step === "modelGroup" && (
-        <>
-          <button onClick={() => setStep("brand")}>رجوع</button>
+      {/* MODEL GROUP */}
+      {selectedBrand && (
+        <div>
+          <p className="text-sm mb-2">الموديل</p>
 
-          {loading && <Loader2 className="animate-spin" />}
-
-          {modelGroups.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => {
-                setSelectedModelGroup(m);
-                setStep("model");
-              }}
-            >
-              {m.label} ({m.count})
-            </button>
-          ))}
-
-          <button onClick={() => apply()}>كل الموديلات</button>
-        </>
-      )}
-
-      {/* STEP 3 */}
-      {step === "model" && (
-        <>
-          <button onClick={() => setStep("modelGroup")}>رجوع</button>
-
-          {models.map((m) => (
-            <button
-              key={m.value}
-              onClick={() => apply(m)}
-            >
-              {m.label}
-            </button>
-          ))}
-        </>
-      )}
-
-      {/* STEP 4 */}
-      {step === "filters" && (
-        <div className="space-y-3">
-
-          <select
-            value={filters.yearFrom ?? ""}
-            onChange={(e) =>
-              updateFilter("yearFrom", e.target.value ? +e.target.value : undefined)
-            }
-          >
-            <option value="">من سنة</option>
-            {YEARS.map((y) => (
-              <option key={y}>{y}</option>
-            ))}
-          </select>
-
-          <input
-            type="number"
-            placeholder="السعر الأدنى"
-            value={filters.priceMin ?? ""}
-            onChange={(e) =>
-              updateFilter("priceMin", e.target.value ? +e.target.value : undefined)
-            }
-          />
-
-          <button
-            onClick={() =>
-              updateFilter("sunroof", filters.sunroof ? undefined : true)
-            }
-          >
-            فتحة سقف
-          </button>
-
+          {loading ? <Loader2 className="animate-spin" /> : (
+            <div className="space-y-2 max-h-40 overflow-auto">
+              {modelGroups.map(m => (
+                <button
+                  key={m.value}
+                  onClick={() => {
+                    setSelectedModelGroup(m);
+                    updateFilter("model", m.value);
+                  }}
+                  className="w-full text-right border rounded-xl px-3 py-2 text-sm"
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       )}
+
+      {/* MODEL */}
+      {selectedModelGroup && (
+        <div>
+          <p className="text-sm mb-2">الجيل</p>
+
+          {loading ? <Loader2 className="animate-spin" /> : (
+            <div className="space-y-2 max-h-40 overflow-auto">
+              {models.map(m => (
+                <button
+                  key={m.value}
+                  onClick={() => updateFilter("model", m.value)}
+                  className="w-full text-right border rounded-xl px-3 py-2 text-sm"
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* باقي الفلاتر دايم ظاهرة */}
+      <div>
+        <p className="text-sm mb-2">السعر</p>
+        <div className="flex gap-2">
+          <input
+            type="number"
+            placeholder="من"
+            value={filters.priceMin || ""}
+            onChange={e => updateFilter("priceMin", Number(e.target.value))}
+            className="border rounded-xl p-2 w-full"
+          />
+          <input
+            type="number"
+            placeholder="إلى"
+            value={filters.priceMax || ""}
+            onChange={e => updateFilter("priceMax", Number(e.target.value))}
+            className="border rounded-xl p-2 w-full"
+          />
+        </div>
+      </div>
+
+      <div>
+        <p className="text-sm mb-2">الممشى</p>
+        <input
+          type="number"
+          placeholder="أقصى ممشى"
+          value={filters.mileageMax || ""}
+          onChange={e => updateFilter("mileageMax", Number(e.target.value))}
+          className="border rounded-xl p-2 w-full"
+        />
+      </div>
+
+      <div>
+        <p className="text-sm mb-2">وقود</p>
+        <div className="grid grid-cols-2 gap-2">
+          {["gasoline", "diesel", "hybrid"].map(f => (
+            <button
+              key={f}
+              onClick={() => updateFilter("fuelType", f as any)}
+              className={cn("border rounded-xl py-2", filters.fuelType === f && "bg-blue-100")}
+            >
+              {f}
+            </button>
+          ))}
+        </div>
+      </div>
+
     </div>
   );
 }
