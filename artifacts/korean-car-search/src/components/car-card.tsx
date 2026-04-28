@@ -1,8 +1,7 @@
 import { Link } from "wouter";
-import { Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck, AlertTriangle, ArrowLeft } from "lucide-react";
+import { Gauge, Fuel, Settings2, MapPin, ExternalLink, ShieldCheck, ArrowLeft } from "lucide-react";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import type { Car } from "@workspace/api-client-react";
-import { COUNTRY_RULES, type CountryCode } from "@/components/filter-sidebar";
 
 const COLOR_SWATCHES: Record<string, { css: string }> = {
   white:     { css: "#F8F8F8" },
@@ -28,28 +27,9 @@ const TRANS_MAP: Record<string, string> = {
 
 type Option = { id: string; ar: string };
 
-function getCompatibility(year: number | undefined, country: CountryCode | "") {
-  if (!country || !year) return null;
-  const rule = COUNTRY_RULES[country];
-  return year >= rule.minYear ? "compatible" : "incompatible";
-}
-
-function getSelectedCountry(): CountryCode | "" {
-  try {
-    const saved = sessionStorage.getItem("car_search_filters");
-    if (saved) {
-      const parsed = JSON.parse(saved);
-      return (parsed.country as CountryCode) || "";
-    }
-  } catch {}
-  return "";
-}
-
 export function CarCard({ car }: { car: Car }) {
   const colorSwatch = COLOR_SWATCHES[car.color];
   const options: Option[] = (car as any).options ?? [];
-  const selectedCountry = getSelectedCountry();
-  const compatibility = getCompatibility(car.year, selectedCountry);
 
   return (
     <div className="group bg-card rounded-2xl overflow-hidden border border-border/50 shadow-sm hover:shadow-2xl hover:shadow-primary/10 hover:border-primary/30 transition-all duration-500 flex flex-col h-full">
@@ -74,18 +54,6 @@ export function CarCard({ car }: { car: Car }) {
           {car.sunroof && (
             <div className="bg-primary/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg">
               فتحة سقف
-            </div>
-          )}
-          {compatibility === "compatible" && selectedCountry && (
-            <div className="bg-green-500/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
-              <ShieldCheck className="w-3.5 h-3.5" />
-              {COUNTRY_RULES[selectedCountry].flag} متوافق
-            </div>
-          )}
-          {compatibility === "incompatible" && selectedCountry && (
-            <div className="bg-red-500/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
-              <AlertTriangle className="w-3.5 h-3.5" />
-              {COUNTRY_RULES[selectedCountry].flag} غير متوافق
             </div>
           )}
         </div>
@@ -139,14 +107,6 @@ export function CarCard({ car }: { car: Car }) {
             {car.priceFormatted || formatPriceKRW(car.price)}
           </span>
         </div>
-
-        {/* Incompatibility warning */}
-        {compatibility === "incompatible" && selectedCountry && (
-          <div className="mb-3 bg-red-50 border border-red-200 rounded-xl px-3 py-2 text-xs text-red-700 flex items-center gap-2">
-            <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-            <span>موديل {car.year} قد لا يدخل {COUNTRY_RULES[selectedCountry].label}</span>
-          </div>
-        )}
 
         {/* Options */}
         {options.length > 0 && (
