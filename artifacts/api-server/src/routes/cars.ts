@@ -1044,7 +1044,10 @@ router.get("/filters", async (req, res) => {
       q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}.)`;
     }
 
-    const rawUrl = `${ENCAR_API}/search/car/list/premium?count=true&q=${q}&inav=%7CMetadata%7CSort`;
+    const inavParam = modelGroup
+      ? encodeURIComponent("|Metadata|Sort")  // عند ModelGroup محدد، Encar يرجع Models في nodes
+      : encodeURIComponent("|Metadata|Sort");
+    const rawUrl = `${ENCAR_API}/search/car/list/premium?count=true&q=${q}&inav=${inavParam}`;
     const resp = await fetch(rawUrl, {
       headers: {
         Referer: "https://www.encar.com",
@@ -1058,16 +1061,48 @@ router.get("/filters", async (req, res) => {
     const data = await resp.json() as { iNav?: { Nodes?: any[] } };
     const nodes = data.iNav?.Nodes ?? [];
 
+    // DEBUG: إذا modelGroup موجود، نرجع الـ nodes names للتشخيص
+    if (modelGroup && req.query.debug === "1") {
+      res.json({
+        nodeNames: nodes.map((n: any) => n.Name),
+        rawNodes: nodes.slice(0, 5),
+      });
+      return;
+    }
+
     if (modelGroup) {
-      // نستخرج Models من iNav
+      // Models داخل Refinements داخل ModelGroup facet
+      // أولاً نحاول نجيبها من Node مباشر
       const modelNode = nodes.find((n: any) => n.Name === "Model");
-      const models = (modelNode?.Facets ?? [])
-        .filter((f: any) => f.Count > 0)
-        .map((f: any) => ({
-          value: f.Value,
-          label: f.DisplayValue,
-          count: f.Count,
-        }));
+      let modelFacets = (modelNode?.Facets ?? []).filter((f: any) => f.Count > 0);
+
+      // إذا ما لقينا، نبحث في Refinements داخل ModelGroup node
+      if (modelFacets.length === 0) {
+        const mgNode = nodes.find((n: any) => n.Name === "ModelGroup");
+        const mgFacet = mgNode?.Facets?.find((f: any) => f.Value === modelGroup || f.IsSelected);
+        const refinementModel = mgFacet?.Refinements?.Nodes?.find((n: any) => n.Name === "Model");
+        modelFacets = (refinementModel?.Facets ?? []).filter((f: any) => f.Count > 0);
+      }
+
+      // إذا ما لقينا بعد، نبحث في أي Refinements في أي node
+      if (modelFacets.length === 0) {
+        for (const node of nodes) {
+          for (const facet of node.Facets ?? []) {
+            const refModel = facet?.Refinements?.Nodes?.find((n: any) => n.Name === "Model");
+            if (refModel?.Facets?.length > 0) {
+              modelFacets = refModel.Facets.filter((f: any) => f.Count > 0);
+              break;
+            }
+          }
+          if (modelFacets.length > 0) break;
+        }
+      }
+
+      const models = modelFacets.map((f: any) => ({
+        value: f.Value,
+        label: f.DisplayValue,
+        count: f.Count,
+      }));
       res.json({ models });
     } else {
       // نستخرج ModelGroups من iNav
@@ -1193,3 +1228,4 @@ router.get("/:id", async (req, res): Promise<void> => {
 });
 
 export default router;
+
