@@ -2,20 +2,22 @@ import { useState, useEffect } from "react";
 import type { SearchCarsParams } from "@workspace/api-client-react";
 import { ChevronRight, X, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+
+// ── COUNTRY_RULES — مطلوب من car-card.tsx ──────────────
 export type CountryCode = "SA" | "AE" | "KW" | "QA" | "BH" | "OM" | "IQ" | "LY" | "YE" | "EG" | "MA";
 
 export const COUNTRY_RULES: Record<CountryCode, { minYear: number; label: string; flag: string }> = {
-  SA: { minYear: 2010, label: "السعودية", flag: "🇸🇦" },
-  AE: { minYear: 2010, label: "الإمارات", flag: "🇦🇪" },
-  KW: { minYear: 2008, label: "الكويت",   flag: "🇰🇼" },
-  QA: { minYear: 2010, label: "قطر",      flag: "🇶🇦" },
-  BH: { minYear: 2008, label: "البحرين",  flag: "🇧🇭" },
-  OM: { minYear: 2008, label: "عُمان",    flag: "🇴🇲" },
-  IQ: { minYear: 2005, label: "العراق",   flag: "🇮🇶" },
-  LY: { minYear: 2005, label: "ليبيا",    flag: "🇱🇾" },
-  YE: { minYear: 2005, label: "اليمن",    flag: "🇾🇪" },
-  EG: { minYear: 2008, label: "مصر",      flag: "🇪🇬" },
-  MA: { minYear: 2008, label: "المغرب",   flag: "🇲🇦" },
+  SA: { minYear: 2010, label: "السعودية",    flag: "🇸🇦" },
+  AE: { minYear: 2010, label: "الإمارات",    flag: "🇦🇪" },
+  KW: { minYear: 2008, label: "الكويت",      flag: "🇰🇼" },
+  QA: { minYear: 2010, label: "قطر",         flag: "🇶🇦" },
+  BH: { minYear: 2008, label: "البحرين",     flag: "🇧🇭" },
+  OM: { minYear: 2008, label: "عُمان",       flag: "🇴🇲" },
+  IQ: { minYear: 2005, label: "العراق",      flag: "🇮🇶" },
+  LY: { minYear: 2005, label: "ليبيا",       flag: "🇱🇾" },
+  YE: { minYear: 2005, label: "اليمن",       flag: "🇾🇪" },
+  EG: { minYear: 2008, label: "مصر",         flag: "🇪🇬" },
+  MA: { minYear: 2008, label: "المغرب",      flag: "🇲🇦" },
 };
 
 interface FilterSidebarProps {
@@ -109,12 +111,15 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
     if (!selectedBrand) return;
     updateFilter("brand", selectedBrand.en);
     if (model) {
-      updateFilter("model", model.value);
+      // جيل محدد → نضيف prefix "m:" للتمييز
+      updateFilter("model", `m:${model.value}`);
     } else if (selectedModelGroup) {
-      updateFilter("model", selectedModelGroup.value);
+      // ModelGroup → نضيف prefix "g:"
+      updateFilter("model", `g:${selectedModelGroup.value}`);
     } else {
       updateFilter("model", undefined);
     }
+    // نحذف modelType لأنه مو في الـ schema
     setStep("filters");
   };
 
