@@ -674,54 +674,50 @@ function buildEncarQuery(params: {
   if (params.model) {
     const input = params.model.trim();
 
-    // prefix "m:" = Model مباشر، "g:" = ModelGroup مباشر
-    if (input.startsWith("m:")) {
-      const modelVal = input.slice(2);
-      q += `_.Model.${modelVal}.`;
-      modelKr = modelVal;
-    } else if (input.startsWith("g:")) {
-      const groupVal = input.slice(2);
-      q += `_.ModelGroup.${groupVal}.`;
-      modelKr = groupVal;
+    // إزالة prefix m: أو g: إذا موجود
+    const cleanInput = input.startsWith("m:") ? input.slice(2)
+                     : input.startsWith("g:") ? input.slice(2)
+                     : input;
+    const forceModel = input.startsWith("m:");
+    const forceGroup = input.startsWith("g:");
+
+    const isKorean = /[\uAC00-\uD7A3]/.test(cleanInput);
+
+    if (forceModel) {
+      q += `_.Model.${cleanInput}.`;
+      modelKr = cleanInput;
+    } else if (forceGroup) {
+      q += `_.ModelGroup.${cleanInput}.`;
+      modelKr = cleanInput;
+    } else if (isKorean) {
+      const group = MODEL_GROUP_MAP[cleanInput];
+      if (group) {
+        q += `_.ModelGroup.${group}.`;
+      } else {
+        q += `_.Model.${cleanInput}.`;
+      }
+      modelKr = cleanInput;
     } else {
-      // fallback: البحث التلقائي القديم
-      const isKorean = /[\uAC00-\uD7A3]/.test(input);
-      if (params.modelType === "model") {
-        q += `_.Model.${input}.`;
-        modelKr = input;
-      } else if (params.modelType === "group") {
-        q += `_.ModelGroup.${input}.`;
-        modelKr = input;
-      } else if (isKorean) {
-        const group = MODEL_GROUP_MAP[input];
+      const lowerInput = cleanInput.toLowerCase();
+      let translated = EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[cleanInput];
+      if (!translated) {
+        const withoutGen = cleanInput.replace(/\s+[A-Z]\d{2,3}$/i, "").trim();
+        translated = EN_MODEL_TO_KR[withoutGen.toLowerCase()] ?? EN_MODEL_TO_KR[withoutGen];
+      }
+      if (!translated) {
+        const firstWord = cleanInput.split(" ")[0];
+        translated = EN_MODEL_TO_KR[firstWord.toLowerCase()] ?? EN_MODEL_TO_KR[firstWord];
+      }
+      if (translated) {
+        const group = MODEL_GROUP_MAP[translated];
         if (group) {
           q += `_.ModelGroup.${group}.`;
         } else {
-          q += `_.Model.${input}.`;
+          q += `_.Model.${translated}.`;
         }
-        modelKr = input;
+        modelKr = translated;
       } else {
-        const lowerInput = input.toLowerCase();
-        let translated = EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[input];
-        if (!translated) {
-          const withoutGen = input.replace(/\s+[A-Z]\d{2,3}$/i, "").trim();
-          translated = EN_MODEL_TO_KR[withoutGen.toLowerCase()] ?? EN_MODEL_TO_KR[withoutGen];
-        }
-        if (!translated) {
-          const firstWord = input.split(" ")[0];
-          translated = EN_MODEL_TO_KR[firstWord.toLowerCase()] ?? EN_MODEL_TO_KR[firstWord];
-        }
-        if (translated) {
-          const group = MODEL_GROUP_MAP[translated];
-          if (group) {
-            q += `_.ModelGroup.${group}.`;
-          } else {
-            q += `_.Model.${translated}.`;
-          }
-          modelKr = translated;
-        } else {
-          modelRaw = input;
-        }
+        modelRaw = cleanInput;
       }
     }
   }
