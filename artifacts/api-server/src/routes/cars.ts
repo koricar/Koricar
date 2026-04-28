@@ -630,6 +630,7 @@ function formatPrice(price: number): string {
 function buildEncarQuery(params: {
   brand?: string;
   model?: string;
+  modelType?: "group" | "model"; // "group" = ModelGroup, "model" = Model مباشر
   sunroof?: boolean;
   fuelType?: string;
   transmission?: string;
@@ -674,7 +675,15 @@ function buildEncarQuery(params: {
     const input = params.model.trim();
     const isKorean = /[\uAC00-\uD7A3]/.test(input);
 
-    if (isKorean) {
+    // إذا modelType محدد صراحة، نستخدمه مباشرة
+    if (params.modelType === "model") {
+      q += `_.Model.${input}.`;
+      modelKr = input;
+    } else if (params.modelType === "group") {
+      q += `_.ModelGroup.${input}.`;
+      modelKr = input;
+    } else if (isKorean) {
+      // تلقائي: نبحث في MODEL_GROUP_MAP
       const group = MODEL_GROUP_MAP[input];
       if (group) {
         q += `_.ModelGroup.${group}.`;
@@ -1139,11 +1148,12 @@ router.get("/search", async (req, res) => {
     fuelType, bodyType, color, priceMin, priceMax, mileageMax,
     page = 1, limit = 20,
   } = parsed.data;
+  // modelType: "group" أو "model" — يُرسل من filter-sidebar
+  const modelType = (req.query.modelType as "group" | "model" | undefined);
   try {
-    // ✅ تمرير yearFrom و yearTo للـ query مباشرة
     const { q: encarQ, modelRaw } = buildEncarQuery({
       brand, model, sunroof, fuelType, transmission, bodyType, color,
-      yearFrom, yearTo,
+      yearFrom, yearTo, modelType,
     });
     const offset = (page - 1) * limit;
     // نبني الـ query مع السنة
@@ -1228,4 +1238,3 @@ router.get("/:id", async (req, res): Promise<void> => {
 });
 
 export default router;
-
