@@ -30,12 +30,15 @@ const BRAND_MODELS: Record<string, ModelOption[]> = {
 
   // ══ HYUNDAI ══════════════════════════════════════════════════════════════
   "Hyundai": [
-    // Elantra / Avante - جميع الأجيال بدون فجوات
-    { label: "Elantra HD (2006–2010)",         value: "아반떼 HD",                  yearFrom: 2006, yearTo: 2010 },
-    { label: "Elantra MD (2010–2015)",         value: "아반떼 MD",                  yearFrom: 2010, yearTo: 2015 },
-    { label: "Elantra AD (2015–2020)",         value: "아반떼 (AD)",                yearFrom: 2015, yearTo: 2020 },
-    { label: "Elantra CN7 (2020+)",            value: "아반떼 (CN7)",               yearFrom: 2020 },
-    { label: "Elantra Hybrid CN7 (2020+)",     value: "아반떼 하이브리드 (CN7)",    yearFrom: 2020 },
+    // Elantra / Avante - أسماء حقيقية من Encar API (Model level)
+    { label: "Elantra HD (2006–2010)",              value: "아반떼 HD",                      yearFrom: 2006, yearTo: 2010 },
+    { label: "Elantra MD (2010–2015)",              value: "아반떼 MD",                      yearFrom: 2010, yearTo: 2015 },
+    { label: "Elantra AD (2015–2018)",              value: "아반떼 AD",                      yearFrom: 2015, yearTo: 2018 },
+    { label: "The New Elantra AD (2018–2020)",      value: "더 뉴 아반떼 AD",               yearFrom: 2018, yearTo: 2020 },
+    { label: "Elantra CN7 (2020–2023)",             value: "아반떼 (CN7)",                   yearFrom: 2020, yearTo: 2023 },
+    { label: "The New Elantra CN7 (2023+)",         value: "더 뉴 아반떼 (CN7)",             yearFrom: 2023 },
+    { label: "Elantra Hybrid CN7 (2020–2023)",      value: "아반떼 하이브리드 (CN7)",        yearFrom: 2020, yearTo: 2023 },
+    { label: "The New Elantra Hybrid CN7 (2023+)",  value: "더 뉴 아반떼 하이브리드 (CN7)", yearFrom: 2023 },
     // Sonata
     { label: "Sonata NF (2004–2009)",          value: "쏘나타 NF",                  yearFrom: 2004, yearTo: 2009 },
     { label: "Sonata YF (2009–2014)",          value: "쏘나타 YF",                  yearFrom: 2009, yearTo: 2014 },
