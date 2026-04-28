@@ -1011,6 +1011,88 @@ router.get("/brands", (_req, res) => {
   });
 });
 
+// ─────────────────────────────────────────────
+// /filters — يجيب ModelGroups أو Models من Encar مباشرة
+// GET /filters?brand=Hyundai               → قائمة ModelGroups
+// GET /filters?brand=Hyundai&modelGroup=아반떼 → قائمة Models (الأجيال)
+// ─────────────────────────────────────────────
+router.get("/filters", async (req, res) => {
+  const { brand, modelGroup } = req.query as { brand?: string; modelGroup?: string };
+
+  if (!brand) {
+    res.status(400).json({ error: "brand is required" });
+    return;
+  }
+
+  const krBrand = EN_TO_MANUFACTURER[brand.toLowerCase()];
+  if (!krBrand) {
+    res.status(400).json({ error: "unknown brand" });
+    return;
+  }
+
+  const isDomestic = DOMESTIC_BRANDS.has(brand.toLowerCase());
+  const carTypePart = isDomestic ? "_.CarType.Y." : "";
+
+  try {
+    let q: string;
+
+    if (modelGroup) {
+      // نجيب Models (الأجيال) لـ ModelGroup معين
+      q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}._.ModelGroup.${modelGroup}.)`;
+    } else {
+      // نجيب ModelGroups للماركة
+      q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}.)`;
+    }
+
+    const rawUrl = `${ENCAR_API}/search/car/list/premium?count=true&q=${q}&inav=%7CMetadata%7CSort`;
+    const resp = await fetch(rawUrl, {
+      headers: {
+        Referer: "https://www.encar.com",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+        Accept: "application/json, text/plain, */*",
+      },
+      signal: AbortSignal.timeout(10000),
+    });
+
+    if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
+    const data = await resp.json() as { iNav?: { Nodes?: any[] } };
+    const nodes = data.iNav?.Nodes ?? [];
+
+    if (modelGroup) {
+      // نستخرج Models من iNav
+      const modelNode = nodes.find((n: any) => n.Name === "Model");
+      const models = (modelNode?.Facets ?? [])
+        .filter((f: any) => f.Count > 0)
+        .map((f: any) => ({
+          value: f.Value,
+          label: f.DisplayValue,
+          count: f.Count,
+        }));
+      res.json({ models });
+    } else {
+      // نستخرج ModelGroups من iNav
+      const mgNode = nodes.find((n: any) => n.Name === "ModelGroup");
+      // ModelGroups تكون في Refinements داخل Manufacturer facet
+      const mfNode = nodes.find((n: any) => n.Name === "Manufacturer");
+      const krFacet = mfNode?.Facets?.find((f: any) => f.Value === krBrand);
+      const refinementMG = krFacet?.Refinements?.Nodes?.find((n: any) => n.Name === "ModelGroup");
+
+      const rawGroups = refinementMG?.Facets ?? mgNode?.Facets ?? [];
+      const modelGroups = rawGroups
+        .filter((f: any) => f.Count > 0)
+        .map((f: any) => ({
+          value: f.Value,
+          label: f.DisplayValue,
+          count: f.Count,
+        }));
+      res.json({ modelGroups });
+    }
+  } catch (err) {
+    req.log.error({ err }, "Encar filters error");
+    res.status(502).json({ error: "upstream_error" });
+  }
+});
+
 router.get("/search", async (req, res) => {
   const parsed = SearchCarsQueryParams.safeParse(req.query);
   if (!parsed.success) {
@@ -1029,13 +1111,17 @@ router.get("/search", async (req, res) => {
       yearFrom, yearTo,
     });
     const offset = (page - 1) * limit;
-    // إذا في فلتر سنة، نطلب 100 سيارة من Encar ونفلتر بعدياً
-    const encarLimit = (yearFrom !== undefined || yearTo !== undefined) ? 100 : limit;
-    const url = new URL(`${ENCAR_API}/search/car/list/general`);
-    url.searchParams.set("count", "true");
-    url.searchParams.set("q", encarQ);
-    url.searchParams.set("sr", `|ModifiedDate|${offset}|${encarLimit}`);
-    const resp = await fetch(url.toString(), {
+    // نبني الـ query مع السنة
+    let finalQ = encarQ;
+    if (yearFrom !== undefined || yearTo !== undefined) {
+      const from = yearFrom ?? 1990;
+      const to = yearTo ?? 2030;
+      // نضيف Year.range قبل آخر )
+      finalQ = encarQ.replace(/\)$/, `_.Year.range(${from}..${to}).)`);
+    }
+    // نبني الـ URL يدوياً — بدون encodeURIComponent لأن Encar يحتاج الأقواس raw
+    const rawUrl = `${ENCAR_API}/search/car/list/general?count=true&q=${finalQ}&sr=|ModifiedDate|${offset}|${limit}`;
+    const resp = await fetch(rawUrl, {
       headers: {
         Referer: "https://www.encar.com",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
@@ -1061,9 +1147,6 @@ router.get("/search", async (req, res) => {
       const needle = modelRaw.toLowerCase();
       cars = cars.filter((c) => c.model.toLowerCase().includes(needle));
     }
-    // فلتر السنة بعدياً (لأن Encar لا يدعم Year.range في URL)
-    if (yearFrom !== undefined) cars = cars.filter((c) => c.year >= yearFrom);
-    if (yearTo !== undefined) cars = cars.filter((c) => c.year <= yearTo);
     if (priceMin !== undefined) cars = cars.filter((c) => c.price >= priceMin);
     if (priceMax !== undefined) cars = cars.filter((c) => c.price <= priceMax);
     if (mileageMax !== undefined) cars = cars.filter((c) => c.mileage <= mileageMax);
