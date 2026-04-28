@@ -727,13 +727,6 @@ function buildEncarQuery(params: {
     if (kr) q += `_.Color.${kr}.`;
   }
 
-  // ✅ إضافة فلتر السنة مباشرة في Encar query
-  if (params.yearFrom !== undefined || params.yearTo !== undefined) {
-    const from = params.yearFrom ?? 1990;
-    const to = params.yearTo ?? 2030;
-    q += `_.Year.range(${from}..${to}).`;
-  }
-
   q += ")";
   return { q, modelKr, modelRaw };
 }
@@ -1036,10 +1029,12 @@ router.get("/search", async (req, res) => {
       yearFrom, yearTo,
     });
     const offset = (page - 1) * limit;
+    // إذا في فلتر سنة، نطلب 100 سيارة من Encar ونفلتر بعدياً
+    const encarLimit = (yearFrom !== undefined || yearTo !== undefined) ? 100 : limit;
     const url = new URL(`${ENCAR_API}/search/car/list/general`);
     url.searchParams.set("count", "true");
     url.searchParams.set("q", encarQ);
-    url.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
+    url.searchParams.set("sr", `|ModifiedDate|${offset}|${encarLimit}`);
     const resp = await fetch(url.toString(), {
       headers: {
         Referer: "https://www.encar.com",
@@ -1066,6 +1061,9 @@ router.get("/search", async (req, res) => {
       const needle = modelRaw.toLowerCase();
       cars = cars.filter((c) => c.model.toLowerCase().includes(needle));
     }
+    // فلتر السنة بعدياً (لأن Encar لا يدعم Year.range في URL)
+    if (yearFrom !== undefined) cars = cars.filter((c) => c.year >= yearFrom);
+    if (yearTo !== undefined) cars = cars.filter((c) => c.year <= yearTo);
     if (priceMin !== undefined) cars = cars.filter((c) => c.price >= priceMin);
     if (priceMax !== undefined) cars = cars.filter((c) => c.price <= priceMax);
     if (mileageMax !== undefined) cars = cars.filter((c) => c.mileage <= mileageMax);
