@@ -1159,17 +1159,11 @@ router.get("/search", async (req, res) => {
       yearFrom, yearTo, modelType,
     });
     const offset = (page - 1) * limit;
-    // نبني الـ query مع السنة
-    let finalQ = encarQ;
-    if (yearFrom !== undefined || yearTo !== undefined) {
-      const from = yearFrom ?? 1990;
-      const to = yearTo ?? 2030;
-      // نضيف Year.range قبل آخر )
-      finalQ = encarQ.replace(/\)$/, `_.Year.range(${from}..${to}).)`);
-    }
-    // نبني الـ URL يدوياً — بدون encodeURIComponent لأن Encar يحتاج الأقواس raw
-    const rawUrl = `${ENCAR_API}/search/car/list/general?count=true&q=${finalQ}&sr=|ModifiedDate|${offset}|${limit}`;
-    const resp = await fetch(rawUrl, {
+    const url = new URL(`${ENCAR_API}/search/car/list/general`);
+    url.searchParams.set("count", "true");
+    url.searchParams.set("q", encarQ);
+    url.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
+    const resp = await fetch(url.toString(), {
       headers: {
         Referer: "https://www.encar.com",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
@@ -1195,6 +1189,8 @@ router.get("/search", async (req, res) => {
       const needle = modelRaw.toLowerCase();
       cars = cars.filter((c) => c.model.toLowerCase().includes(needle));
     }
+    if (yearFrom !== undefined) cars = cars.filter((c) => c.year >= yearFrom);
+    if (yearTo !== undefined) cars = cars.filter((c) => c.year <= yearTo);
     if (priceMin !== undefined) cars = cars.filter((c) => c.price >= priceMin);
     if (priceMax !== undefined) cars = cars.filter((c) => c.price <= priceMax);
     if (mileageMax !== undefined) cars = cars.filter((c) => c.mileage <= mileageMax);
