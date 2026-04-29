@@ -43,7 +43,7 @@ export const SearchCarsQueryParams = zod.object({
     .optional()
     .describe("Transmission type (auto, manual)"),
   fuelType: zod
-    .enum(["gasoline", "diesel", "hybrid", "electric", "any"])
+    .enum(["gasoline", "diesel", "hybrid", "electric", "lpg", "any"])
     .optional()
     .describe("Fuel type"),
   bodyType: zod
