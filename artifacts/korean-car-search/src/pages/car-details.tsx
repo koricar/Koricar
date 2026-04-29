@@ -9,7 +9,7 @@ import {
 import ImportCalculator from "@/components/ImportCalculator";
 import QuoteRequestForm from "@/components/QuoteRequestForm";
 import { motion } from "framer-motion";
-import { COUNTRY_RULES, type CountryCode } from "@/components/filter-sidebar";
+import { COUNTRY_RULES, type CountryCode } from "@/components/country-rules";
 
 function toArabicUrl(url: string): string {
   return `https://translate.yandex.com/translate?url=${encodeURIComponent(url)}&lang=ko-ar`;
@@ -106,7 +106,6 @@ export default function CarDetails() {
                     <ShieldCheck className="w-4 h-4" /> فحص معتمد
                   </span>
                 )}
-                {/* توافق الدولة في الهيدر */}
                 {isCompatible === true && selectedCountry && (
                   <span className="px-3 py-1 bg-green-500/10 text-green-700 border border-green-200 font-bold text-sm rounded-lg flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4" />
@@ -253,7 +252,6 @@ export default function CarDetails() {
                       <p className="text-xs text-muted-foreground">نتولى كافة الإجراءات القانونية</p>
                     </div>
                   </div>
-                  {/* زر التحقق من كفاءة الطاقة */}
                   <div className="flex items-start gap-3">
                     <Zap className="w-5 h-5 text-amber-500 mt-0.5 shrink-0" />
                     <div>
