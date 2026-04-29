@@ -586,6 +586,7 @@ const KR_TO_EN_LABEL: Record<string, string> = {
 function getDisplayLabel(krLabel: string): string {
   return KR_TO_EN_LABEL[krLabel] ?? krLabel;
 }
+interface FilterSidebarProps {
   filters: SearchCarsParams;
   updateFilter: <K extends keyof SearchCarsParams>(key: K, value: SearchCarsParams[K]) => void;
   resetFilters: () => void;
