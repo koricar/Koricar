@@ -151,7 +151,7 @@ const FUEL_TO_EN: Record<string, string> = {
 const EN_TO_FUEL_KR: Record<string, string> = {
   "gasoline": "가솔린",
   "diesel": "디젤",
-  "lpg": "LPG",
+  "lpg": "LPG(일반인 구입_)",
   "electric": "전기",
   "hybrid": "가솔린+전기",
 };
