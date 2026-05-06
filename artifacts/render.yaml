@@ -1,7 +1,12 @@
-services:
+  services:
   - type: web
-    name: koricar-frontend
-    env: static
-    rootDir: artifacts/korean-car-search
-    buildCommand: npm install -g pnpm && pnpm install && pnpm run build
-    staticPublishPath: dist
+    name: koricar
+    env: node
+    rootDir: artifacts
+    buildCommand: npm install -g pnpm && pnpm install --no-frozen-lockfile && BASE_PATH=/ PORT=3000 pnpm --filter @workspace/korean-car-search run build && pnpm --filter @workspace/api-server run build
+    startCommand: pnpm --filter @workspace/api-server run start
+    envVars:
+      - key: PORT
+        value: 3000
+      - key: NODE_ENV
+        value: production
