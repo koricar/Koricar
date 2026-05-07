@@ -1,9 +1,9 @@
- packages:
+packages:
   - artifacts/api-server
   - artifacts/korean-car-search
   - lib/*
   - lib/integrations/*
-  - scripts 
+  - scripts
 
 autoInstallPeers: false
 
@@ -98,7 +98,7 @@ overrides:
   lightningcss>lightningcss-linux-arm64-gnu: '-'
   lightningcss>lightningcss-linux-arm64-musl: '-'
   lightningcss>lightningcss-linux-x64-musl: '-'
-  lightningcss>lightningcss-win32-arm64-msvc: '-'
+  lightningcss>lightningcss-win32-arm64-msvc': '-'
   lightningcss>lightningcss-win32-x64-msvc: '-'
   rollup>@rollup/rollup-android-arm-eabi: '-'
   rollup>@rollup/rollup-android-arm64: '-'
