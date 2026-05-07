@@ -80,8 +80,6 @@ router.get("/", async (req, res) => {
 
 // POST /api/equipment/scrape
 router.get("/scrape", async (req, res) => {
-  if (req.headers["x-admin-key"] !== process.env.ADMIN_SECRET_KEY) {
-    return res.status(401).json({ error: "غير مصرح" });
   }
 
   res.json({ message: "بدأ السحب..." });
