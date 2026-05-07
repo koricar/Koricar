@@ -11,7 +11,6 @@ const supabase = createClient(
 
 const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN!;
 
-// فئات perfect82.com
 const CATEGORIES = [
   { url: "https://www.perfect82.com/pt0203", nameAr: "ميني بوكلين", nameEn: "Mini Excavator" },
   { url: "https://www.perfect82.com/pt0608", nameAr: "بوكلين متوسط", nameEn: "Excavator Medium" },
@@ -29,16 +28,15 @@ const CATEGORIES = [
 
 async function scrapeWithBrowserless(url: string, nameAr: string, nameEn: string) {
   try {
-    // استخدام Browserless لتحميل الصفحة كاملاً مع JavaScript
     const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
-    
+
     const response = await fetch(browserlessUrl, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         url,
-        waitFor: 2000, // انتظر 2 ثانية لتحميل JavaScript
-        rejectResourceTypes: ["image", "font", "stylesheet"],
+        waitFor: 5000,
+        rejectResourceTypes: ["font", "stylesheet"],
       }),
     });
 
@@ -50,42 +48,44 @@ async function scrapeWithBrowserless(url: string, nameAr: string, nameEn: string
     const html = await response.text();
     const $ = cheerio.load(html);
     const items: any[] = [];
+    const seen = new Set<string>();
 
-    // perfect82 يستخدم imweb - المنتجات في روابط محددة
     $("a[href]").each((_, el) => {
       const href = $(el).attr("href") || "";
+      const fullHref = href.startsWith("http") ? href : `https://www.perfect82.com${href}`;
+
+      // روابط المنتجات الفردية فقط
+      if (!href.match(/perfect82\.com\/\d+$/) && !href.match(/^\/\d+$/)) return;
+      if (seen.has(fullHref)) return;
+      seen.add(fullHref);
+
       const text = $(el).text().trim();
-      const img = $(el).find("img").attr("src") || "";
+      const img = $(el).find("img").first().attr("src") || 
+                  $(el).closest("div").find("img").first().attr("src") || "";
 
-      // روابط المنتجات في perfect82 تحتوي على أرقام فقط
-      if (
-        href.match(/^https?:\/\/www\.perfect82\.com\/\d+$/) &&
-        text.length > 5
-      ) {
-        // تحليل النص: "볼보/14톤/17년/전북/3600만원"
-        const parts = text.split("/");
-        const brand = parts[0]?.trim() || "";
-        const tons = parts[1]?.trim() || "";
-        const year = parts[2]?.replace("년", "")?.trim() || "";
-        const region = parts[3]?.trim() || "";
-        const price = parts[4]?.trim() || "";
+      // تحليل النص: "볼보/14톤/17년/전북/3600만원"
+      const parts = text.split("/");
+      const brand = parts[0]?.trim() || "";
+      const tons  = parts[1]?.trim() || "";
+      const year  = parts[2]?.replace("년", "").trim() || "";
+      const region = parts[3]?.trim() || "";
+      const price  = parts[4]?.trim() || parts[3]?.trim() || "";
 
-        if (brand && price) {
-          items.push({
-            title: `${brand} ${tons} ${year}년`.trim(),
-            price,
-            year,
-            tons,
-            brand,
-            region,
-            image: img.startsWith("http") ? img : "",
-            link: href,
-            category_ar: nameAr,
-            category_en: nameEn,
-            source: "perfect82",
-            scraped_at: new Date().toISOString(),
-          });
-        }
+      if (brand.length > 1 && brand.length < 20) {
+        items.push({
+          title: `${brand} ${tons} ${year}년`.trim(),
+          price,
+          year,
+          tons,
+          brand,
+          region,
+          image: img.startsWith("http") ? img : "",
+          link: fullHref,
+          category_ar: nameAr,
+          category_en: nameEn,
+          source: "perfect82",
+          scraped_at: new Date().toISOString(),
+        });
       }
     });
 
@@ -145,13 +145,14 @@ router.get("/scrape", async (req, res) => {
   for (const cat of CATEGORIES) {
     const items = await scrapeWithBrowserless(cat.url, cat.nameAr, cat.nameEn);
     allItems = [...allItems, ...items];
-    await new Promise(r => setTimeout(r, 2000)); // انتظر بين الطلبات
+    await new Promise(r => setTimeout(r, 3000));
   }
 
   console.log(`📦 المجموع: ${allItems.length} معدة`);
 
   if (allItems.length > 0) {
     await supabase.from("equipment").delete().eq("source", "perfect82");
+    await supabase.from("equipment").delete().eq("source", "ty-heavyequipment");
     const { error } = await supabase.from("equipment").insert(allItems);
     if (error) {
       console.error("❌ خطأ Supabase:", error.message);
