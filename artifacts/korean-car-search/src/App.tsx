@@ -12,6 +12,7 @@ import About from "@/pages/about";
 import FAQ from "@/pages/faq";
 import HowToImport from "@/pages/how-to-import";
 import Contact from "@/pages/contact";
+import Equipment from "@/pages/equipment";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -88,6 +89,7 @@ function Router() {
       <Route path="/how-to-import" component={HowToImport} />
       <Route path="/contact" component={Contact} />
       <Route component={NotFound} />
+      <Route path="/equipment" component={Equipment} />
     </Switch>
   );
 }
