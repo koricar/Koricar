@@ -88,8 +88,8 @@ function Router() {
       <Route path="/faq" component={FAQ} />
       <Route path="/how-to-import" component={HowToImport} />
       <Route path="/contact" component={Contact} />
-      <Route component={NotFound} />
       <Route path="/equipment" component={Equipment} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
