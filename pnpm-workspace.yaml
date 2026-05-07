@@ -1,8 +1,9 @@
-packages:
-  - artifacts/*
+ packages:
+  - artifacts/api-server
+  - artifacts/korean-car-search
   - lib/*
   - lib/integrations/*
-  - scripts
+  - scripts 
 
 autoInstallPeers: false
 
