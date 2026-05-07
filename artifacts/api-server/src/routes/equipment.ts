@@ -80,7 +80,7 @@ router.get("/", async (req, res) => {
 
 // POST /api/equipment/scrape
 router.get("/scrape", async (req, res) => {
-  }
+  
 
   res.json({ message: "بدأ السحب..." });
 
