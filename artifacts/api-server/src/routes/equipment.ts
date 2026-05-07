@@ -28,7 +28,7 @@ const CATEGORIES = [
 
 async function scrapeWithBrowserless(url: string, nameAr: string, nameEn: string) {
   try {
-    const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
+    const browserlessUrl = `const browserlessUrl = `https://production-sfo.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
 
     const response = await fetch(browserlessUrl, {
       method: "POST",
