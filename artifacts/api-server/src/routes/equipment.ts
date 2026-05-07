@@ -9,77 +9,91 @@ const supabase = createClient(
   process.env.SUPABASE_SERVICE_KEY!
 );
 
+const BROWSERLESS_TOKEN = process.env.BROWSERLESS_TOKEN!;
+
+// فئات perfect82.com
 const CATEGORIES = [
-  { cat1: 18, cat2: 27, nameAr: "حفار كبير", nameEn: "Large Excavator" },
-  { cat1: 18, cat2: 28, nameAr: "حفار متوسط", nameEn: "Excavator 1.0m3" },
-  { cat1: 18, cat2: 31, nameAr: "ميني بوكلين", nameEn: "Mini Excavator" },
-  { cat1: 18, cat2: 32, nameAr: "بوكلين بعجلات", nameEn: "Wheeled Excavator" },
-  { cat1: 21, cat2: 49, nameAr: "شيول", nameEn: "Wheel Loader" },
-  { cat1: 21, cat2: 51, nameAr: "بلدوزر", nameEn: "Bulldozer" },
-  { cat1: 22, cat2: 54, nameAr: "كرين كارغو", nameEn: "Cargo Crane" },
-  { cat1: 19, cat2: 36, nameAr: "قلاب كبير", nameEn: "Dump Truck Large" },
-  { cat1: 20, cat2: 46, nameAr: "رافعة شوكية", nameEn: "Forklift" },
+  { url: "https://www.perfect82.com/pt0203", nameAr: "ميني بوكلين", nameEn: "Mini Excavator" },
+  { url: "https://www.perfect82.com/pt0608", nameAr: "بوكلين متوسط", nameEn: "Excavator Medium" },
+  { url: "https://www.perfect82.com/pt10",   nameAr: "بوكلين كبير", nameEn: "Excavator Large" },
+  { url: "https://www.perfect82.com/ptbig",  nameAr: "بوكلين ضخم", nameEn: "Excavator XL" },
+  { url: "https://www.perfect82.com/pttire", nameAr: "بوكلين بعجلات", nameEn: "Wheeled Excavator" },
+  { url: "https://www.perfect82.com/346",    nameAr: "شيول", nameEn: "Wheel Loader" },
+  { url: "https://www.perfect82.com/348",    nameAr: "بلدوزر", nameEn: "Bulldozer" },
+  { url: "https://www.perfect82.com/339",    nameAr: "كرين كارغو", nameEn: "Cargo Crane" },
+  { url: "https://www.perfect82.com/d15",    nameAr: "دمبر 15 طن", nameEn: "Dump Truck 15T" },
+  { url: "https://www.perfect82.com/d27",    nameAr: "دمبر 27 طن", nameEn: "Dump Truck 27T" },
+  { url: "https://www.perfect82.com/3ton",   nameAr: "رافعة شوكية 3 طن", nameEn: "Forklift 3T" },
+  { url: "https://www.perfect82.com/5ton",   nameAr: "رافعة شوكية 5 طن", nameEn: "Forklift 5T" },
 ];
 
-async function scrapePage(cat1: number, cat2: number, nameAr: string, nameEn: string) {
-  const url = `https://ty-heavyequipment.com/taeyang_product_list/?cat1=${cat1}&cat2=${cat2}`;
+async function scrapeWithBrowserless(url: string, nameAr: string, nameEn: string) {
   try {
-    const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
+    // استخدام Browserless لتحميل الصفحة كاملاً مع JavaScript
+    const browserlessUrl = `https://chrome.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
+    
+    const response = await fetch(browserlessUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        url,
+        waitFor: 2000, // انتظر 2 ثانية لتحميل JavaScript
+        rejectResourceTypes: ["image", "font", "stylesheet"],
+      }),
     });
-    const html = await res.text();
+
+    if (!response.ok) {
+      console.error(`Browserless error for ${nameAr}: ${response.status}`);
+      return [];
+    }
+
+    const html = await response.text();
     const $ = cheerio.load(html);
     const items: any[] = [];
 
-    // كل رابط منتج في الصفحة
-    $("a[href*='taeyang_product_view'], a[href*='?idx='], a[href*='/product/']").each((_, el) => {
-      const link = $(el).attr("href") || "";
-      const title = $(el).text().trim() || 
-                    $(el).find("h2, h3, h4, strong, b").first().text().trim();
-      const image = $(el).find("img").first().attr("src") || "";
+    // perfect82 يستخدم imweb - المنتجات في روابط محددة
+    $("a[href]").each((_, el) => {
+      const href = $(el).attr("href") || "";
+      const text = $(el).text().trim();
+      const img = $(el).find("img").attr("src") || "";
 
-      if (title && title.length > 2 && link) {
-        items.push({
-          title,
-          price: "",
-          image,
-          link: link.startsWith("http") ? link : `https://ty-heavyequipment.com${link}`,
-          category_ar: nameAr,
-          category_en: nameEn,
-          source: "ty-heavyequipment",
-          scraped_at: new Date().toISOString(),
-        });
-      }
-    });
+      // روابط المنتجات في perfect82 تحتوي على أرقام فقط
+      if (
+        href.match(/^https?:\/\/www\.perfect82\.com\/\d+$/) &&
+        text.length > 5
+      ) {
+        // تحليل النص: "볼보/14톤/17년/전북/3600만원"
+        const parts = text.split("/");
+        const brand = parts[0]?.trim() || "";
+        const tons = parts[1]?.trim() || "";
+        const year = parts[2]?.replace("년", "")?.trim() || "";
+        const region = parts[3]?.trim() || "";
+        const price = parts[4]?.trim() || "";
 
-    // إذا ما لقى، جرب WordPress custom post type
-    if (items.length === 0) {
-      $(".elementor-post, .elementor-grid-item, [class*='post-'], article").each((_, el) => {
-        const linkEl = $(el).find("a").first();
-        const link = linkEl.attr("href") || "";
-        const title = $(el).find("h2, h3, h4, .elementor-post__title").first().text().trim();
-        const image = $(el).find("img").first().attr("src") || "";
-        const price = $(el).find("[class*='price'], [class*='가격']").first().text().trim();
-
-        if (title && title.length > 2 && link && link !== "https://ty-heavyequipment.com") {
+        if (brand && price) {
           items.push({
-            title,
+            title: `${brand} ${tons} ${year}년`.trim(),
             price,
-            image,
-            link: link.startsWith("http") ? link : `https://ty-heavyequipment.com${link}`,
+            year,
+            tons,
+            brand,
+            region,
+            image: img.startsWith("http") ? img : "",
+            link: href,
             category_ar: nameAr,
             category_en: nameEn,
-            source: "ty-heavyequipment",
+            source: "perfect82",
             scraped_at: new Date().toISOString(),
           });
         }
-      });
-    }
+      }
+    });
 
-    console.log(`${nameAr}: ${items.length} معدة`);
+    console.log(`✅ ${nameAr}: ${items.length} معدة`);
     return items;
+
   } catch (err) {
-    console.error(`خطأ في ${nameAr}:`, err);
+    console.error(`❌ خطأ في ${nameAr}:`, err);
     return [];
   }
 }
@@ -87,7 +101,7 @@ async function scrapePage(cat1: number, cat2: number, nameAr: string, nameEn: st
 // GET /api/equipment
 router.get("/", async (req, res) => {
   try {
-    const { category, page = "1", limit = "20" } = req.query as any;
+    const { category, brand, year_min, page = "1", limit = "20" } = req.query as any;
     const offset = (Number(page) - 1) * Number(limit);
 
     let query = supabase
@@ -97,6 +111,8 @@ router.get("/", async (req, res) => {
       .range(offset, offset + Number(limit) - 1);
 
     if (category) query = query.eq("category_en", category);
+    if (brand) query = query.ilike("brand", `%${brand}%`);
+    if (year_min) query = query.gte("year", year_min);
 
     const { data, error, count } = await query;
     if (error) throw error;
@@ -107,23 +123,43 @@ router.get("/", async (req, res) => {
   }
 });
 
+// GET /api/equipment/categories
+router.get("/categories", async (req, res) => {
+  const { data, error } = await supabase
+    .from("equipment")
+    .select("category_ar, category_en")
+    .order("category_en");
+
+  if (error) return res.status(500).json({ error: error.message });
+
+  const unique = [...new Map(data.map(i => [i.category_en, i])).values()];
+  res.json({ success: true, data: unique });
+});
+
 // GET /api/equipment/scrape
 router.get("/scrape", async (req, res) => {
-  res.json({ message: "بدأ السحب..." });
+  res.json({ message: "🚀 بدأ السحب من perfect82..." });
 
   let allItems: any[] = [];
+
   for (const cat of CATEGORIES) {
-    const items = await scrapePage(cat.cat1, cat.cat2, cat.nameAr, cat.nameEn);
+    const items = await scrapeWithBrowserless(cat.url, cat.nameAr, cat.nameEn);
     allItems = [...allItems, ...items];
-    await new Promise(r => setTimeout(r, 1200));
+    await new Promise(r => setTimeout(r, 2000)); // انتظر بين الطلبات
   }
 
+  console.log(`📦 المجموع: ${allItems.length} معدة`);
+
   if (allItems.length > 0) {
-    await supabase.from("equipment").delete().eq("source", "ty-heavyequipment");
-    await supabase.from("equipment").insert(allItems);
-    console.log(`✅ تم حفظ ${allItems.length} معدة`);
+    await supabase.from("equipment").delete().eq("source", "perfect82");
+    const { error } = await supabase.from("equipment").insert(allItems);
+    if (error) {
+      console.error("❌ خطأ Supabase:", error.message);
+    } else {
+      console.log(`✅ تم حفظ ${allItems.length} معدة`);
+    }
   } else {
-    console.log("⚠️ ما وجدنا معدات - المشكلة في الـ selectors");
+    console.log("⚠️ ما وجدنا معدات");
   }
 });
 
