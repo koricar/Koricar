@@ -25,21 +25,24 @@ async function scrapePage(cat1: number, cat2: number, nameAr: string, nameEn: st
   const url = `https://ty-heavyequipment.com/taeyang_product_list/?cat1=${cat1}&cat2=${cat2}`;
   try {
     const res = await fetch(url, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" }
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" }
     });
     const html = await res.text();
     const $ = cheerio.load(html);
     const items: any[] = [];
 
-    $("article, .post, [class*='product']").each((_, el) => {
-      const title = $(el).find("h2, h3, .entry-title").first().text().trim();
-      const link  = $(el).find("a").first().attr("href") || "";
+    // كل رابط منتج في الصفحة
+    $("a[href*='taeyang_product_view'], a[href*='?idx='], a[href*='/product/']").each((_, el) => {
+      const link = $(el).attr("href") || "";
+      const title = $(el).text().trim() || 
+                    $(el).find("h2, h3, h4, strong, b").first().text().trim();
       const image = $(el).find("img").first().attr("src") || "";
-      const price = $(el).find("[class*='price']").first().text().trim();
 
-      if (title && title.length > 2) {
+      if (title && title.length > 2 && link) {
         items.push({
-          title, price, image,
+          title,
+          price: "",
+          image,
           link: link.startsWith("http") ? link : `https://ty-heavyequipment.com${link}`,
           category_ar: nameAr,
           category_en: nameEn,
@@ -48,6 +51,32 @@ async function scrapePage(cat1: number, cat2: number, nameAr: string, nameEn: st
         });
       }
     });
+
+    // إذا ما لقى، جرب WordPress custom post type
+    if (items.length === 0) {
+      $(".elementor-post, .elementor-grid-item, [class*='post-'], article").each((_, el) => {
+        const linkEl = $(el).find("a").first();
+        const link = linkEl.attr("href") || "";
+        const title = $(el).find("h2, h3, h4, .elementor-post__title").first().text().trim();
+        const image = $(el).find("img").first().attr("src") || "";
+        const price = $(el).find("[class*='price'], [class*='가격']").first().text().trim();
+
+        if (title && title.length > 2 && link && link !== "https://ty-heavyequipment.com") {
+          items.push({
+            title,
+            price,
+            image,
+            link: link.startsWith("http") ? link : `https://ty-heavyequipment.com${link}`,
+            category_ar: nameAr,
+            category_en: nameEn,
+            source: "ty-heavyequipment",
+            scraped_at: new Date().toISOString(),
+          });
+        }
+      });
+    }
+
+    console.log(`${nameAr}: ${items.length} معدة`);
     return items;
   } catch (err) {
     console.error(`خطأ في ${nameAr}:`, err);
@@ -78,23 +107,23 @@ router.get("/", async (req, res) => {
   }
 });
 
-// POST /api/equipment/scrape
+// GET /api/equipment/scrape
 router.get("/scrape", async (req, res) => {
-  
-
   res.json({ message: "بدأ السحب..." });
 
   let allItems: any[] = [];
   for (const cat of CATEGORIES) {
     const items = await scrapePage(cat.cat1, cat.cat2, cat.nameAr, cat.nameEn);
     allItems = [...allItems, ...items];
-    await new Promise(r => setTimeout(r, 1000));
+    await new Promise(r => setTimeout(r, 1200));
   }
 
   if (allItems.length > 0) {
     await supabase.from("equipment").delete().eq("source", "ty-heavyequipment");
     await supabase.from("equipment").insert(allItems);
     console.log(`✅ تم حفظ ${allItems.length} معدة`);
+  } else {
+    console.log("⚠️ ما وجدنا معدات - المشكلة في الـ selectors");
   }
 });
 
