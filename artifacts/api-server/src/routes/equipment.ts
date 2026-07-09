@@ -28,7 +28,8 @@ const CATEGORIES = [
 
 async function scrapeWithBrowserless(url: string, nameAr: string, nameEn: string) {
   try {
-    const browserlessUrl = `const browserlessUrl = `https://production-sfo.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
+    // تم تصحيح هذا السطر وإزالة التكرار وأقواس الـ backtick الخاطئة
+    const browserlessUrl = `https://production-sfo.browserless.io/content?token=${BROWSERLESS_TOKEN}`;
 
     const response = await fetch(browserlessUrl, {
       method: "POST",
