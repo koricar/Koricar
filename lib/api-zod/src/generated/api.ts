@@ -91,6 +91,7 @@ export const SearchCarsResponse = zod.object({
       thumbnailUrl: zod.string().optional(),
       description: zod.string().optional(),
       features: zod.array(zod.string()).optional(),
+      images: zod.array(zod.string()).optional(), // 👈 تمت إضافة مصفوفة الصور هنا بنجاح لنتائج البحث
       source: zod.string().describe("Source website name"),
       sourceUrl: zod
         .string()
@@ -138,6 +139,7 @@ export const GetCarByIdResponse = zod.object({
   thumbnailUrl: zod.string().optional(),
   description: zod.string().optional(),
   features: zod.array(zod.string()).optional(),
+  images: zod.array(zod.string()).optional(), // 👈 تمت إضافة مصفوفة الصور هنا بنجاح لتفاصيل السيارة الفردية
   source: zod.string().describe("Source website name"),
   sourceUrl: zod.string().describe("URL to the listing on the source website"),
   location: zod.string().optional(),
