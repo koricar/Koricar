@@ -234,7 +234,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "아카디아": "아카디아", "GMC 아카디아": "아카디아",
   "유콘": "유콘", "캐니언": "캐니언",
   // ── DODGE ─────────────────────────────────
-  "챌린저": "챌린저", "차جر": "차جر", "듀랑고": "듀랑고", "램": "램",
+  "챌린저": "챌린جر", "차جر": "차جر", "듀랑고": "듀랑고", "램": "램",
   // ── POLESTAR ──────────────────────────────
   "폴스타 2": "폴스타 2", "폴스타 3": "폴스타 3", "폴스타 4": "폴스타 4",
   // ── FIAT ──────────────────────────────────
@@ -246,7 +246,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   // ── LOTUS ─────────────────────────────────
   "엘리스": "엘리스", "에보라": "에보라", "에미라": "에미라", "일레트르": "일레트르",
   // ── BYD ───────────────────────────────────
-  "아토 3": "아토 3", "씰": "씰", "돌핀": "돌핀", "탕": "탕",
+  "아토 3": "아토 3", "씰": "씰", "돌핀": "돌phin", "탕": "탕",
   // ── MAYBACH ───────────────────────────────
   "마이바흐 S클래스": "마이바흐 S클래스", "마이바흐 GLS": "마이바흐 GLS",
   // ── RENAULT ───────────────────────────────
@@ -418,7 +418,7 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "grandeur": "그랜저", "그랜저": "그랜저", "جرانديور": "그랜저",
   "accent": "엑센트", "verna": "엑센트", "엑센트": "엑센트", "اكسنت": "엑센트",
   "tucson": "투싼", "투싼": "투싼", "توسان": "투싼", "تيوسون": "투싼",
-  "santa fe": "싼타페", "santafe": "싼타페", "싼타페": "싼타페", "سانتافي": "싼타페",
+  "santa fe": "싼타페", "santafe": "싼타페", "싼타페": "싼타페", "سان타في": "싼타페",
   "palisade": "팰리세이드", "팰리세이드": "팰리세이드", "باليسيد": "팰리세이드",
   "kona": "코나", "코나": "코나", "كونا": "코나",
   "nexo": "넥쏘", "넥쏘": "넥쏘",
@@ -934,7 +934,7 @@ function extractFeatures(car: EncarCar): string[] {
   for (const sm of car.ServiceMark ?? []) { const label = SERVICE_MARK_MAP[sm]; if (label) { add(label); break; } }
   const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
   const fuelAr: Record<string, string> = {
-    gasoline: "بنزين", diesel: "ديزل", hybrid: "هايبرد",
+    gasoline: "بنزين", diesel: "디زل", hybrid: "هايبرد",
     electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG",
   };
   if (fuelAr[fuel]) add(fuelAr[fuel]);
@@ -956,18 +956,13 @@ interface EncarResponse {
   SearchResults: EncarCar[];
 }
 
-// دالة مساعدة لتوجيه الصور عبر Proxy مجاني وسريع لتلافي قيود الحظر من Encar
 function getProxyUrl(url: string): string {
   return `https://wsrv.nl/?url=${encodeURIComponent(url)}&af`;
 }
 
 function mapEncarCar(car: EncarCar) {
   const sortedPhotos = (car.Photos ?? []).sort((a, b) => a.ordering - b.ordering);
-  
-  // تحويل كافة روابط الصور المتاحة لهذه السيارة إلى روابط Proxy سريعة ومستقرة
   const images = sortedPhotos.map(photo => getProxyUrl(`${ENCAR_PHOTO}${photo.location}`));
-  
-  // الصورة الرئيسية والصورة المصغرة
   const imageUrl = images[0] || "";
 
   const brandEn = MANUFACTURER_TO_EN[car.Manufacturer] ?? car.Manufacturer;
@@ -1003,7 +998,7 @@ function mapEncarCar(car: EncarCar) {
     inspected,
     imageUrl,
     thumbnailUrl: imageUrl,
-    images, // مصفوفة الصور الكاملة المرتبة التي سنستدعيها في الواجهة الأمامية!
+    images, 
     description: `${brandEn} ${car.Model} ${car.FormYear}`,
     features,
     options,
@@ -1199,23 +1194,61 @@ router.get("/search", async (req, res) => {
   }
 });
 
+// دالة جلب سيارة محددة بالـ id مع دمج جلب معرض الصور الكامل والعميق
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   try {
+    // 1. جلب البيانات الأساسية للسيارة
     const url = `https://api.encar.com/search/car/view/general/${id}`;
     const resp = await fetch(url, {
       headers: {
         Referer: "https://www.encar.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json, text/plain, */*",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
       },
       signal: AbortSignal.timeout(10000),
     });
+
     if (resp.ok) {
       const data = await resp.json() as EncarCar;
       const car = mapEncarCar(data);
+
+      // 2. جلب الصور العميقة الإضافية من الـ API الداخلي لضمان المعرض الكامل
+      try {
+        const detailUrl = `https://api.encar.com/v1/readside/car/${id}`;
+        const detailResp = await fetch(detailUrl, {
+          headers: {
+            Referer: `https://www.encar.com/dc/dc_cardetailview.do?carid=${id}`,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(5000),
+        });
+
+        if (detailResp.ok) {
+          const dData = await detailResp.json() as any;
+          const allPhotos = dData.meta?.photos || [];
+          if (allPhotos.length > 0) {
+            // ترتيب وتحويل روابط الصور عبر البروكسي wsrv
+            const deepImages = allPhotos
+              .sort((a: any, b: any) => (a.ordering || 0) - (b.ordering || 0))
+              .map((p: any) => `https://wsrv.nl/?url=${encodeURIComponent(`https://ci.encar.com${p.location}`)}&af`);
+            
+            // تحديث المصفوفة كاملة بالصور العميقة
+            car.images = deepImages;
+            if (deepImages[0]) {
+              car.imageUrl = deepImages[0];
+              car.thumbnailUrl = deepImages[0];
+            }
+          }
+        }
+      } catch (deepErr) {
+        req.log.warn({ id, deepErr }, "Failed to fetch deep photos, using standard photos");
+      }
+
       carCache.set(car.id, car);
-      res.json(car); return;
+      res.json(car); 
+      return;
     }
   } catch (err) {
     req.log.warn({ err }, "Failed to fetch car details from Encar, falling back to cache");
