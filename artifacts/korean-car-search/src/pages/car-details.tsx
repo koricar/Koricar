@@ -14,7 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRY_RULES, type CountryCode } from "@/components/country-rules";
 
 function toArabicUrl(url: string): string {
-  return `https://translate.yandex.com/translate?url=${encodeURIComponent(url)}&lang=ko-ar`;
+  return `https://translate.yandex.com/translate?url=${encodeURIComponent(url || "")}&lang=ko-ar`;
 }
 
 const FUEL_MAP: Record<string, string> = {
@@ -83,22 +83,31 @@ export default function CarDetails() {
     );
   }
 
-  // مصفوفة الصور المدعومة بالتفاصيل العميقة من السيرفر
-  const carImages: string[] = (car as any).images && (car as any).images.length > 0 
-    ? (car as any).images 
-    : car.imageUrl ? [car.imageUrl] : [];
+  // استخراج الصور بأمان تام منعاً للكراش
+  const rawImages = (car as any)?.images;
+  const carImages: string[] = Array.isArray(rawImages) && rawImages.length > 0 
+    ? rawImages 
+    : car?.imageUrl ? [car.imageUrl] : [];
 
   const nextImage = () => {
+    if (carImages.length <= 1) return;
     setCurrentImgIndex((prev) => (prev === carImages.length - 1 ? 0 : prev + 1));
   };
 
   const prevImage = () => {
+    if (carImages.length <= 1) return;
     setCurrentImgIndex((prev) => (prev === 0 ? carImages.length - 1 : prev - 1));
   };
 
-  const isCompatible = selectedCountry && car.year
+  const isCompatible = selectedCountry && car?.year && COUNTRY_RULES[selectedCountry]
     ? car.year >= COUNTRY_RULES[selectedCountry].minYear
     : null;
+
+  // دمج خيارات ومواصفات السيارة بأمان
+  const rawOptions = (car as any)?.options;
+  const displayFeatures: string[] = Array.isArray(rawOptions) && rawOptions.length > 0
+    ? rawOptions
+    : Array.isArray(car?.features) ? car.features : [];
 
   return (
     <Layout>
@@ -108,40 +117,40 @@ export default function CarDetails() {
           <nav className="flex items-center gap-2 text-sm text-muted-foreground mb-6 font-medium">
             <Link href="/" className="hover:text-primary transition-colors">الرئيسية</Link>
             <ChevronLeftIcon className="w-4 h-4" />
-            <span className="text-foreground">{car.brand}</span>
+            <span className="text-foreground">{car?.brand || "—"}</span>
             <ChevronLeftIcon className="w-4 h-4" />
-            <span className="text-foreground line-clamp-1">{car.model}</span>
+            <span className="text-foreground line-clamp-1">{car?.model || "—"}</span>
           </nav>
 
           <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
             <div>
               <div className="flex items-center gap-3 mb-3 flex-wrap">
-                <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-sm rounded-lg uppercase tracking-wider">{car.brand}</span>
-                <span className="px-3 py-1 bg-white border border-border shadow-sm font-bold text-sm rounded-lg">المصدر: {car.source}</span>
-                {car.inspected && (
+                <span className="px-3 py-1 bg-primary/10 text-primary font-bold text-sm rounded-lg uppercase tracking-wider">{car?.brand || "—"}</span>
+                <span className="px-3 py-1 bg-white border border-border shadow-sm font-bold text-sm rounded-lg">المصدر: {car?.source || "—"}</span>
+                {car?.inspected && (
                   <span className="px-3 py-1 bg-emerald-500/10 text-emerald-600 border border-emerald-200 font-bold text-sm rounded-lg flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4" /> فحص معتمد
                   </span>
                 )}
-                {isCompatible === true && selectedCountry && (
+                {isCompatible === true && selectedCountry && COUNTRY_RULES[selectedCountry] && (
                   <span className="px-3 py-1 bg-green-500/10 text-green-700 border border-green-200 font-bold text-sm rounded-lg flex items-center gap-1.5">
                     <ShieldCheck className="w-4 h-4" />
                     {COUNTRY_RULES[selectedCountry].flag} متوافق مع {COUNTRY_RULES[selectedCountry].label}
                   </span>
                 )}
-                {isCompatible === false && selectedCountry && (
+                {isCompatible === false && selectedCountry && COUNTRY_RULES[selectedCountry] && (
                   <span className="px-3 py-1 bg-red-500/10 text-red-700 border border-red-200 font-bold text-sm rounded-lg flex items-center gap-1.5">
                     <AlertTriangle className="w-4 h-4" />
                     {COUNTRY_RULES[selectedCountry].flag} قد لا يدخل {COUNTRY_RULES[selectedCountry].label}
                   </span>
                 )}
               </div>
-              <h1 className="text-3xl md:text-5xl font-black text-foreground">{car.model}</h1>
+              <h1 className="text-3xl md:text-5xl font-black text-foreground">{car?.model || "—"}</h1>
             </div>
             <div className="text-start md:text-end">
               <p className="text-sm text-muted-foreground font-bold mb-1">السعر التقريبي</p>
               <div className="text-4xl md:text-5xl font-black font-numbers text-primary">
-                {car.priceFormatted || formatPriceKRW(car.price)}
+                {car?.priceFormatted || formatPriceKRW(car?.price || 0)}
               </div>
             </div>
           </div>
@@ -166,7 +175,7 @@ export default function CarDetails() {
                     <motion.img
                       key={currentImgIndex}
                       src={carImages[currentImgIndex]}
-                      alt={`${car.model} - صورة ${currentImgIndex + 1}`}
+                      alt={`${car?.model || "سيارة"} - صورة ${currentImgIndex + 1}`}
                       initial={{ opacity: 0 }}
                       animate={{ opacity: 1 }}
                       exit={{ opacity: 0 }}
@@ -206,14 +215,14 @@ export default function CarDetails() {
                 </div>
               )}
               
-              {car.sunroof && (
+              {car?.sunroof && (
                 <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md text-white font-bold px-4 py-2 rounded-xl shadow-lg border border-white/10">
                   فتحة سقف ✓
                 </div>
               )}
             </motion.div>
 
-            {/* صور المعرض المصغرة أسفل العرض الرئيسي لتسهيل الاختيار */}
+            {/* صور المعرض المصغرة أسفل العرض الرئيسي */}
             {carImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted">
                 {carImages.map((img, index) => (
@@ -233,10 +242,10 @@ export default function CarDetails() {
             {/* Key Specs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
               {[
-                { icon: Calendar,  label: "سنة الصنع",     value: car.year?.toString() ?? "—" },
-                { icon: Gauge,     label: "الممشى",         value: car.mileage != null ? `${formatNumber(car.mileage)} كم` : "—" },
-                { icon: Fuel,      label: "الوقود",         value: FUEL_MAP[car.fuelType] ?? car.fuelType ?? "—" },
-                { icon: Settings2, label: "ناقل الحركة",    value: TRANS_MAP[car.transmission] ?? car.transmission ?? "—" },
+                { icon: Calendar,  label: "سنة الصنع",     value: car?.year?.toString() ?? "—" },
+                { icon: Gauge,     label: "الممشى",         value: car?.mileage != null ? `${formatNumber(car.mileage)} كم` : "—" },
+                { icon: Fuel,      label: "الوقود",         value: FUEL_MAP[car?.fuelType || ""] ?? car?.fuelType ?? "—" },
+                { icon: Settings2, label: "ناقل الحركة",    value: TRANS_MAP[car?.transmission || ""] ?? car?.transmission ?? "—" },
               ].map((spec, i) => (
                 <motion.div
                   key={i}
@@ -253,13 +262,13 @@ export default function CarDetails() {
             </div>
 
             {/* تنبيه عدم التوافق */}
-            {isCompatible === false && selectedCountry && (
+            {isCompatible === false && selectedCountry && COUNTRY_RULES[selectedCountry] && (
               <div className="bg-red-50 border border-red-200 rounded-2xl p-5 flex items-start gap-4">
                 <AlertTriangle className="w-6 h-6 text-red-500 shrink-0 mt-0.5" />
                 <div>
                   <p className="font-bold text-red-800 mb-1">⚠️ تنبيه كفاءة الطاقة</p>
                   <p className="text-sm text-red-700">
-                    موديل {car.year} قد لا يتوافق مع اشتراطات {COUNTRY_RULES[selectedCountry].label} (الحد الأدنى {COUNTRY_RULES[selectedCountry].minYear}).
+                    موديل {car?.year} قد لا يتوافق مع اشتراطات {COUNTRY_RULES[selectedCountry].label} (الحد الأدنى {COUNTRY_RULES[selectedCountry].minYear}).
                     تواصل معنا للتحقق قبل الطلب.
                   </p>
                   <a
@@ -277,22 +286,22 @@ export default function CarDetails() {
             )}
 
             {/* Description */}
-            {car.description && (
+            {car?.description && (
               <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
                 <h3 className="text-2xl font-bold mb-6">ملاحظات إضافية</h3>
                 <p className="text-lg leading-relaxed text-muted-foreground whitespace-pre-wrap">{car.description}</p>
               </div>
             )}
 
-            {/* Features (خيارات ومميزات السيرفر العميقة أو القديمة المدمجة) */}
-            {(((car as any).options && (car as any).options.length > 0) || (car.features && car.features.length > 0)) && (
+            {/* Features */}
+            {displayFeatures.length > 0 && (
               <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
                 <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
                   <ListPlus className="w-6 h-6 text-primary" />
                   المواصفات والإضافات بالسيارة
                 </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {((car as any).options || car.features || []).map((feature: string, idx: number) => (
+                  {displayFeatures.map((feature: string, idx: number) => (
                     <div key={idx} className="flex items-center gap-3">
                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <Check className="w-4 h-4 text-primary" />
@@ -345,10 +354,10 @@ export default function CarDetails() {
                   </div>
                 </div>
 
-                <QuoteRequestForm carName={car.title || car.model} carPrice={car.priceFormatted || formatPriceKRW(car.price)} carId={car.id} />
-                <ImportCalculator carPriceKRW={car.price * 10000} />
+                <QuoteRequestForm carName={car?.title || car?.model || "سيارة كورية"} carPrice={car?.priceFormatted || formatPriceKRW(car?.price || 0)} carId={car?.id} />
+                <ImportCalculator carPriceKRW={(car?.price || 0) * 10000} />
 
-                {car.sourceUrl && (
+                {car?.sourceUrl && (
                   <div className="flex flex-col gap-2 mt-4">
                     <a
                       href={toArabicUrl(car.sourceUrl)}
@@ -371,24 +380,24 @@ export default function CarDetails() {
                 )}
               </div>
 
-              {/* Summary (تم تحديثه ليعرض البيانات العميقة والجديدة بشكل مثالي) */}
+              {/* Summary */}
               <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
                 <h4 className="font-bold mb-4 border-b border-border pb-2">ملخص المواصفات الفنية</h4>
                 <ul className="space-y-3">
                   {[
-                    { label: "نوع الهيكل",   value: BODY_MAP[car.bodyType] ?? car.bodyType },
-                    { label: "اللون",         value: car.colorAr ?? car.color },
+                    { label: "نوع الهيكل",   value: BODY_MAP[car?.bodyType || ""] ?? car?.bodyType },
+                    { label: "اللون",         value: car?.colorAr ?? car?.color },
                     { 
                       label: "رقم الهيكل (VIN)", 
-                      value: (car as any).chassisNumber || "غير متوفر",
+                      value: (car as any)?.chassisNumber || "غير متوفر",
                       icon: <Binary className="w-3.5 h-3.5 text-primary inline ml-1" />
                     },
                     { 
                       label: "الموقع في كوريا",        
-                      value: (car as any).location || car.location || "كوريا الجنوبية", 
+                      value: (car as any)?.location || car?.location || "كوريا الجنوبية", 
                       icon: <MapPin className="w-3.5 h-3.5 text-primary inline ml-1" /> 
                     },
-                    { label: "تاريخ العرض",   value: car.createdAt ? new Date(car.createdAt).toLocaleDateString("ar-SA") : "غير محدد" },
+                    { label: "تاريخ العرض",   value: car?.createdAt ? new Date(car.createdAt).toLocaleDateString("ar-SA") : "غير محدد" },
                   ].filter(item => item.value).map((item, i, arr) => (
                     <li key={i} className={`flex justify-between items-center ${i < arr.length - 1 ? "border-b border-border/50 pb-3" : "pb-1"}`}>
                       <span className="text-muted-foreground text-sm">{item.label}</span>
