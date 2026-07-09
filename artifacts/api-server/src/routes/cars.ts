@@ -104,7 +104,7 @@ const EN_TO_MANUFACTURER: Record<string, string> = {
   "cadillac": "캐딜락",
   "ferrari": "페라리",
   "lamborghini": "람보르기니",
-  "maserati": "마세라티",
+  "maserati": "마세라تي",
   "rolls-royce": "롤스로이스",
   "mclaren": "맥라렌",
   "tesla": "테슬라",
@@ -234,7 +234,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "아카디아": "아카디아", "GMC 아카디아": "아카디아",
   "유콘": "유콘", "캐니언": "캐니언",
   // ── DODGE ─────────────────────────────────
-  "챌린저": "챌린저", "차저": "차저", "듀랑고": "듀랑고", "램": "램",
+  "챌린저": "챌린저", "차جر": "차جر", "듀랑고": "듀랑고", "램": "램",
   // ── POLESTAR ──────────────────────────────
   "폴스타 2": "폴스타 2", "폴스타 3": "폴스타 3", "폴스타 4": "폴스타 4",
   // ── FIAT ──────────────────────────────────
@@ -393,7 +393,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "사이버트럭": "사이버트럭",
   // ── MASERATI ─────────────────────────────
   "기블리": "기블리", "레반떼": "레반떼",
-  "콰트로포르테": "콰트로포르테", "그레칼레": "그레칼레", "MC20": "MC20",
+  "콰τρο포르테": "콰τρο포르테", "그레칼레": "그레칼레", "MC20": "MC20",
   // ── FERRARI ──────────────────────────────
   "로마": "로마", "SF90": "SF90", "488": "488", "296 GTB": "296 GTB", "포르토피노": "포르토피노",
   // ── LAMBORGHINI ──────────────────────────
@@ -403,7 +403,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   // ── SUBARU ───────────────────────────────
   "아웃백": "아웃백", "포레스터": "포레스터", "임프레자": "임프레자", "레거시": "레거시", "크로스트렉": "크로스트렉",
   // ── ALFA ROMEO ───────────────────────────
-  "줄리아": "줄리아", "스텔비오": "스텔비오", "토날레": "토날레",
+  "줄이야": "줄리아", "스텔비오": "스텔비오", "토날레": "토날레",
   // ── MITSUBISHI ───────────────────────────
   "아웃랜더": "아웃랜더", "이클립스 크로스": "이클립스 크로스", "파제로": "파제로",
   // ── BENTLEY ──────────────────────────────
@@ -529,7 +529,7 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "rs3": "RS3", "rs4": "RS4", "rs5": "RS5", "rs6": "RS6", "rs7": "RS7",
   "RS3": "RS3", "RS4": "RS4", "RS5": "RS5", "RS6": "RS6", "RS7": "RS7",
   "golf": "골프", "골프": "골프", "جولف": "골프",
-  "tiguan": "티구안", "티구안": "티구안", "تيجوان": "티구안",
+  "tiguan": "티구안", "티구안": "티구안", "티게완": "티구안",
   "passat": "파사트", "파사트": "파사트",
   "touareg": "투아렉", "투아렉": "투아렉", "توارك": "투아렉",
   "polo": "폴로", "arteon": "아테온",
@@ -590,7 +590,7 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "bentayga": "벤테이가",
   "phantom": "팬텀", "ghost": "고스트", "cullinan": "컬리넌",
   "sierra": "시에라", "acadia": "아카디아", "yukon": "유콘",
-  "challenger": "챌린저", "charger": "차저", "durango": "듀랑고",
+  "challenger": "챌린جر", "charger": "차جر", "durango": "듀랑고",
   "urus": "우루스", "우루스": "우루스",
   "huracan": "우라칸", "aventador": "아벤타도르",
 };
@@ -624,13 +624,10 @@ function formatPrice(price: number): string {
   return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
 
-// ─────────────────────────────────────────────
-// buildEncarQuery — now supports yearFrom/yearTo directly in Encar query
-// ─────────────────────────────────────────────
 function buildEncarQuery(params: {
   brand?: string;
   model?: string;
-  modelType?: "group" | "model"; // "group" = ModelGroup, "model" = Model مباشر
+  modelType?: "group" | "model";
   sunroof?: boolean;
   fuelType?: string;
   transmission?: string;
@@ -674,7 +671,6 @@ function buildEncarQuery(params: {
   if (params.model) {
     const input = params.model.trim();
 
-    // إزالة prefix m: أو g: إذا موجود
     const cleanInput = input.startsWith("m:") ? input.slice(2)
                      : input.startsWith("g:") ? input.slice(2)
                      : input;
@@ -960,10 +956,20 @@ interface EncarResponse {
   SearchResults: EncarCar[];
 }
 
+// دالة مساعدة لتوجيه الصور عبر Proxy مجاني وسريع لتلافي قيود الحظر من Encar
+function getProxyUrl(url: string): string {
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&af`;
+}
+
 function mapEncarCar(car: EncarCar) {
   const sortedPhotos = (car.Photos ?? []).sort((a, b) => a.ordering - b.ordering);
-  const firstPhoto = sortedPhotos[0];
-  const imageUrl = firstPhoto ? `${ENCAR_PHOTO}${firstPhoto.location}` : "";
+  
+  // تحويل كافة روابط الصور المتاحة لهذه السيارة إلى روابط Proxy سريعة ومستقرة
+  const images = sortedPhotos.map(photo => getProxyUrl(`${ENCAR_PHOTO}${photo.location}`));
+  
+  // الصورة الرئيسية والصورة المصغرة
+  const imageUrl = images[0] || "";
+
   const brandEn = MANUFACTURER_TO_EN[car.Manufacturer] ?? car.Manufacturer;
   const fuelEn = FUEL_TO_EN[car.FuelType] ?? "gasoline";
   const transmissionEn = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "auto";
@@ -997,6 +1003,7 @@ function mapEncarCar(car: EncarCar) {
     inspected,
     imageUrl,
     thumbnailUrl: imageUrl,
+    images, // مصفوفة الصور الكاملة المرتبة التي سنستدعيها في الواجهة الأمامية!
     description: `${brandEn} ${car.Model} ${car.FormYear}`,
     features,
     options,
@@ -1023,11 +1030,6 @@ router.get("/brands", (_req, res) => {
   });
 });
 
-// ─────────────────────────────────────────────
-// /filters — يجيب ModelGroups أو Models من Encar مباشرة
-// GET /filters?brand=Hyundai               → قائمة ModelGroups
-// GET /filters?brand=Hyundai&modelGroup=아반떼 → قائمة Models (الأجيال)
-// ─────────────────────────────────────────────
 router.get("/filters", async (req, res) => {
   const { brand, modelGroup } = req.query as { brand?: string; modelGroup?: string };
 
@@ -1049,15 +1051,13 @@ router.get("/filters", async (req, res) => {
     let q: string;
 
     if (modelGroup) {
-      // نجيب Models (الأجيال) لـ ModelGroup معين
       q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}._.ModelGroup.${modelGroup}.)`;
     } else {
-      // نجيب ModelGroups للماركة
       q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}.)`;
     }
 
     const inavParam = modelGroup
-      ? encodeURIComponent("|Metadata|Sort")  // عند ModelGroup محدد، Encar يرجع Models في nodes
+      ? encodeURIComponent("|Metadata|Sort")
       : encodeURIComponent("|Metadata|Sort");
     const rawUrl = `${ENCAR_API}/search/car/list/premium?count=true&q=${q}&inav=${inavParam}`;
     const resp = await fetch(rawUrl, {
@@ -1073,7 +1073,6 @@ router.get("/filters", async (req, res) => {
     const data = await resp.json() as { iNav?: { Nodes?: any[] } };
     const nodes = data.iNav?.Nodes ?? [];
 
-    // DEBUG: إذا modelGroup موجود، نرجع الـ nodes names للتشخيص
     if (modelGroup && req.query.debug === "1") {
       res.json({
         nodeNames: nodes.map((n: any) => n.Name),
@@ -1083,12 +1082,9 @@ router.get("/filters", async (req, res) => {
     }
 
     if (modelGroup) {
-      // Models داخل Refinements داخل ModelGroup facet
-      // أولاً نحاول نجيبها من Node مباشر
       const modelNode = nodes.find((n: any) => n.Name === "Model");
       let modelFacets = (modelNode?.Facets ?? []).filter((f: any) => f.Count > 0);
 
-      // إذا ما لقينا، نبحث في Refinements داخل ModelGroup node
       if (modelFacets.length === 0) {
         const mgNode = nodes.find((n: any) => n.Name === "ModelGroup");
         const mgFacet = mgNode?.Facets?.find((f: any) => f.Value === modelGroup || f.IsSelected);
@@ -1096,7 +1092,6 @@ router.get("/filters", async (req, res) => {
         modelFacets = (refinementModel?.Facets ?? []).filter((f: any) => f.Count > 0);
       }
 
-      // إذا ما لقينا بعد، نبحث في أي Refinements في أي node
       if (modelFacets.length === 0) {
         for (const node of nodes) {
           for (const facet of node.Facets ?? []) {
@@ -1117,9 +1112,7 @@ router.get("/filters", async (req, res) => {
       }));
       res.json({ models });
     } else {
-      // نستخرج ModelGroups من iNav
       const mgNode = nodes.find((n: any) => n.Name === "ModelGroup");
-      // ModelGroups تكون في Refinements داخل Manufacturer facet
       const mfNode = nodes.find((n: any) => n.Name === "Manufacturer");
       const krFacet = mfNode?.Facets?.find((f: any) => f.Value === krBrand);
       const refinementMG = krFacet?.Refinements?.Nodes?.find((n: any) => n.Name === "ModelGroup");
@@ -1151,7 +1144,6 @@ router.get("/search", async (req, res) => {
     fuelType, bodyType, color, priceMin, priceMax, mileageMax,
     page = 1, limit = 20,
   } = parsed.data;
-  // modelType: "group" أو "model" — يُرسل من filter-sidebar
   const modelType = (req.query.modelType as "group" | "model" | undefined);
   try {
     const { q: encarQ, modelRaw } = buildEncarQuery({
