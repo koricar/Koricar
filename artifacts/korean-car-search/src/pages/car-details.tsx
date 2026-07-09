@@ -49,8 +49,37 @@ export default function CarDetails() {
   const { id } = useParams();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   
-  const { data: car, isLoading, isError } = useGetCarById(id || "", {
+  const { data: carData, isLoading, isError } = useGetCarById(id || "", {
     query: { enabled: !!id }
+  });
+
+  // توسيع حقول السيارة بأمان لتجنب استخدام any
+  const car = carData as (typeof carData & {
+    images?: string[];
+    options?: string[];
+    chassisNumber?: string;
+    location?: string;
+    brand?: string;
+    model?: string;
+    source?: string;
+    inspected?: boolean;
+    year?: number;
+    priceFormatted?: string;
+    price?: number;
+    imageUrl?: string;
+    sunroof?: boolean;
+    mileage?: number;
+    fuelType?: string;
+    transmission?: string;
+    description?: string;
+    features?: string[];
+    title?: string;
+    id?: string;
+    sourceUrl?: string;
+    bodyType?: string;
+    colorAr?: string;
+    color?: string;
+    createdAt?: string;
   });
 
   const selectedCountry = getSelectedCountry();
@@ -83,10 +112,8 @@ export default function CarDetails() {
     );
   }
 
-  // استخراج الصور بأمان تام منعاً للكراش
-  const rawImages = (car as any)?.images;
-  const carImages: string[] = Array.isArray(rawImages) && rawImages.length > 0 
-    ? rawImages 
+  const carImages: string[] = Array.isArray(car?.images) && car.images.length > 0 
+    ? car.images 
     : car?.imageUrl ? [car.imageUrl] : [];
 
   const nextImage = () => {
@@ -103,11 +130,15 @@ export default function CarDetails() {
     ? car.year >= COUNTRY_RULES[selectedCountry].minYear
     : null;
 
-  // دمج خيارات ومواصفات السيارة بأمان
-  const rawOptions = (car as any)?.options;
-  const displayFeatures: string[] = Array.isArray(rawOptions) && rawOptions.length > 0
-    ? rawOptions
+  const displayFeatures: string[] = Array.isArray(car?.options) && car.options.length > 0
+    ? car.options
     : Array.isArray(car?.features) ? car.features : [];
+
+  const formatCreatedAt = (dateStr?: string) => {
+    if (!dateStr) return "غير محدد";
+    const d = new Date(dateStr);
+    return isNaN(d.getTime()) ? "غير محدد" : d.toLocaleDateString("ar-SA");
+  };
 
   return (
     <Layout>
@@ -163,7 +194,7 @@ export default function CarDetails() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
 
-            {/* Image Slider (Carousel) */}
+            {/* Image Slider */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -184,7 +215,6 @@ export default function CarDetails() {
                     />
                   </AnimatePresence>
 
-                  {/* أزرار التنقل بين الصور */}
                   {carImages.length > 1 && (
                     <>
                       <button
@@ -202,7 +232,6 @@ export default function CarDetails() {
                         <ChevronLeft className="w-6 h-6" />
                       </button>
 
-                      {/* عداد مؤشر الصور السفلي */}
                       <div className="absolute bottom-4 right-1/2 translate-x-1/2 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full z-10">
                         {currentImgIndex + 1} / {carImages.length}
                       </div>
@@ -222,7 +251,6 @@ export default function CarDetails() {
               )}
             </motion.div>
 
-            {/* صور المعرض المصغرة أسفل العرض الرئيسي */}
             {carImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted">
                 {carImages.map((img, index) => (
@@ -389,15 +417,15 @@ export default function CarDetails() {
                     { label: "اللون",         value: car?.colorAr ?? car?.color },
                     { 
                       label: "رقم الهيكل (VIN)", 
-                      value: (car as any)?.chassisNumber || "غير متوفر",
+                      value: car?.chassisNumber || "غير متوفر",
                       icon: <Binary className="w-3.5 h-3.5 text-primary inline ml-1" />
                     },
                     { 
                       label: "الموقع في كوريا",        
-                      value: (car as any)?.location || car?.location || "كوريا الجنوبية", 
+                      value: car?.location || "كوريا الجنوبية", 
                       icon: <MapPin className="w-3.5 h-3.5 text-primary inline ml-1" /> 
                     },
-                    { label: "تاريخ العرض",   value: car?.createdAt ? new Date(car.createdAt).toLocaleDateString("ar-SA") : "غير محدد" },
+                    { label: "تاريخ العرض",   value: formatCreatedAt(car?.createdAt) },
                   ].filter(item => item.value).map((item, i, arr) => (
                     <li key={i} className={`flex justify-between items-center ${i < arr.length - 1 ? "border-b border-border/50 pb-3" : "pb-1"}`}>
                       <span className="text-muted-foreground text-sm">{item.label}</span>
