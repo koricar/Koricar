@@ -52,23 +52,23 @@ const MANUFACTURER_TO_KR: Record<string, string> = {
   "Renault Korea": "르노코리아",
   Chevrolet: "쉐보레",
   BMW: "BMW",
-  "Mercedes-Benz": "메르세데스-벤츠",
-  Audi: "아우디",
+  "Mercedes-Benz": "메르세데س-벤츠",
+  Audi: "아우دي",
   Volkswagen: "폭스바겐",
   Volvo: "볼보",
   Toyota: "도요타",
   Lexus: "렉서스",
   Honda: "혼다",
   Nissan: "닛산",
-  Infiniti: "인피니티",
+  Infiniti: "인피니تي",
   Porsche: "포르쉐",
-  "Land Rover": "랜드로버",
+  "Land Rover": "랜드로بر",
   MINI: "MINI",
   Ford: "포드",
   Jeep: "지프",
   Lincoln: "링컨",
   Cadillac: "캐딜락",
-  Maserati: "마세라티",
+  Maserati: "마세라تي",
   Jaguar: "재규어",
   "Rolls-Royce": "롤스로이스",
   McLaren: "맥라렌",
@@ -124,7 +124,18 @@ function buildCronQuery(alert: {
 }
 
 async function fetchLatestCars(alert: typeof alertsTable.$inferSelect): Promise<
-  Array<{ id: string; brand: string; model: string; year: number; price: number; imageUrl: string }>
+  Array<{ 
+    id: string; 
+    brand: string; 
+    model: string; 
+    year: number; 
+    price: number; 
+    imageUrl: string;
+    images: string[];
+    chassisNumber: string;
+    location: string;
+    options: string[];
+  }>
 > {
   const q = buildCronQuery(alert);
   const url = new URL(`${ENCAR_API}/search/car/list/general`);
@@ -156,26 +167,88 @@ async function fetchLatestCars(alert: typeof alertsTable.$inferSelect): Promise<
     }>;
   };
 
-  return data.SearchResults.map((c) => {
-    const photo = (c.Photos ?? []).sort((a, b) => a.ordering - b.ordering)[0];
+  const detailedCars = [];
+
+  for (const c of data.SearchResults) {
     const year = parseInt(c.FormYear, 10) || 0;
 
-    // Post-filter year and price
-    if (alert.yearFrom && year < alert.yearFrom) return null;
-    if (alert.yearTo && year > alert.yearTo) return null;
-    if (alert.priceMin && c.Price < alert.priceMin) return null;
-    if (alert.priceMax && c.Price > alert.priceMax) return null;
-    if (alert.mileageMax && (c.Mileage ?? 0) > alert.mileageMax) return null;
+    // الفلترة الأولية لتوفير الوقت والطلبات
+    if (alert.yearFrom && year < alert.yearFrom) continue;
+    if (alert.yearTo && year > alert.yearTo) continue;
+    if (alert.priceMin && c.Price < alert.priceMin) continue;
+    if (alert.priceMax && c.Price > alert.priceMax) continue;
+    if (alert.mileageMax && (c.Mileage ?? 0) > alert.mileageMax) continue;
 
-    return {
-      id: String(c.Id),
-      brand: c.Manufacturer,
-      model: c.Badge ? `${c.Model} ${c.Badge}` : c.Model,
-      year,
-      price: Math.round(c.Price),
-      imageUrl: photo ? `${ENCAR_PHOTO}${photo.location}` : "",
-    };
-  }).filter(Boolean) as Array<{ id: string; brand: string; model: string; year: number; price: number; imageUrl: string }>;
+    try {
+      // جلب التفاصيل العميقة لكل سيارة (الصور الكاملة والمواصفات من الـ API الداخلي لـ Encar)
+      const detailUrl = `${ENCAR_API}/v1/readside/car/${c.Id}`;
+      const detailResp = await fetch(detailUrl, {
+        headers: {
+          Referer: `https://www.encar.com/dc/dc_cardetailview.do?carid=${c.Id}`,
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(5000),
+      });
+
+      if (detailResp.ok) {
+        const dData = await detailResp.json() as any;
+        
+        // تجميع روابط كافة الصور المتاحة للمعرض وترتيبها
+        const allPhotos = dData.meta?.photos || [];
+        const imagesArray = allPhotos
+          .sort((a: any, b: any) => (a.ordering || 0) - (b.ordering || 0))
+          .map((p: any) => `${ENCAR_PHOTO}${p.location}`);
+
+        // تجميع كافة المميزات المتاحة بالسيارة (Options)
+        const optionList = dData.options?.map((o: any) => o.name) || [];
+
+        detailedCars.push({
+          id: String(c.Id),
+          brand: c.Manufacturer,
+          model: c.Badge ? `${c.Model} ${c.Badge}` : c.Model,
+          year,
+          price: Math.round(c.Price),
+          imageUrl: imagesArray[0] || (c.Photos?.[0] ? `${ENCAR_PHOTO}${c.Photos[0].location}` : ""),
+          images: imagesArray.length > 0 ? imagesArray : (c.Photos?.map(p => `${ENCAR_PHOTO}${p.location}`) || []),
+          chassisNumber: dData.inspect?.chassisNumber || dData.specification?.chassisNumber || "غير متوفر",
+          location: dData.advertisement?.areaName || "كوريا الجنوبية",
+          options: optionList,
+        });
+      } else {
+        // في حال فشل طلب التفاصيل، نعتمد على البيانات الأساسية المتاحة كبديل مؤقت
+        const photo = (c.Photos ?? []).sort((a, b) => a.ordering - b.ordering)[0];
+        detailedCars.push({
+          id: String(c.Id),
+          brand: c.Manufacturer,
+          model: c.Badge ? `${c.Model} ${c.Badge}` : c.Model,
+          year,
+          price: Math.round(c.Price),
+          imageUrl: photo ? `${ENCAR_PHOTO}${photo.location}` : "",
+          images: c.Photos?.map(p => `${ENCAR_PHOTO}${p.location}`) || [],
+          chassisNumber: "غير متوفر",
+          location: "كوريا الجنوبية",
+          options: [],
+        });
+      }
+    } catch (e) {
+      const photo = (c.Photos ?? []).sort((a, b) => a.ordering - b.ordering)[0];
+      detailedCars.push({
+        id: String(c.Id),
+        brand: c.Manufacturer,
+        model: c.Badge ? `${c.Model} ${c.Badge}` : c.Model,
+        year,
+        price: Math.round(c.Price),
+        imageUrl: photo ? `${ENCAR_PHOTO}${photo.location}` : "",
+        images: c.Photos?.map(p => `${ENCAR_PHOTO}${p.location}`) || [],
+        chassisNumber: "غير متوفر",
+        location: "كوريا الجنوبية",
+        options: [],
+      });
+    }
+  }
+
+  return detailedCars;
 }
 
 async function checkAlert(alert: typeof alertsTable.$inferSelect) {
