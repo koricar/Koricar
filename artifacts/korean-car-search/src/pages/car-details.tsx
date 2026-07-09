@@ -2,13 +2,15 @@ import { useParams, Link } from "wouter";
 import { useGetCarById } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
+import { useState } from "react";
 import {
   Loader2, Calendar, Settings2, Fuel, MapPin, Gauge,
-  ShieldCheck, Check, ExternalLink, AlertTriangle, Zap
+  ShieldCheck, Check, ExternalLink, AlertTriangle, Zap,
+  ChevronRight, ChevronLeft, Binary, ListPlus
 } from "lucide-react";
 import ImportCalculator from "@/components/ImportCalculator";
 import QuoteRequestForm from "@/components/QuoteRequestForm";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { COUNTRY_RULES, type CountryCode } from "@/components/country-rules";
 
 function toArabicUrl(url: string): string {
@@ -45,6 +47,8 @@ function ChevronLeftIcon(props: React.ComponentProps<"svg">) {
 
 export default function CarDetails() {
   const { id } = useParams();
+  const [currentImgIndex, setCurrentImgIndex] = useState(0);
+  
   const { data: car, isLoading, isError } = useGetCarById(id || "", {
     query: { enabled: !!id }
   });
@@ -78,6 +82,19 @@ export default function CarDetails() {
       </Layout>
     );
   }
+
+  // مصفوفة الصور المدعومة بالتفاصيل العميقة من السيرفر
+  const carImages: string[] = (car as any).images && (car as any).images.length > 0 
+    ? (car as any).images 
+    : car.imageUrl ? [car.imageUrl] : [];
+
+  const nextImage = () => {
+    setCurrentImgIndex((prev) => (prev === carImages.length - 1 ? 0 : prev + 1));
+  };
+
+  const prevImage = () => {
+    setCurrentImgIndex((prev) => (prev === 0 ? carImages.length - 1 : prev - 1));
+  };
 
   const isCompatible = selectedCountry && car.year
     ? car.year >= COUNTRY_RULES[selectedCountry].minYear
@@ -137,25 +154,81 @@ export default function CarDetails() {
           {/* Left Column */}
           <div className="lg:col-span-2 space-y-8">
 
-            {/* Image */}
+            {/* Image Slider (Carousel) */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               className="rounded-3xl overflow-hidden shadow-2xl border border-border/50 bg-card aspect-[16/10] relative group"
             >
-              {car.imageUrl ? (
-                <img src={car.imageUrl} alt={car.model} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              {carImages.length > 0 ? (
+                <div className="w-full h-full relative overflow-hidden bg-black flex items-center justify-center">
+                  <AnimatePresence mode="wait">
+                    <motion.img
+                      key={currentImgIndex}
+                      src={carImages[currentImgIndex]}
+                      alt={`${car.model} - صورة ${currentImgIndex + 1}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="w-full h-full object-contain max-h-full"
+                    />
+                  </AnimatePresence>
+
+                  {/* أزرار التنقل بين الصور */}
+                  {carImages.length > 1 && (
+                    <>
+                      <button
+                        onClick={prevImage}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                        aria-label="الصورة السابقة"
+                      >
+                        <ChevronRight className="w-6 h-6" />
+                      </button>
+                      <button
+                        onClick={nextImage}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 z-10 p-2 rounded-full bg-black/50 text-white backdrop-blur-sm opacity-0 group-hover:opacity-100 transition-opacity hover:bg-black/70"
+                        aria-label="الصورة التالية"
+                      >
+                        <ChevronLeft className="w-6 h-6" />
+                      </button>
+
+                      {/* عداد مؤشر الصور السفلي */}
+                      <div className="absolute bottom-4 right-1/2 translate-x-1/2 bg-black/60 backdrop-blur-md text-white text-xs font-bold px-3 py-1.5 rounded-full z-10">
+                        {currentImgIndex + 1} / {carImages.length}
+                      </div>
+                    </>
+                  )}
+                </div>
               ) : (
                 <div className="w-full h-full flex items-center justify-center bg-secondary">
                   <span className="text-muted-foreground text-lg font-bold">لا توجد صورة متوفرة</span>
                 </div>
               )}
+              
               {car.sunroof && (
                 <div className="absolute top-4 left-4 z-10 bg-black/60 backdrop-blur-md text-white font-bold px-4 py-2 rounded-xl shadow-lg border border-white/10">
                   فتحة سقف ✓
                 </div>
               )}
             </motion.div>
+
+            {/* صور المعرض المصغرة أسفل العرض الرئيسي لتسهيل الاختيار */}
+            {carImages.length > 1 && (
+              <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-thin scrollbar-thumb-muted">
+                {carImages.map((img, index) => (
+                  <button
+                    key={index}
+                    onClick={() => setCurrentImgIndex(index)}
+                    className={`relative w-20 h-14 rounded-lg overflow-hidden border-2 transition-all shrink-0 ${
+                      index === currentImgIndex ? "border-primary scale-95 shadow-md" : "border-transparent opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <img src={img} alt="مصغرة" className="w-full h-full object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Key Specs */}
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
@@ -211,17 +284,20 @@ export default function CarDetails() {
               </div>
             )}
 
-            {/* Features */}
-            {car.features && car.features.length > 0 && (
+            {/* Features (خيارات ومميزات السيرفر العميقة أو القديمة المدمجة) */}
+            {(((car as any).options && (car as any).options.length > 0) || (car.features && car.features.length > 0)) && (
               <div className="bg-card border border-border rounded-3xl p-8 shadow-sm">
-                <h3 className="text-2xl font-bold mb-6">المواصفات والإضافات</h3>
+                <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
+                  <ListPlus className="w-6 h-6 text-primary" />
+                  المواصفات والإضافات بالسيارة
+                </h3>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {car.features.map((feature, idx) => (
+                  {((car as any).options || car.features || []).map((feature: string, idx: number) => (
                     <div key={idx} className="flex items-center gap-3">
                       <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                         <Check className="w-4 h-4 text-primary" />
                       </div>
-                      <span className="font-semibold text-foreground">{feature}</span>
+                      <span className="font-semibold text-foreground text-sm">{feature}</span>
                     </div>
                   ))}
                 </div>
@@ -269,7 +345,7 @@ export default function CarDetails() {
                   </div>
                 </div>
 
-                <QuoteRequestForm carName={car.title} carPrice={car.priceFormatted} carId={car.id} />
+                <QuoteRequestForm carName={car.title || car.model} carPrice={car.priceFormatted || formatPriceKRW(car.price)} carId={car.id} />
                 <ImportCalculator carPriceKRW={car.price * 10000} />
 
                 {car.sourceUrl && (
@@ -295,19 +371,28 @@ export default function CarDetails() {
                 )}
               </div>
 
-              {/* Summary */}
+              {/* Summary (تم تحديثه ليعرض البيانات العميقة والجديدة بشكل مثالي) */}
               <div className="bg-card border border-border rounded-3xl p-6 shadow-sm">
-                <h4 className="font-bold mb-4">ملخص المواصفات</h4>
+                <h4 className="font-bold mb-4 border-b border-border pb-2">ملخص المواصفات الفنية</h4>
                 <ul className="space-y-3">
                   {[
                     { label: "نوع الهيكل",   value: BODY_MAP[car.bodyType] ?? car.bodyType },
                     { label: "اللون",         value: car.colorAr ?? car.color },
-                    { label: "الموقع",        value: car.location, icon: <MapPin className="w-3 h-3 text-primary inline ml-1" /> },
+                    { 
+                      label: "رقم الهيكل (VIN)", 
+                      value: (car as any).chassisNumber || "غير متوفر",
+                      icon: <Binary className="w-3.5 h-3.5 text-primary inline ml-1" />
+                    },
+                    { 
+                      label: "الموقع في كوريا",        
+                      value: (car as any).location || car.location || "كوريا الجنوبية", 
+                      icon: <MapPin className="w-3.5 h-3.5 text-primary inline ml-1" /> 
+                    },
                     { label: "تاريخ العرض",   value: car.createdAt ? new Date(car.createdAt).toLocaleDateString("ar-SA") : "غير محدد" },
                   ].filter(item => item.value).map((item, i, arr) => (
-                    <li key={i} className={`flex justify-between ${i < arr.length - 1 ? "border-b border-border/50 pb-3" : "pb-1"}`}>
+                    <li key={i} className={`flex justify-between items-center ${i < arr.length - 1 ? "border-b border-border/50 pb-3" : "pb-1"}`}>
                       <span className="text-muted-foreground text-sm">{item.label}</span>
-                      <span className="font-bold text-sm">
+                      <span className="font-bold text-sm text-foreground flex items-center gap-0.5">
                         {item.icon}{item.value}
                       </span>
                     </li>
