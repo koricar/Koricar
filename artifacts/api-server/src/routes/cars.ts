@@ -1212,8 +1212,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     if (resp.ok) {
       const data = await resp.json() as EncarCar;
       const car = mapEncarCar(data);
-
-      // 2. جلب الصور العميقة الإضافية من الـ API الداخلي لضمان المعرض الكامل
+// 2. جلب الصور العميقة الإضافية من الـ API الداخلي بمسارات بحث متعددة لضمان جلب المعرض الكامل
       try {
         const detailUrl = `https://api.encar.com/v1/readside/car/${id}`;
         const detailResp = await fetch(detailUrl, {
@@ -1227,12 +1226,18 @@ router.get("/:id", async (req, res): Promise<void> => {
 
         if (detailResp.ok) {
           const dData = await detailResp.json() as any;
-          const allPhotos = dData.meta?.photos || [];
+          
+          // فحص عدة احتمالات لمكان مصفوفة الصور في استجابة الـ API الداخلي
+          const allPhotos = dData.photos || dData.vehicle?.photos || dData.meta?.photos || [];
+          
           if (allPhotos.length > 0) {
-            // ترتيب وتحويل روابط الصور عبر البروكسي wsrv
+            // ترتيب وتحويل روابط الصور عبر البروكسي wsrv لضمان السرعة والجودة
             const deepImages = allPhotos
               .sort((a: any, b: any) => (a.ordering || 0) - (b.ordering || 0))
-              .map((p: any) => `https://wsrv.nl/?url=${encodeURIComponent(`https://ci.encar.com${p.location}`)}&af`);
+              .map((p: any) => {
+                const imgPath = p.location || p.path || p.url;
+                return `https://wsrv.nl/?url=${encodeURIComponent(`https://ci.encar.com${imgPath}`)}&w=1200&q=85&output=webp`;
+              });
             
             // تحديث المصفوفة كاملة بالصور العميقة
             car.images = deepImages;
@@ -1245,20 +1250,7 @@ router.get("/:id", async (req, res): Promise<void> => {
       } catch (deepErr) {
         req.log.warn({ id, deepErr }, "Failed to fetch deep photos, using standard photos");
       }
-
-      carCache.set(car.id, car);
-      res.json(car); 
-      return;
-    }
-  } catch (err) {
-    req.log.warn({ err }, "Failed to fetch car details from Encar, falling back to cache");
-  }
-  const cached = carCache.get(id);
-  if (cached) { res.json(cached); return; }
-  res.status(404).json({
-    error: "not_found",
-    message: "Car not found. Please search first and click a result.",
-  });
-});
+      
+      
 
 export default router;
