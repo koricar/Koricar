@@ -1193,8 +1193,11 @@ router.get("/search", async (req, res) => {
     });
   }
 });
-
 // دالة جلب سيارة محددة بالـ id مع دمج جلب معرض الصور الكامل والعميق
+// ⚠️ هذا الملف يحتوي فقط على الـ route المعدّل الخاص بـ GET /:id
+// انسخ هذا الجزء وضعه بدل الـ route القديم في ملف cars.router.ts الأصلي
+// (باقي الملف - كل الجداول والدوال فوق - يبقى بدون أي تغيير)
+
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   try {
@@ -1209,13 +1212,33 @@ router.get("/:id", async (req, res): Promise<void> => {
       signal: AbortSignal.timeout(10000),
     });
 
-    if (resp.ok) {
-      const data = await resp.json() as EncarCar;
-      const car = mapEncarCar(data);
+    if (!resp.ok) {
+      res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
+      return;
+    }
 
-      // 2. جلب الصور العميقة الإضافية من الـ API الداخلي لضمان المعرض الكامل
+    const data = (await resp.json()) as EncarCar;
+    const car = mapEncarCar(data);
+
+    // 🔍 DEBUG: كم صورة جاءت من المصدر الأساسي (view/general)
+    req.log.info(
+      { carId: id, primaryPhotoCount: (data.Photos ?? []).length, primaryPhotos: data.Photos },
+      "DEBUG: primary Photos array from view/general"
+    );
+
+    // 2. محاولة جلب معرض الصور العميق من عدة مسارات محتملة
+    // نجرب أكثر من مسار لأن مسار encar الداخلي للصور غير موثق رسميًا وقد يتغير
+    const candidateUrls = [
+      `https://api.encar.com/v1/readside/vehicle/${id}`,      // احتمال 1: vehicle بدل car
+      `https://api.encar.com/v1/readside/car/${id}`,           // المسار القديم (الأصلي)
+      `https://api.encar.com/v1/readside/record/vehicle/${id}/photos`, // احتمال 2: مسار صور مخصص
+    ];
+
+    let deepImages: string[] = [];
+    let matchedUrl: string | null = null;
+
+    for (const detailUrl of candidateUrls) {
       try {
-        const detailUrl = `https://api.encar.com/v1/readside/car/${id}`;
         const detailResp = await fetch(detailUrl, {
           headers: {
             Referer: `https://www.encar.com/dc/dc_cardetailview.do?carid=${id}`,
@@ -1225,40 +1248,74 @@ router.get("/:id", async (req, res): Promise<void> => {
           signal: AbortSignal.timeout(5000),
         });
 
-        if (detailResp.ok) {
-          const dData = await detailResp.json() as any;
-          const allPhotos = dData.meta?.photos || [];
-          if (allPhotos.length > 0) {
-            // ترتيب وتحويل روابط الصور عبر البروكسي wsrv
-            const deepImages = allPhotos
-              .sort((a: any, b: any) => (a.ordering || 0) - (b.ordering || 0))
-              .map((p: any) => `https://wsrv.nl/?url=${encodeURIComponent(`https://ci.encar.com${p.location}`)}&af`);
-            
-            // تحديث المصفوفة كاملة بالصور العميقة
-            car.images = deepImages;
-            if (deepImages[0]) {
-              car.imageUrl = deepImages[0];
-              car.thumbnailUrl = deepImages[0];
-            }
-          }
+        // 🔍 DEBUG: نسجل حالة كل مسار حتى لو فشل، عشان نعرف وين المشكلة بالضبط
+        if (!detailResp.ok) {
+          req.log.warn({ carId: id, detailUrl, status: detailResp.status }, "DEBUG: readside path failed (not ok)");
+          continue;
         }
-      } catch (deepErr) {
-        req.log.warn({ id, deepErr }, "Failed to fetch deep photos, using standard photos");
-      }
 
-      carCache.set(car.id, car);
-      res.json(car); 
-      return;
+        const dData = (await detailResp.json()) as any;
+
+        // 🔍 DEBUG: نطبع أول 500 حرف من الرد وأسماء المفاتيح لمعرفة شكل البيانات الفعلي
+        req.log.info(
+          { carId: id, detailUrl, topLevelKeys: Object.keys(dData ?? {}), sample: JSON.stringify(dData).slice(0, 800) },
+          "DEBUG: readside raw response"
+        );
+
+        const rawPhotos =
+          dData.photos ||
+          dData.vehicle?.photos ||
+          dData.meta?.photos ||
+          dData.car?.photos ||
+          dData.image?.photos ||
+          (Array.isArray(dData) ? dData : []);
+
+        const allPhotos = Array.isArray(rawPhotos) ? rawPhotos : [];
+
+        req.log.info(
+          { carId: id, detailUrl, foundPhotoCount: allPhotos.length },
+          "DEBUG: extracted photo count from this path"
+        );
+
+        if (allPhotos.length > 0) {
+          deepImages = allPhotos
+            .sort((a: any, b: any) => (a.ordering || 0) - (b.ordering || 0))
+            .map((p: any) => {
+              const imgPath = p.location || p.path || p.url;
+              return `https://wsrv.nl/?url=${encodeURIComponent(`https://ci.encar.com${imgPath}`)}&w=1200&q=85&output=webp`;
+            });
+          matchedUrl = detailUrl;
+          break; // وجدنا مصدر فيه صور، نوقف المحاولة على بقية المسارات
+        }
+      } catch (pathErr) {
+        req.log.warn({ carId: id, detailUrl, pathErr }, "DEBUG: readside path threw error");
+      }
     }
+
+    if (deepImages.length > 0) {
+      car.images = deepImages;
+      car.imageUrl = deepImages[0];
+      car.thumbnailUrl = deepImages[0];
+      req.log.info(
+        { carId: id, matchedUrl, totalDeepImages: deepImages.length },
+        "DEBUG: using deep images (full gallery)"
+      );
+    } else {
+      req.log.warn(
+        { carId: id, fallbackImageCount: car.images.length },
+        "DEBUG: no deep images found on any path — falling back to primary Photos (likely limited to 4)"
+      );
+    }
+
+    res.json(car);
   } catch (err) {
-    req.log.warn({ err }, "Failed to fetch car details from Encar, falling back to cache");
+    req.log.error({ err, id }, "Encar detail API error");
+    res.status(502).json({
+      error: "upstream_error",
+      message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.",
+    });
   }
-  const cached = carCache.get(id);
-  if (cached) { res.json(cached); return; }
-  res.status(404).json({
-    error: "not_found",
-    message: "Car not found. Please search first and click a result.",
-  });
 });
 
 export default router;
+
