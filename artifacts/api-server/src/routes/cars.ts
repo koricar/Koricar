@@ -1227,9 +1227,18 @@ router.get("/:id", async (req, res): Promise<void> => {
         if (detailResp.ok) {
           const dData = await detailResp.json() as any;
           
-          // فحص عدة احتمالات لمكان مصفوفة الصور في استجابة الـ API الداخلي
-          const allPhotos = dData.photos || dData.vehicle?.photos || dData.meta?.photos || [];
           
+          // البحث الشامل في جميع الهياكل المحتملة لاستجابة صور Encar
+const rawPhotos = 
+  dData.photos || 
+  dData.vehicle?.photos || 
+  dData.meta?.photos || 
+  dData.car?.photos || 
+  dData.image?.photos ||
+  (Array.isArray(dData) ? dData : []);
+
+const allPhotos = Array.isArray(rawPhotos) ? rawPhotos : [];
+
           if (allPhotos.length > 0) {
             // ترتيب وتحويل روابط الصور عبر البروكسي wsrv لضمان السرعة والجودة
             const deepImages = allPhotos
