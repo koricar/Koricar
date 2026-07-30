@@ -1254,6 +1254,8 @@ const allPhotos = Array.isArray(rawPhotos) ? rawPhotos : [];
               car.imageUrl = deepImages[0];
               car.thumbnailUrl = deepImages[0];
             }
+            req.log.info({ carId: id, totalFetchedPhotos: allPhotos.length, imagesArray: deepImages }, "DEBUG: Car Photos Fetched");
+
           }
         }
       } catch (deepErr) {
