@@ -1193,7 +1193,7 @@ router.get("/search", async (req, res) => {
     });
   }
 });
-// دالة جلب سيارة محددة بالـ id - نسخة معدّلة تستخدم الـ endpoint الجديد المكتشف
+// دالة جلب سيارة محددة بالـ id - نسخة معدّلة: نطلب كل الأقسام صراحة من endpoint الجديد
 // ⚠️ هذا الملف يحتوي فقط على الـ route المعدّل الخاص بـ GET /:id
 // انسخ هذا الجزء وضعه بدل الـ route القديم في ملف cars.ts
 // (باقي الملف - كل الجداول والدوال فوق - يبقى بدون أي تغيير)
@@ -1201,9 +1201,20 @@ router.get("/search", async (req, res) => {
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   try {
-    // ✅ الـ endpoint القديم /search/car/view/general/${id} صار معطّل (404) من عند Encar
-    // ✅ تم اكتشاف الـ endpoint الجديد الصحيح عبر فحص شبكة الموقع مباشرة:
-    const url = `https://api.encar.com/v1/readside/vehicle/${id}?include=CONTENTS`;
+    // ✅ لازم نطلب كل الأقسام صراحة، وإلا يرجع فقط القسم اللي حددناه (CONTENTS) والباقي null
+    const includeParams = [
+      "CATEGORY",
+      "SPEC",
+      "PHOTOS",
+      "CONTENTS",
+      "ADVERTISEMENT",
+      "MANAGE",
+      "OPTIONS",
+      "CONDITION",
+      "PARTNERSHIP",
+      "CONTACT",
+    ].join(",");
+    const url = `https://api.encar.com/v1/readside/vehicle/${id}?include=${includeParams}`;
     const resp = await fetch(url, {
       headers: {
         Referer: `https://fem.encar.com/cars/detail/${id}`,
@@ -1230,57 +1241,53 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const raw = (await resp.json()) as any;
 
-    // 🔍 DEBUG: نطبع الهيكل العام للرد عشان نتأكد من أسماء الحقول أول مرة
+    // 🔍 DEBUG: نتأكد الآن إن الأقسام صارت مليانة مو null
     req.log.info(
-      { carId: id, topLevelKeys: Object.keys(raw ?? {}), sample: JSON.stringify(raw).slice(0, 1000) },
-      "DEBUG: new vehicle endpoint raw response"
+      {
+        carId: id,
+        hasCategory: !!raw.category,
+        hasSpec: !!raw.spec,
+        hasPhotos: !!raw.photos,
+        photosType: Array.isArray(raw.photos) ? "array" : typeof raw.photos,
+        photosLength: Array.isArray(raw.photos) ? raw.photos.length : null,
+        samplePhotoObj: Array.isArray(raw.photos) ? raw.photos[0] : null,
+      },
+      "DEBUG: new vehicle endpoint sections check"
     );
 
-    // البحث الشامل عن مصفوفة الصور في كل الأماكن المحتملة داخل الرد الجديد
-    const rawPhotos =
-      raw.photos ||
-      raw.contents?.photos ||
-      raw.vehicle?.photos ||
-      raw.spec?.photos ||
-      raw.category?.photos ||
-      (Array.isArray(raw.contents) ? raw.contents.find((c: any) => Array.isArray(c?.photos))?.photos : null) ||
-      [];
-
-    const allPhotos = Array.isArray(rawPhotos) ? rawPhotos : [];
+    const rawPhotos = Array.isArray(raw.photos) ? raw.photos : [];
 
     req.log.info(
-      { carId: id, foundPhotoCount: allPhotos.length, samplePhoto: allPhotos[0] },
+      { carId: id, foundPhotoCount: rawPhotos.length },
       "DEBUG: extracted photo count from new endpoint"
     );
 
-    // نبني كائن EncarCar متوافق مع mapEncarCar الموجودة، من بيانات الرد الجديد
-    // إذا اختلفت أسماء الحقول عن القديم، نأخذ القيم بأمان مع fallback
-    const spec = raw.spec ?? raw;
-    const category = raw.category ?? raw;
-    const advertisement = raw.advertisement ?? raw;
+    const spec = raw.spec ?? {};
+    const category = raw.category ?? {};
+    const advertisement = raw.advertisement ?? {};
 
     const encarCarLike: EncarCar = {
       Id: String(raw.vehicleId ?? id),
-      Manufacturer: category.manufacturerName ?? spec.manufacturerName ?? "",
-      Model: category.modelName ?? spec.modelName ?? "",
-      Badge: category.gradeName ?? spec.gradeName ?? "",
+      Manufacturer: category.manufacturerName ?? "",
+      Model: category.modelName ?? "",
+      Badge: category.gradeName ?? category.gradeDetailName ?? "",
       GreenType: "",
-      FuelType: spec.fuelName ?? category.fuelName ?? "",
-      Transmission: spec.transmissionName ?? category.transmissionName ?? "",
-      FormYear: String(category.formYear ?? spec.formYear ?? ""),
-      Mileage: Number(spec.mileage ?? category.mileage ?? 0),
-      Price: Number(advertisement.price ?? raw.price ?? 0),
-      Color: spec.colorName ?? category.colorName ?? "",
+      FuelType: spec.fuelName ?? "",
+      Transmission: spec.transmissionName ?? "",
+      FormYear: String(category.formYear ?? category.yearMonth ?? ""),
+      Mileage: Number(spec.mileage ?? 0),
+      Price: Number(advertisement.price ?? 0),
+      Color: spec.colorName ?? "",
       Condition: [],
       Trust: [],
       ServiceMark: [],
       BuyType: [],
       OfficeCityState: advertisement.city ?? "",
-      Photos: allPhotos.map((p: any, i: number) => ({
+      Photos: rawPhotos.map((p: any, i: number) => ({
         location: p.location ?? p.path ?? p.url ?? "",
         ordering: p.ordering ?? i,
       })),
-      Year: Number(category.yearMonth ?? category.formYear ?? 0),
+      Year: Number(category.formYear ?? category.yearMonth ?? 0),
       Options: [],
     };
 
@@ -1302,4 +1309,3 @@ router.get("/:id", async (req, res): Promise<void> => {
 });
 
 export default router;
-
