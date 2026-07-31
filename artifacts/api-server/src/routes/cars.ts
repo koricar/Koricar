@@ -1196,7 +1196,7 @@ router.get("/search", async (req, res) => {
 
 // دالة جلب سيارة محددة بالـ id مع دمج جلب معرض الصور الكامل والعميق
 // ⚠️ هذا الملف يحتوي فقط على الـ route المعدّل الخاص بـ GET /:id
-// انسخ هذا الجزء وضعه بدل الـ route القديم في ملف cars.router.ts الأصلي
+// انسخ هذا الجزء وضعه بدل الـ route القديم في ملف cars.ts
 // (باقي الملف - كل الجداول والدوال فوق - يبقى بدون أي تغيير)
 
 router.get("/:id", async (req, res): Promise<void> => {
@@ -1214,6 +1214,24 @@ router.get("/:id", async (req, res): Promise<void> => {
     });
 
     if (!resp.ok) {
+      // 🔍 DEBUG: نسجل السبب الحقيقي لفشل الطلب الأول - هذا كان ناقص قبل
+      let bodyText = "";
+      try {
+        bodyText = (await resp.text()).slice(0, 500);
+      } catch {
+        bodyText = "(تعذر قراءة نص الرد)";
+      }
+      req.log.error(
+        {
+          carId: id,
+          url,
+          status: resp.status,
+          statusText: resp.statusText,
+          headers: Object.fromEntries(resp.headers.entries()),
+          bodySample: bodyText,
+        },
+        "DEBUG: primary Encar request failed (not ok)"
+      );
       res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
       return;
     }
@@ -1228,11 +1246,10 @@ router.get("/:id", async (req, res): Promise<void> => {
     );
 
     // 2. محاولة جلب معرض الصور العميق من عدة مسارات محتملة
-    // نجرب أكثر من مسار لأن مسار encar الداخلي للصور غير موثق رسميًا وقد يتغير
     const candidateUrls = [
-      `https://api.encar.com/v1/readside/vehicle/${id}`,      // احتمال 1: vehicle بدل car
-      `https://api.encar.com/v1/readside/car/${id}`,           // المسار القديم (الأصلي)
-      `https://api.encar.com/v1/readside/record/vehicle/${id}/photos`, // احتمال 2: مسار صور مخصص
+      `https://api.encar.com/v1/readside/vehicle/${id}`,
+      `https://api.encar.com/v1/readside/car/${id}`,
+      `https://api.encar.com/v1/readside/record/vehicle/${id}/photos`,
     ];
 
     let deepImages: string[] = [];
@@ -1249,7 +1266,6 @@ router.get("/:id", async (req, res): Promise<void> => {
           signal: AbortSignal.timeout(5000),
         });
 
-        // 🔍 DEBUG: نسجل حالة كل مسار حتى لو فشل، عشان نعرف وين المشكلة بالضبط
         if (!detailResp.ok) {
           req.log.warn({ carId: id, detailUrl, status: detailResp.status }, "DEBUG: readside path failed (not ok)");
           continue;
@@ -1257,7 +1273,6 @@ router.get("/:id", async (req, res): Promise<void> => {
 
         const dData = (await detailResp.json()) as any;
 
-        // 🔍 DEBUG: نطبع أول 500 حرف من الرد وأسماء المفاتيح لمعرفة شكل البيانات الفعلي
         req.log.info(
           { carId: id, detailUrl, topLevelKeys: Object.keys(dData ?? {}), sample: JSON.stringify(dData).slice(0, 800) },
           "DEBUG: readside raw response"
@@ -1286,7 +1301,7 @@ router.get("/:id", async (req, res): Promise<void> => {
               return `https://wsrv.nl/?url=${encodeURIComponent(`https://ci.encar.com${imgPath}`)}&w=1200&q=85&output=webp`;
             });
           matchedUrl = detailUrl;
-          break; // وجدنا مصدر فيه صور، نوقف المحاولة على بقية المسارات
+          break;
         }
       } catch (pathErr) {
         req.log.warn({ carId: id, detailUrl, pathErr }, "DEBUG: readside path threw error");
@@ -1319,4 +1334,5 @@ router.get("/:id", async (req, res): Promise<void> => {
 });
 
 export default router;
+
 
