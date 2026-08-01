@@ -1131,6 +1131,31 @@ function mapEncarCarExtended(car: EncarCarExtended) {
   const base = mapEncarCar(car);
   const bodyTypeRaw = (car.BodyType ?? "").trim();
   const bodyTypeAr = BODY_TYPE_KR_TO_AR[bodyTypeRaw.toLowerCase()] ?? BODY_TYPE_KR_TO_AR[bodyTypeRaw] ?? bodyTypeRaw;
+  
+    const car = mapEncarCarExtended(encarCarLike);
+
+    // ─── إضافة بيانات الفحص والتأمين ───
+    const inspection = {
+      hasDamage: inspectionData?.hasDamage ?? inspectionData?.damageCount > 0 ?? false,
+      damageCount: inspectionData?.damageCount ?? 0,
+      parts: inspectionData?.parts ?? inspectionData?.inspectionItems ?? [],
+      summary: inspectionData?.summary ?? inspectionData?.result ?? null,
+    };
+
+    const insurance = {
+      totalAccidents: insuranceData?.totalAccidents ?? insuranceData?.accidentCount ?? 0,
+      myAccidents: insuranceData?.myAccidents ?? insuranceData?.mySideAccidentCount ?? 0,
+      otherAccidents: insuranceData?.otherAccidents ?? insuranceData?.otherSideAccidentCount ?? 0,
+      ownerChanges: insuranceData?.ownerChanges ?? insuranceData?.ownerChangeCount ?? 0,
+      ownerChangeDates: insuranceData?.ownerChangeDates ?? insuranceData?.ownerChangeHistory ?? [],
+    };
+
+    // في الـ res.json أضفهم:
+    res.json({
+      ...car,
+      inspection,
+      insurance,
+    });
 
   // خيارات الـ choice الحقيقية (أسماء كورية + أسعار) من الـ endpoint المخصص
   const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({
@@ -1385,6 +1410,46 @@ router.get("/:id", async (req, res): Promise<void> => {
     const spec = raw.spec ?? {};
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
+        // ─── جلب بيانات الفحص والتأمين ───
+    const inspectionUrl = `https://api.encar.com/v1/readside/vehicle/${id}/inspection`;
+    const insuranceUrl = `https://api.encar.com/v1/readside/vehicle/${id}/insurance`;
+
+    let inspectionData: any = null;
+    let insuranceData: any = null;
+
+    try {
+      const inspResp = await fetch(inspectionUrl, {
+        headers: {
+          Referer: `https://fem.encar.com/cars/detail/${id}`,
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (inspResp.ok) inspectionData = await inspResp.json();
+    } catch { /* ignore */ }
+
+    try {
+      const insResp = await fetch(insuranceUrl, {
+        headers: {
+          Referer: `https://fem.encar.com/cars/detail/${id}`,
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+          Accept: "application/json",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (insResp.ok) insuranceData = await insResp.json();
+    } catch { /* ignore */ }
+
+    // DEBUG
+    req.log.info({
+      carId: id,
+      hasInspection: !!inspectionData,
+      hasInsurance: !!insuranceData,
+      inspectionSample: JSON.stringify(inspectionData).slice(0, 500),
+      insuranceSample: JSON.stringify(insuranceData).slice(0, 500),
+    }, "DEBUG: inspection/insurance raw");
+
 
     // 🔍 DEBUG: نطبع شكل spec وcategory وoptions كامل - هذا أهم سطر لمعرفة أسماء الحقول الحقيقية
     req.log.info(
