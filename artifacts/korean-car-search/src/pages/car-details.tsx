@@ -7,7 +7,7 @@ import {
   Loader2, Calendar, Settings2, Fuel, Gauge, Car, Palette,
   Armchair, MapPin, Hash, DollarSign, CheckCircle2, Shield,
   Fuel as FuelIcon, Cog, Ruler, Users, Paintbrush, AlertTriangle,
-  History, UserCheck, Car, ShieldCheck
+  History, UserCheck, ShieldCheck
 } from "lucide-react";
 import QuoteRequestForm from "@/components/QuoteRequestForm";
 import { motion, AnimatePresence } from "framer-motion";
