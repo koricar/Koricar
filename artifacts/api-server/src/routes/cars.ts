@@ -1490,7 +1490,6 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-Encar API ───
     const inspection: any = {
       hasDamage: false,
       damageCount: 0,
