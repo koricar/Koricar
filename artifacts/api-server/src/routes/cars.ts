@@ -897,118 +897,103 @@ const SERVICE_MARK_MAP: Record<string, string> = {
   EncarMeetgo: "Encar Meetgo",
 };
 
-const ENCAR_OPTION_MAP: Record<string, { id: string; ar: string }> = {
+// خريطة كودات Encar → أسماء عربية
+// (نبنيها تدريجياً — الأرقام اللي تحت مؤكدة من لوقات حقيقية)
+const ENCAR_OPTION_CODE_MAP: Record<string, string> = {
+  // ── أنظمة الأمان الأساسية ──
+  "001": "ABS",
+  "004": "ESC (نظام التحكم بالثبات)",
+  "005": "TCS (نظام منع الانزلاق)",
+  "006": "HAC (مساعد الانطلاق على المرتفعات)",
+  "007": "TPMS (مراقبة ضغط الإطارات)",
+  "008": "فرملة طوارئ أوتوماتيكية",
+  
   // ── وسائد هوائية ──
-  "에어백": { id: "airbag", ar: "وسادة هوائية" },
-  "에어백(운전석)": { id: "airbag_driver", ar: "وسادة هوائية (السائق)" },
-  "에어백(조수석)": { id: "airbag_passenger", ar: "وسادة هوائية (الراكب)" },
-  "에어백(사이드)": { id: "airbag_side", ar: "وسادة هوائية جانبية" },
-  "에어백(커튼)": { id: "airbag_curtain", ar: "وسادة هوائية ستارية" },
-  "에어백(무릎)": { id: "airbag_knee", ar: "وسادة هوائية للركبة" },
+  "010": "وسادة هوائية للسائق",
+  "014": "وسادة هوائية للراكب",
+  "015": "وسائد هوائية جانبية",
+  "017": "وسائد هوائية ستارية",
   
-  // ── أنظمة الأمان ──
-  "ABS": { id: "abs", ar: "نظام منع انغلاق المكابح (ABS)" },
-  "ESC": { id: "esc", ar: "نظام التحكم الإلكتروني بالثبات (ESC)" },
-  "TCS": { id: "tcs", ar: "نظام منع الانزلاق (TCS)" },
-  "VDC": { id: "vdc", ar: "نظام التحكم بالديناميكية" },
-  "HAC": { id: "hac", ar: "مساعد الانطلاق على المرتفعات" },
-  "TPMS": { id: "tpms", ar: "مراقبة ضغط الإطارات" },
-  "차선이탈방지": { id: "lane_keep", ar: "مساعد الحفاظ على المسار" },
-  "차선이탈경보": { id: "lane_departure", ar: "تحذير مغادرة المسار" },
-  "사각지대감지": { id: "blind_spot", ar: "كشف النقطة العمياء" },
-  "후측방경보": { id: "rear_blind_spot", ar: "تحذير النقطة العمياء الخلفية" },
-  "전방충돌방지": { id: "front_collision", ar: "منع الاصطدام الأمامي" },
-  "자동급제동": { id: "auto_brake", ar: "فرملة طوارئ أوتوماتيكية" },
-  "주차보조": { id: "parking_assist", ar: "مساعد الركن" },
-  "후방감지기": { id: "parking_sensor_rear", ar: "حساسات ركن خلفية" },
-  "전방감지기": { id: "parking_sensor_front", ar: "حساسات ركن أمامية" },
-  "후방카메라": { id: "camera_rear", ar: "كاميرا خلفية" },
-  "전방카메라": { id: "camera_front", ar: "كاميرا أمامية" },
-  "어라운드뷰": { id: "camera_360", ar: "كاميرا 360°" },
-  "서라운드뷰": { id: "camera_360", ar: "كاميرا 360°" },
-  "헤드업디스플레이": { id: "hud", ar: "شاشة عرض على الزجاج الأمامي (HUD)" },
+  // ── مساعدات القيادة ──
+  "019": "تحذير مغادرة المسار",
+  "020": "مساعد الحفاظ على المسار",
+  "021": "كشف النقطة العمياء",
+  "022": "تحذير النقطة العمياء الخلفية",
+  "023": "منع الاصطدام الأمامي",
+  "024": "كاميرا خلفية",
   
-  // ── الراحة ──
-  "전동접이사이드미러": { id: "power_mirror", ar: "مرايا جانبية كهربائية قابلة للطي" },
-  "오토라이트": { id: "auto_light", ar: "إضاءة أوتوماتيكية" },
-  "오토에어컨": { id: "auto_ac", ar: "مكيّف هواء أوتوماتيكي" },
-  "듀얼에어컨": { id: "dual_ac", ar: "مكيّف هواء مزدوج" },
-  "풀오토에어컨": { id: "full_auto_ac", ar: "مكيّف هواء أوتوماتيكي كامل" },
-  "스마트키": { id: "smart_key", ar: "مفتاح ذكي" },
-  "키리스": { id: "keyless", ar: "دخول بدون مفتاح" },
-  "버튼시동": { id: "push_start", ar: "تشغيل بالزر" },
-  "크루즈컨트롤": { id: "cruise", ar: "مثبت سرعة" },
-  "어댑티브크루즈": { id: "adaptive_cruise", ar: "كروز تكيّفي" },
-  "스마트크루즈": { id: "smart_cruise", ar: "كروز ذكي" },
-  "전동시트": { id: "power_seat", ar: "مقاعد كهربائية" },
-  "전동시트(운전석)": { id: "power_seat_driver", ar: "مقعد كهربائي (السائق)" },
-  "전동시트(조수석)": { id: "power_seat_passenger", ar: "مقعد كهربائي (الراكب)" },
-  "열선시트": { id: "heated_seat", ar: "مقاعد مدفأة" },
-  "열선시트(앞좌석)": { id: "heated_seat_front", ar: "مقاعد مدفأة (أمامية)" },
-  "열선시트(뒷좌석)": { id: "heated_seat_rear", ar: "مقاعد مدفأة (خلفية)" },
-  "통풍시트": { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
-  "통풍시트(앞좌석)": { id: "ventilated_seat_front", ar: "مقاعد مهوّاة (أمامية)" },
-  "가죽시트": { id: "leather_seat", ar: "مقاعد جلدية" },
-  "메모리시트": { id: "memory_seat", ar: "مقاعد بذاكرة" },
-  "메모리시트(운전석)": { id: "memory_seat_driver", ar: "مقعد بذاكرة (السائق)" },
-  "열선핸들": { id: "heated_wheel", ar: "عجلة قيادة مدفأة" },
-  "통풍핸들": { id: "ventilated_wheel", ar: "عجلة قيادة مهواة" },
-  "파워핸들": { id: "power_steering", ar: "عجلة قيادة كهربائية" },
-  "전동트렁크": { id: "power_trunk", ar: "شنطة كهربائية" },
-  "핸즈프리": { id: "hands_free", ar: "فتح الشنطة بالقدم" },
-  "루프랙": { id: "roof_rack", ar: "قضبان سقف" },
+  // ── راحة ──
+  "026": "مثبت سرعة",
+  "027": "كروز تكيّفي / ذكي",
+  "030": "مفتاح ذكي",
+  "031": "تشغيل بالزر",
+  "032": "دخول بدون مفتاح",
   
-  // ── الترفيه والتقنية ──
-  "네비게이션": { id: "navigation", ar: "ملاحة" },
-  "내비게이션": { id: "navigation", ar: "ملاحة" },
-  "블루투스": { id: "bluetooth", ar: "بلوتوث" },
-  "USB": { id: "usb", ar: "منفذ USB" },
-  "AUX": { id: "aux", ar: "منفذ AUX" },
-  "하이패스": { id: "hipass", ar: "نظام دفع رسوم المرور" },
-  "무선충전": { id: "wireless_charge", ar: "شاحن لاسلكي" },
-  "애플카플레이": { id: "carplay", ar: "Apple CarPlay" },
-  "안드로이드오토": { id: "android_auto", ar: "Android Auto" },
-  "CD플레이어": { id: "cd_player", ar: "مشغل أقراص مدمجة" },
-  "MP3": { id: "mp3", ar: "مشغل MP3" },
+  // ── مقاعد ──
+  "033": "مقاعد كهربائية",
+  "034": "مقاعد مدفأة",
+  "035": "مقاعد مهوّاة",
   
-  // ── الإضاءة ──
-  "LED헤드램프": { id: "led_headlight", ar: "مصابيح أمامية LED" },
-  "LED리어램프": { id: "led_taillight", ar: "مصابيح خلفية LED" },
-  "HID": { id: "hid", ar: "مصابيح HID" },
-  "데이라이트": { id: "daylight", ar: "إضاءة نهارية" },
-  "포그램프": { id: "fog_light", ar: "مصابيح ضباب" },
-  "매트릭스LED": { id: "matrix_led", ar: "مصابيح Matrix LED" },
+  // ── تكييف ──
+  "051": "مكيّف هواء أوتوماتيكي",
   
-  // ── السقف ──
-  "선루프": { id: "sunroof", ar: "فتحة سقف" },
-  "썬루프": { id: "sunroof", ar: "فتحة سقف" },
-  "파노라마선루프": { id: "panorama", ar: "سقف بانورامي" },
-  "파노라믹선루프": { id: "panorama", ar: "سقف بانورامي" },
+  // ── مرايا ونوافذ ──
+  "055": "مرايا جانبية كهربائية قابلة للطي",
+  "056": "نوافذ كهربائية",
+  "057": "إضاءة أوتوماتيكية",
   
-  // ── دفع و هيكل ──
-  "4WD": { id: "awd", ar: "دفع رباعي" },
-  "AWD": { id: "awd", ar: "دفع رباعي" },
-  "사륜구동": { id: "awd", ar: "دفع رباعي" },
+  // ── ترفيه ──
+  "058": "بلوتوث",
+  "059": "نظام ملاحة",
   
-  // ── نوافذ وأبواب ──
-  "전동윈도우": { id: "power_window", ar: "نوافذ كهربائية" },
-  "썬팅": { id: "sunfilm", ar: "تظليل زجاج" },
-  "알루미늄휠": { id: "alloy_wheel", ar: "عجلات ألومنيوم" },
+  // ── إضاءة ──
+  "062": "مصابيح أمامية LED",
+  "063": "مصابيح خلفية LED",
+  
+  // ── كاميرات وحساسات ──
+  "072": "حساسات ركن",
+  "075": "كاميرا 360°",
+  
+  // ── سقف ──
+  "077": "فتحة سقف",
+  "078": "سقف بانورامي",
+  
+  // ── هيكل ودفع ──
+  "079": "دفع رباعي",
+  
+  // ── مقاعد متقدمة ──
+  "081": "مقاعد جلدية",
+  "082": "مقعد بذاكرة",
+  "083": "عجلة قيادة مدفأة",
+  "084": "عجلة قيادة مهواة",
+  "085": "شنطة كهربائية",
+  "086": "فتح الشنطة بالقدم",
+  "087": "قضبان سقف",
+  "088": "تظليل زجاج",
+  
+  // ── تقنية ──
+  "092": "Apple CarPlay",
+  "093": "Android Auto",
+  "094": "شاحن لاسلكي",
+  "095": "نظام دفع رسوم المرور",
+  "096": "مشغل أقراص CD",
+  "097": "منفذ USB/AUX",
 };
 
 
 function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; ar: string }> {
   const result: Array<{ id: string; ar: string }> = [];
   const seen = new Set<string>();
-  for (const opt of options) {
-    const mapped = ENCAR_OPTION_MAP[opt];
-    if (mapped && !seen.has(mapped.id)) {
-      seen.add(mapped.id);
-      result.push(mapped);
+  for (const code of options) {
+    const name = ENCAR_OPTION_CODE_MAP[code];
+    if (name && !seen.has(code)) {
+      seen.add(code);
+      result.push({ id: code, ar: name });
     }
   }
   return result;
 }
+
 
 function extractOptions(car: EncarCar): Array<{ id: string; ar: string }> {
   if (car.Options && car.Options.length > 0) {
@@ -1438,9 +1423,14 @@ router.get("/:id", async (req, res): Promise<void> => {
         ordering: p.ordering ?? i,
       })),
       Year: Number(category.formYear ?? category.yearMonth ?? 0),
-      Options: Array.isArray(raw.options) 
-  ? raw.options.map((o: any) => typeof o === 'string' ? o : (o.optionName || o.name || ''))
-  : [],
+     
+Options: (() => {
+  const rawOpts = raw.options ?? {};
+  const standard = Array.isArray(rawOpts.standard) ? rawOpts.standard : [];
+  const etc = Array.isArray(rawOpts.etc) ? rawOpts.etc : [];
+  const tuning = Array.isArray(rawOpts.tuning) ? rawOpts.tuning : [];
+  return [...standard, ...etc, ...tuning];
+})(),
 
       // ✅ أسماء الحقول هذه مؤكدة الآن من فحص الـ DEBUG logs الفعلية
       Vin: raw.vin ?? spec.vin ?? undefined,
