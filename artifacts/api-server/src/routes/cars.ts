@@ -773,14 +773,20 @@ interface EncarCarExtended extends EncarCar {
   RawOptions?: any;
 }
 
-const BODY_TYPE_AR: Record<string, string> = {
-  sedan: "سيدان",
-  suv: "دفع رباعي (SUV)",
-  hatchback: "هاتشباك",
-  coupe: "كوبيه",
-  wagon: "ستيشن",
-  van: "فان",
-  truck: "بيك أب",
+// bodyName القادم من Encar هو نص كوري مباشر (مو إنجليزي) - أمثلة حقيقية شفناها:
+// "SUV", "준중형차" (مدمجة), "대형차" (كبيرة), "소형차" (صغيرة), "경차" (صغيرة جدًا),
+// "스포츠카" (رياضية), "승합차" (فان/ركاب), "화물차" (شحن)
+const BODY_TYPE_KR_TO_AR: Record<string, string> = {
+  "suv": "دفع رباعي (SUV)",
+  "경차": "سيارة صغيرة جدًا",
+  "소형차": "سيارة صغيرة",
+  "준중형차": "سيارة مدمجة",
+  "중형차": "سيارة متوسطة",
+  "대형차": "سيارة كبيرة",
+  "스포츠카": "سيارة رياضية",
+  "승합차": "فان / حافلة صغيرة",
+  "화물차": "شاحنة / نقل",
+  "제네시스": "جينيسيس",
 };
 
 function extractRealOptions(rawOptions: any): Array<{ id: string; ar: string; category?: string }> {
@@ -1047,8 +1053,8 @@ function mapEncarCar(car: EncarCar) {
 // ==================== النسخة الموسّعة من mapEncarCar - تُستخدم فقط في GET /:id ====================
 function mapEncarCarExtended(car: EncarCarExtended) {
   const base = mapEncarCar(car);
-  const bodyTypeRaw = (car.BodyType ?? "").toLowerCase();
-  const bodyTypeAr = BODY_TYPE_AR[bodyTypeRaw] ?? car.BodyType ?? "";
+  const bodyTypeRaw = (car.BodyType ?? "").trim();
+  const bodyTypeAr = BODY_TYPE_KR_TO_AR[bodyTypeRaw.toLowerCase()] ?? BODY_TYPE_KR_TO_AR[bodyTypeRaw] ?? bodyTypeRaw;
 
   return {
     ...base,
