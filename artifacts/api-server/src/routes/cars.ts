@@ -9,6 +9,10 @@ const ENCAR_API = "https://api.encar.com";
 const ENCAR_PHOTO = "https://ci.encar.com";
 const ENCAR_DETAIL = "https://www.encar.com/dc/dc_cardetailview.do?carid=";
 
+/* ────────────────────────────
+   Translation Maps
+   ──────────────────────────── */
+
 const MANUFACTURER_TO_EN: Record<string, string> = {
   "현대": "Hyundai",
   "기아": "Kia",
@@ -104,7 +108,7 @@ const EN_TO_MANUFACTURER: Record<string, string> = {
   "cadillac": "캐딜락",
   "ferrari": "페라리",
   "lamborghini": "람보르기니",
-  "maserati": "마세라تي",
+  "maserati": "마세라티",
   "rolls-royce": "롤스로이스",
   "mclaren": "맥라렌",
   "tesla": "테슬라",
@@ -161,8 +165,116 @@ const EN_TO_TRANSMISSION_KR: Record<string, string> = {
   "manual": "수동",
 };
 
+const TRANSMISSION_TO_EN: Record<string, string> = {
+  "오토": "auto",
+  "수동": "manual",
+  "CVT": "auto",
+  "DCT": "auto",
+};
+
+const COLOR_MAP: Record<string, { ar: string; en: string }> = {
+  "흰색":   { ar: "أبيض",    en: "white" },
+  "검정색": { ar: "أسود",    en: "black" },
+  "쥐색":   { ar: "رمادي",   en: "gray" },
+  "은색":   { ar: "فضي",     en: "silver" },
+  "빨간색": { ar: "أحمر",    en: "red" },
+  "하늘색": { ar: "أزرق فاتح", en: "lightblue" },
+  "갈색":   { ar: "بني",     en: "brown" },
+  "녹색":   { ar: "أخضر",    en: "green" },
+  "노란색": { ar: "أصفر",    en: "yellow" },
+  "주황색": { ar: "برتقالي", en: "orange" },
+  "연두색": { ar: "أخضر فاتح", en: "lime" },
+};
+
+const EN_COLOR_TO_KR: Record<string, string> = {
+  "white": "흰색",
+  "black": "검정색",
+  "gray": "쥐색",
+  "grey": "쥐색",
+  "silver": "은색",
+  "red": "빨간색",
+  "lightblue": "하늘색",
+  "blue": "하늘색",
+  "brown": "갈색",
+  "green": "녹색",
+  "yellow": "노란색",
+  "orange": "주황색",
+  "lime": "연두색",
+};
+
+const BODY_TYPE_KR_TO_AR: Record<string, string> = {
+  "suv": "دفع رباعي (SUV)",
+  "경차": "سيارة صغيرة جدًا",
+  "소형차": "سيارة صغيرة",
+  "준중형차": "سيارة مدمجة",
+  "중형차": "سيارة متوسطة",
+  "대형차": "سيارة كبيرة",
+  "스포츠카": "سيارة رياضية",
+  "승합차": "فان / حافلة صغيرة",
+  "화물차": "شاحنة / نقل",
+  "제네시스": "جينيسيس",
+};
+
+const ENCAR_OPTION_CODE_MAP: Record<string, string> = {
+  "001": "ABS",
+  "004": "ESC (نظام التحكم بالثبات)",
+  "005": "TCS (نظام منع الانزلاق)",
+  "006": "HAC (مساعد الانطلاق على المرتفعات)",
+  "007": "TPMS (مراقبة ضغط الإطارات)",
+  "008": "فرملة طوارئ أوتوماتيكية",
+  "010": "وسادة هوائية للسائق",
+  "014": "وسادة هوائية للراكب",
+  "015": "وسائد هوائية جانبية",
+  "017": "وسائد هوائية ستارية",
+  "019": "تحذير مغادرة المسار",
+  "020": "مساعد الحفاظ على المسار",
+  "021": "كشف النقطة العمياء",
+  "022": "تحذير النقطة العمياء الخلفية",
+  "023": "منع الاصطدام الأمامي",
+  "024": "كاميرا خلفية",
+  "026": "مثبت سرعة",
+  "027": "كروز تكيّفي / ذكي",
+  "030": "مفتاح ذكي",
+  "031": "تشغيل بالزر",
+  "032": "دخول بدون مفتاح",
+  "033": "مقاعد كهربائية",
+  "034": "مقاعد مدفأة",
+  "035": "مقاعد مهوّاة",
+  "051": "مكيّف هواء أوتوماتيكي",
+  "055": "مرايا جانبية كهربائية قابلة للطي",
+  "056": "نوافذ كهربائية",
+  "057": "إضاءة أوتوماتيكية",
+  "058": "بلوتوث",
+  "059": "نظام ملاحة",
+  "062": "مصابيح أمامية LED",
+  "063": "مصابيح خلفية LED",
+  "072": "حساسات ركن",
+  "075": "كاميرا 360°",
+  "077": "فتحة سقف",
+  "078": "سقف بانورامي",
+  "079": "دفع رباعي",
+  "081": "مقاعد جلدية",
+  "082": "مقعد بذاكرة",
+  "083": "عجلة قيادة مدفأة",
+  "084": "عجلة قيادة مهواة",
+  "085": "شنطة كهربائية",
+  "086": "فتح الشنطة بالقدم",
+  "087": "قضبان سقف",
+  "088": "تظليل زجاج",
+  "092": "Apple CarPlay",
+  "093": "Android Auto",
+  "094": "شاحن لاسلكي",
+  "095": "نظام دفع رسوم المرور",
+  "096": "مشغل أقراص CD",
+  "097": "منفذ USB/AUX",
+};
+
+/* ────────────────────────────
+   Model Maps
+   ──────────────────────────── */
+
 const MODEL_GROUP_MAP: Record<string, string> = {
-  // ── HYUNDAI ──────────────────────────────
+  // HYUNDAI
   "아반떼": "아반떼", "아반떼 (CN7)": "아반떼", "아반떼 하이브리드 (CN7)": "아반떼", "아반떼 MD": "아반떼",
   "쏘나타": "쏘나타", "쏘나타 (DN8)": "쏘나타", "쏘나타 하이브리드 (DN8)": "쏘나타", "LF 쏘나타": "쏘나타",
   "그랜저": "그랜저", "그랜저 (GN7)": "그랜저", "그랜저 하이브리드 (GN7)": "그랜저",
@@ -187,7 +299,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "캐스퍼": "캐스퍼", "캐스퍼 일렉트릭": "캐스퍼",
   "엑센트": "엑센트", "벨로스터": "벨로스터",
   "포터": "포터", "포터 2": "포터",
-  // ── KIA ──────────────────────────────────
+  // KIA
   "K3": "K3", "더 뉴 K3 2세대": "K3",
   "K5": "K5", "K5 3세대": "K5", "K5 하이브리드 3세대": "K5", "더 뉴 K5 2세대": "K5",
   "K8": "K8", "K8 하이브리드": "K8", "K9": "K9",
@@ -205,7 +317,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "더 뉴 카니발": "카니발", "카니발 리무진": "카니발",
   "모닝": "모닝", "레이": "레이",
   "EV3": "EV3", "EV6": "EV6", "EV6 GT": "EV6", "EV9": "EV9",
-  // ── GENESIS ──────────────────────────────
+  // GENESIS
   "G70": "G70", "더 뉴 G70": "G70", "G70 2세대": "G70",
   "G80": "G80", "G80 (RG3)": "G80", "G80 전동화": "G80",
   "G90": "G90", "G90 (RS4)": "G90", "EQ900": "G90",
@@ -213,7 +325,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "GV70": "GV70", "GV70 전동화": "GV70",
   "GV80": "GV80", "GV80 쿠페": "GV80",
   "GV90": "GV90",
-  // ── CHEVROLET ─────────────────────────────
+  // CHEVROLET
   "트레일블레이저": "트레일블레이저", "더 뉴 트레일블레이저": "트레일블레이저",
   "트랙스": "트랙스", "트랙스 크로스오버": "트랙스",
   "말리부": "말리부", "스파크": "스파크",
@@ -229,38 +341,38 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "크루즈": "크루즈", "레조": "레조",
   "윈스톰": "윈스톰", "윈스톰 맥스": "윈스톰",
   "알페온": "알페온", "매그너스": "매그너스", "베리타스": "베리타스",
-  // ── GMC ───────────────────────────────────
+  // GMC
   "시에라": "시에라", "GMC 시에라": "시에라",
   "아카디아": "아카디아", "GMC 아카디아": "아카디아",
   "유콘": "유콘", "캐니언": "캐니언",
-  // ── DODGE ─────────────────────────────────
-  "챌린저": "챌린جر", "차جر": "차جر", "듀랑고": "듀랑고", "램": "램",
-  // ── POLESTAR ──────────────────────────────
+  // DODGE
+  "챌린저": "챌린저", "차저": "차저", "듀랑고": "듀랑고", "램": "램",
+  // POLESTAR
   "폴스타 2": "폴스타 2", "폴스타 3": "폴스타 3", "폴스타 4": "폴스타 4",
-  // ── FIAT ──────────────────────────────────
+  // FIAT
   "500": "500", "500X": "500X",
-  // ── HUMMER ────────────────────────────────
+  // HUMMER
   "허머 H2": "허머 H2", "허머 H3": "허머 H3", "GMC 허머 EV": "GMC 허머 EV",
-  // ── SAAB ──────────────────────────────────
+  // SAAB
   "사브 9-3": "사브 9-3", "사브 9-5": "사브 9-5",
-  // ── LOTUS ─────────────────────────────────
+  // LOTUS
   "엘리스": "엘리스", "에보라": "에보라", "에미라": "에미라", "일레트르": "일레트르",
-  // ── BYD ───────────────────────────────────
-  "아토 3": "아토 3", "씰": "씰", "돌핀": "돌phin", "탕": "탕",
-  // ── MAYBACH ───────────────────────────────
+  // BYD
+  "아토 3": "아토 3", "씰": "씰", "돌핀": "돌핀", "탕": "탕",
+  // MAYBACH
   "마이바흐 S클래스": "마이바흐 S클래스", "마이바흐 GLS": "마이바흐 GLS",
-  // ── RENAULT ───────────────────────────────
+  // RENAULT
   "QM6": "QM6", "QM6 LPe": "QM6", "SM6": "SM6", "XM3": "XM3",
   "아르카나": "XM3", "SM3": "SM3", "SM5": "SM5", "SM7": "SM7",
   "QM3": "QM3", "QM5": "QM5", "필랑트": "필랑트",
-  // ── SSANGYONG / KGM ───────────────────────
+  // SSANGYONG / KGM
   "렉스턴": "렉스턴", "렉스턴 G4": "렉스턴",
   "렉스턴 스포츠": "렉스턴", "렉스턴 스포츠 칸": "렉스턴",
   "코란도": "코란도", "코란도 이모션": "코란도",
   "티볼리": "티볼리", "티볼리 에어": "티볼리",
   "무쏘": "무쏘", "토레스": "토레스", "토레스 EVX": "토레스",
   "액티언": "액티언", "액티언 스포츠": "액티언",
-  // ── BMW ───────────────────────────────────
+  // BMW
   "1시리즈": "1시리즈", "1시리즈 (E87)": "1시리즈", "1시리즈 (F20)": "1시리즈", "1시리즈 (F40)": "1시리즈",
   "2시리즈": "2시리즈", "2시리즈 쿠페 (F22)": "2시리즈", "2시리즈 그란쿠페 (F44)": "2시리즈",
   "2시리즈 액티브투어러 (F45)": "2시리즈", "2시리즈 (G42)": "2시리즈",
@@ -289,7 +401,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "i8": "i8",
   "iX": "iX", "iX3": "iX3", "iX3 (G08)": "iX3",
   "XM": "XM", "Z4": "Z4", "Z4 (G29)": "Z4",
-  // ── MERCEDES-BENZ ─────────────────────────
+  // MERCEDES-BENZ
   "A클래스": "A클래스", "A클래스 (W176)": "A클래스", "A클래스 (W177)": "A클래스",
   "B클래스": "B클래스",
   "C클래스": "C클래스", "C클래스 (W204)": "C클래스", "C클래스 (W205)": "C클래스", "C클래스 (W206)": "C클래스",
@@ -311,7 +423,7 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "EQS": "EQS", "EQS SUV": "EQS",
   "AMG GT": "AMG GT", "AMG GT (R190)": "AMG GT",
   "SL클래스": "SL클래스",
-  // ── AUDI ──────────────────────────────────
+  // AUDI
   "A1": "A1", "A3": "A3", "A4": "A4", "A5": "A5", "A6": "A6", "A7": "A7", "A8": "A8",
   "Q2": "Q2", "Q3": "Q3", "Q4 e-tron": "Q4 e-tron",
   "Q5": "Q5", "Q7": "Q7", "Q8": "Q8", "Q8 e-tron": "Q8 e-tron",
@@ -320,13 +432,13 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "RS3": "RS3", "RS4": "RS4", "RS5": "RS5", "RS6": "RS6", "RS7": "RS7",
   "SQ5": "SQ5", "SQ7": "SQ7", "SQ8": "SQ8",
   "S3": "S3", "S4": "S4", "S5": "S5", "S6": "S6", "S7": "S7", "S8": "S8",
-  // ── VOLKSWAGEN ───────────────────────────
+  // VOLKSWAGEN
   "골프": "골프", "골프 GTI": "골프", "골프 R": "골프",
   "티구안": "티구안", "티구안 올스페이스": "티구안",
   "파사트": "파사트", "파사트 CC": "파사트",
   "투아렉": "투아렉", "폴로": "폴로", "아테온": "아테온",
   "ID.4": "ID.4", "ID.6": "ID.6",
-  // ── VOLVO ────────────────────────────────
+  // VOLVO
   "XC40": "XC40", "XC40 리차지": "XC40",
   "XC60": "XC60", "XC90": "XC90", "XC90 리차지": "XC90",
   "S60": "S60", "S90": "S90",
@@ -334,14 +446,14 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "V90": "V90", "V90 크로스컨트리": "V90",
   "EX30": "EX30", "EX40": "EX40", "EX90": "EX90",
   "C40 리차지": "C40",
-  // ── TOYOTA ───────────────────────────────
+  // TOYOTA
   "캠리": "캠리", "RAV4": "RAV4", "RAV4 하이브리드": "RAV4",
   "프리우스": "프리우스", "시에나": "시에나", "아발론": "아발론",
   "알파드": "알파드", "벨파이어": "벨파이어",
   "크라운 크로스오버": "크라운 크로스오버",
   "랜드크루저": "랜드크루저", "랜드크루저 프라도": "랜드크루저",
   "하이랜더": "하이랜더", "GR86": "GR86", "GR 수프라": "GR 수프라",
-  // ── LEXUS ────────────────────────────────
+  // LEXUS
   "IS250": "IS250", "IS300h": "IS300h",
   "ES300h 7세대": "ES300h", "뉴 ES350": "ES300h",
   "RX350": "RX350", "RX450h 4세대": "RX350",
@@ -350,65 +462,65 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "UX250h": "UX250h", "CT200h": "CT200h",
   "LX600": "LX600", "LX570": "LX570",
   "LC500": "LC500", "LC500h": "LC500h",
-  // ── PORSCHE ──────────────────────────────
+  // PORSCHE
   "카이엔": "카이엔", "카이엔 쿠페": "카이엔",
   "마칸": "마칸", "마칸 EV": "마칸",
   "파나메라": "파나메라",
   "타이칸": "타이칸", "타이칸 크로스 투리스모": "타이칸",
   "911": "911", "박스터": "박스터", "케이맨": "케이맨",
-  // ── LAND ROVER ───────────────────────────
+  // LAND ROVER
   "레인지로버": "레인지로버", "레인지로버 스포츠": "레인지로버 스포츠",
   "레인지로버 이보크": "레인지로버 이보크", "레인지로버 벨라": "레인지로버 벨라",
   "디스커버리": "디스커버리", "디스커버리 스포츠": "디스커버리", "디펜더": "디펜더",
-  // ── HONDA ────────────────────────────────
+  // HONDA
   "어코드": "어코드", "시빅": "시빅",
   "CR-V": "CR-V", "파일럿": "파일럿", "오딧세이": "오딧세이", "HR-V": "HR-V",
-  // ── NISSAN ───────────────────────────────
+  // NISSAN
   "캐시카이": "캐시카이", "무라노": "무라노",
   "패트롤": "패트롤", "엑스트레일": "엑스트레일",
   "쥬크": "쥬크", "370Z": "370Z", "GT-R": "GT-R",
-  // ── INFINITI ─────────────────────────────
+  // INFINITI
   "Q50": "Q50", "Q60": "Q60", "Q70": "Q70",
   "QX50": "QX50", "QX60": "QX60", "QX70": "QX70", "QX80": "QX80",
-  // ── MINI ─────────────────────────────────
+  // MINI
   "미니쿠퍼": "미니쿠퍼", "컨트리맨": "컨트리맨",
   "클럽맨": "클럽맨", "페이스맨": "페이스맨", "에이스맨": "에이스맨",
-  // ── FORD ─────────────────────────────────
+  // FORD
   "머스탱": "머스탱", "익스플로러": "익스플로러",
   "F-150": "F-150", "브롱코": "브롱코", "엣지": "엣지", "머스탱 마하-E": "머스탱 마하-E",
-  // ── JEEP ─────────────────────────────────
+  // JEEP
   "랭글러": "랭글러", "그랜드체로키": "그랜드체로키",
   "컴패스": "컴패스", "레니게이드": "레니게이드",
-  // ── LINCOLN ──────────────────────────────
+  // LINCOLN
   "네비게이터": "네비게이터", "네비게이터 4세대": "네비게이터", "네비게이터 L": "네비게이터",
   "에비에이터": "에비에이터", "에비에이터 2세대": "에비에이터",
   "노틸러스": "노틸러스", "노틸러스 2세대": "노틸러스",
   "코르세어": "코르세어", "컨티넨탈": "컨티넨탈", "컨티넨탈 10세대": "컨티넨탈",
   "MKZ": "MKZ", "MKX": "MKX", "MKC": "MKC",
-  // ── CADILLAC ─────────────────────────────
+  // CADILLAC
   "에스컬레이드": "에스컬레이드", "CT5": "CT5", "CT6": "CT6",
   "XT4": "XT4", "XT5": "XT5", "XT6": "XT6", "리릭": "리릭",
-  // ── TESLA ────────────────────────────────
+  // TESLA
   "모델 S": "모델 S", "모델 3": "모델 3", "모델 X": "모델 X", "모델 Y": "모델 Y",
   "사이버트럭": "사이버트럭",
-  // ── MASERATI ─────────────────────────────
+  // MASERATI
   "기블리": "기블리", "레반떼": "레반떼",
-  "콰τρο포르테": "콰τρο포르테", "그레칼레": "그레칼레", "MC20": "MC20",
-  // ── FERRARI ──────────────────────────────
+  "콰트로포르테": "콰트로포르테", "그레칼레": "그레칼레", "MC20": "MC20",
+  // FERRARI
   "로마": "로마", "SF90": "SF90", "488": "488", "296 GTB": "296 GTB", "포르토피노": "포르토피노",
-  // ── LAMBORGHINI ──────────────────────────
+  // LAMBORGHINI
   "우루스": "우루스", "우라칸": "우라칸", "아벤타도르": "아벤타도르",
-  // ── MAZDA ────────────────────────────────
+  // MAZDA
   "CX-5": "CX-5", "CX-8": "CX-8", "CX-60": "CX-60", "MX-5": "MX-5", "마쯔다 3": "마쯔다 3",
-  // ── SUBARU ───────────────────────────────
+  // SUBARU
   "아웃백": "아웃백", "포레스터": "포레스터", "임프레자": "임프레자", "레거시": "레거시", "크로스트렉": "크로스트렉",
-  // ── ALFA ROMEO ───────────────────────────
-  "줄이야": "줄리아", "스텔비오": "스텔비오", "토날레": "토날레",
-  // ── MITSUBISHI ───────────────────────────
+  // ALFA ROMEO
+  "줄리아": "줄리아", "스텔비오": "스텔비오", "토날레": "토날레",
+  // MITSUBISHI
   "아웃랜더": "아웃랜더", "이클립스 크로스": "이클립스 크로스", "파제로": "파제로",
-  // ── BENTLEY ──────────────────────────────
+  // BENTLEY
   "컨티넨탈 GT": "컨티넨탈 GT", "벤테이가": "벤테이가", "플라잉 스퍼": "플라잉 스퍼",
-  // ── ROLLS-ROYCE ───────────────────────────
+  // ROLLS-ROYCE
   "팬텀": "팬텀", "고스트": "고스트", "컬리넌": "컬리넌", "레이스": "레이스",
 };
 
@@ -418,7 +530,7 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "grandeur": "그랜저", "그랜저": "그랜저", "جرانديور": "그랜저",
   "accent": "엑센트", "verna": "엑센트", "엑센트": "엑센트", "اكسنت": "엑센트",
   "tucson": "투싼", "투싼": "투싼", "توسان": "투싼", "تيوسون": "투싼",
-  "santa fe": "싼타페", "santafe": "싼타페", "싼타페": "싼타페", "سان타في": "싼타페",
+  "santa fe": "싼타페", "santafe": "싼타페", "싼타페": "싼타페", "سانتافي": "싼타페",
   "palisade": "팰리세이드", "팰리세이드": "팰리세이드", "باليسيد": "팰리세이드",
   "kona": "코나", "코나": "코나", "كونا": "코나",
   "nexo": "넥쏘", "넥쏘": "넥쏘",
@@ -590,39 +702,323 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "bentayga": "벤테이가",
   "phantom": "팬텀", "ghost": "고스트", "cullinan": "컬리넌",
   "sierra": "시에라", "acadia": "아카디아", "yukon": "유콘",
-  "challenger": "챌린جر", "charger": "차جر", "durango": "듀랑고",
+  "challenger": "챌린저", "charger": "차저", "durango": "듀랑고",
   "urus": "우루스", "우루스": "우루스",
-  "huracan": "우라칸", "aventador": "아벤타도르",
+   "huracan": "우라칸", "aventador": "아벤타도르",
 };
 
-const TRANSMISSION_TO_EN: Record<string, string> = {
-  "오토": "auto", "수동": "manual", "CVT": "auto", "DCT": "auto",
+/* ────────────────────────────
+   Option & Feature Configs
+   ──────────────────────────── */
+
+const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = [
+  { keywords: ["파노라마", "파노라믹", "파노라믹선루프"], id: "sunroof_pano", ar: "سقف بانورامي" },
+  { keywords: ["선루프", "썬루프", "sunroof"], id: "sunroof", ar: "فتحة سقف" },
+  { keywords: ["네비게이션", "내비게이션", "내비", "네비", "navi", "네비+"], id: "navigation", ar: "ملاحة" },
+  { keywords: ["후방카메라", "후방 카메라", "후카", "후방cam", "리어카메라"], id: "camera_rear", ar: "كاميرا خلفية" },
+  { keywords: ["360", "서라운드뷰", "어라운드뷰", "전방카메라"], id: "camera_360", ar: "كاميرا 360°" },
+  { keywords: ["열선시트", "열선 시트", "열선"], id: "heated_seat", ar: "مقاعد مدفأة" },
+  { keywords: ["통풍시트", "통풍 시트", "쿨링시트", "통풍"], id: "ventilated_seat", ar: "مقاعد مهوّاة" },
+  { keywords: ["스마트키", "스마트 키", "스마트키리스"], id: "smart_key", ar: "مفتاح ذكي" },
+  { keywords: ["가죽시트", "나파", "퀼팅시트", "천연가죽", "인조가죽"], id: "leather_seat", ar: "مقاعد جلدية" },
+  { keywords: ["오토에어컨", "듀얼에어컨", "풀오토에어컨", "풀오토 에어"], id: "auto_ac", ar: "مكيّف تلقائي" },
+  { keywords: ["파킹센서", "후방센서", "전방센서", "주차보조", "pdc", "주차센서"], id: "parking_sensor", ar: "حساسات وقوف" },
+  { keywords: ["led헤드", "led 헤드", "풀led", "풀 led", "헤드램프 led", "매트릭스led"], id: "led_lights", ar: "مصابيح LED" },
+  { keywords: ["어댑티브크루즈", "어댑티브 크루즈", "스마트크루즈", "acc", "scc"], id: "cruise_control", ar: "كروز تكيّفي" },
+  { keywords: ["차선이탈", "차선 이탈", "레인킵", "lka", "lda"], id: "lane_assist", ar: "مساعد الحارة" },
+  { keywords: ["사각지대", "bsd", "bcw", "후측방경보"], id: "blind_spot", ar: "كشف النقطة العمياء" },
+  { keywords: ["헤드업", "hud", "헤드업 디스플레이"], id: "hud", ar: "HUD" },
+  { keywords: ["전동시트", "파워시트", "전동 시트"], id: "power_seat", ar: "مقاعد كهربائية" },
+  { keywords: ["메모리시트", "메모리 시트"], id: "memory_seat", ar: "مقاعد بذاكرة" },
+  { keywords: ["4wd", "awd", "사륜", "4륜", "htrac", "xdrive", "quattro", "4motion"], id: "awd", ar: "دفع رباعي" },
+  { keywords: ["하이브리드", "hybrid", "hev"], id: "hybrid", ar: "هجين" },
+  { keywords: ["전기차", "전기", "electric", "ev6", "ev3", "ev9", "ioniq", "아이오닉", "모델"], id: "electric", ar: "كهربائي" },
+  { keywords: ["플러그인", "phev", "plug-in", "플러그"], id: "phev", ar: "هجين قابل للشحن" },
+];
+
+const TOP_TRIM_KEYWORDS = [
+  "칼리그라피", "인스퍼레이션", "익스클루시브", "풀옵션", "최고급", "플래티넘",
+  "시그니처", "그래비티", "마스터즈", "prestige", "프레스티지",
+];
+
+const PREMIUM_KEYWORDS = [
+  "럭셔리", "프리미엄", "어드밴스드", "모던", "리미티드",
+  "파인스펙", "스마트", "트렌디", "디럭스플러스",
+];
+
+const BADGE_FEATURE_MAP: Array<{ keywords: string[]; ar: string }> = [
+  { keywords: ["m 스포츠", "m스포츠", "m sport", "m-sport"], ar: "حزمة M الرياضية" },
+  { keywords: ["럭셔리", "프리미엄", "익스클루시브", "풀옵션", "최고급", "플래티넘", "칼리그라피", "어드밴스드", "인스퍼레이션"], ar: "فئة مميزة" },
+];
+
+const CONDITION_FEATURE_MAP: Record<string, string> = {
+  Record: "سجل الصيانة",
+  Resume: "تاريخ السيارة",
 };
 
-const COLOR_MAP: Record<string, { ar: string; en: string }> = {
-  "흰색":   { ar: "أبيض",    en: "white" },
-  "검정색": { ar: "أسود",    en: "black" },
-  "쥐색":   { ar: "رمادي",   en: "gray" },
-  "은색":   { ar: "فضي",     en: "silver" },
-  "빨간색": { ar: "أحمر",    en: "red" },
-  "하늘색": { ar: "أزرق فاتح", en: "lightblue" },
-  "갈색":   { ar: "بني",     en: "brown" },
-  "녹색":   { ar: "أخضر",    en: "green" },
-  "노란색": { ar: "أصفر",    en: "yellow" },
-  "주황색": { ar: "برتقالي", en: "orange" },
-  "연두색": { ar: "أخضر فاتح", en: "lime" },
+const TRUST_FEATURE_MAP: Record<string, string> = {
+  HomeService: "توصيل للمنزل",
 };
 
-const EN_COLOR_TO_KR: Record<string, string> = {
-  "white": "흰색", "black": "검정색", "gray": "쥐색", "grey": "쥐색",
-  "silver": "은색", "red": "빨간색", "lightblue": "하늘색", "blue": "하늘색",
-  "brown": "갈색", "green": "녹색", "yellow": "노란색", "orange": "주황색", "lime": "연두색",
+const SERVICE_MARK_MAP: Record<string, string> = {
+  EncarDiagnosisP1: "تشخيص Encar",
+  EncarDiagnosisP2: "تشخيص Encar",
+  EncarMeetgo: "Encar Meetgo",
 };
+
+const KOREAN_DOMESTIC_BRANDS = new Set([
+  "현대", "기아", "제네시스", "쌍용", "르노삼성", "한국GM", "쉐보레", "쉐보레(GM대우)", "대우",
+  "hyundai", "kia", "genesis", "ssangyong",
+]);
+
+/* ────────────────────────────
+   Interfaces
+   ──────────────────────────── */
+
+interface EncarCar {
+  Id: string;
+  Manufacturer: string;
+  Model: string;
+  Badge?: string;
+  GreenType: string;
+  FuelType: string;
+  Transmission?: string;
+  FormYear: string;
+  Mileage: number;
+  Price: number;
+  Color?: string;
+  Condition?: string[];
+  Trust?: string[];
+  ServiceMark?: string[];
+  BuyType?: string[];
+  HomeServiceVerification?: string;
+  OfficeCityState?: string;
+  Photos?: Array<{ location: string; ordering: number }>;
+  Year?: number;
+  Options?: string[];
+}
+
+interface ChoiceOption {
+  optionCd: string;
+  optionName: string;
+  price?: number;
+}
+
+interface EncarCarExtended extends EncarCar {
+  Vin?: string;
+  BodyType?: string;
+  SeatCount?: number;
+  SeatColor?: string;
+  Displacement?: number;
+  Generation?: string;
+  ChoiceOptions?: ChoiceOption[];
+}
+
+interface EncarResponse {
+  Count: number;
+  SearchResults: EncarCar[];
+}
+
+/* ────────────────────────────
+   Helpers
+   ──────────────────────────── */
 
 function formatPrice(price: number): string {
   const sar = Math.round(price * 27.4);
   return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
+
+function getProxyUrl(url: string): string {
+  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&af`;
+}
+
+function getModelYear(car: EncarCar): number {
+  if (!car.Year) return 0;
+  return Math.floor(car.Year / 100);
+}
+
+function getKoreanBaselineOptions(brand: string, year: number): Array<{ id: string; ar: string }> {
+  const b = brand.toLowerCase();
+  const isKorean = [...KOREAN_DOMESTIC_BRANDS].some((k) => b.includes(k));
+  if (!isKorean || year < 2014) return [];
+  const opts: Array<{ id: string; ar: string }> = [];
+  if (year >= 2014) opts.push({ id: "navigation", ar: "ملاحة" });
+  if (year >= 2016) opts.push({ id: "smart_key", ar: "مفتاح ذكي" });
+  if (year >= 2017) opts.push({ id: "heated_seat", ar: "مقاعد مدفأة" });
+  if (year >= 2018) opts.push({ id: "camera_rear", ar: "كاميرا خلفية" });
+  if (year >= 2019) opts.push({ id: "auto_ac", ar: "مكيّف تلقائي" });
+  if (year >= 2020) opts.push({ id: "parking_sensor", ar: "حساسات وقوف" });
+  if (year >= 2021) opts.push({ id: "led_lights", ar: "مصابيح LED" });
+  return opts;
+}
+
+function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; ar: string }> {
+  const result: Array<{ id: string; ar: string }> = [];
+  const seen = new Set<string>();
+  for (const code of options) {
+    const name = ENCAR_OPTION_CODE_MAP[code];
+    if (name && !seen.has(code)) {
+      seen.add(code);
+      result.push({ id: code, ar: name });
+    }
+  }
+  return result;
+}
+
+function extractOptions(car: EncarCar): Array<{ id: string; ar: string }> {
+  if (car.Options && car.Options.length > 0) {
+    const fromOptions = extractOptionsFromEncarOptions(car.Options);
+    if (fromOptions.length > 0) return fromOptions;
+  }
+  const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
+  const result: Array<{ id: string; ar: string }> = [];
+  const seen = new Set<string>();
+  const add = (o: { id: string; ar: string }) => { if (!seen.has(o.id)) { seen.add(o.id); result.push(o); } };
+  const isTopTrim = TOP_TRIM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
+  const isPremiumTrim = PREMIUM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
+  const priorityOrder = ["phev", "electric", "hybrid"];
+  const sorted = [...HARDWARE_OPTIONS].sort((a, b) => {
+    const ai = priorityOrder.indexOf(a.id);
+    const bi = priorityOrder.indexOf(b.id);
+    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
+  });
+  for (const opt of sorted) {
+    if (opt.keywords.some((kw) => text.includes(kw.toLowerCase()))) {
+      if (opt.id === "hybrid" && seen.has("phev")) continue;
+      add(opt);
+    }
+  }
+  const year = getModelYear(car);
+  const brand = car.Manufacturer ?? "";
+  for (const o of getKoreanBaselineOptions(brand, year)) add(o);
+  if (isTopTrim) {
+    for (const o of [
+      { id: "leather_seat", ar: "مقاعد جلدية" }, { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
+      { id: "power_seat", ar: "مقاعد كهربائية" }, { id: "navigation", ar: "ملاحة" },
+      { id: "smart_key", ar: "مفتاح ذكي" }, { id: "auto_ac", ar: "مكيّف تلقائي" },
+      { id: "camera_rear", ar: "كاميرا خلفية" }, { id: "parking_sensor", ar: "حساسات وقوف" },
+      { id: "led_lights", ar: "مصابيح LED" }, { id: "heated_seat", ar: "مقاعد مدفأة" },
+    ]) add(o);
+  } else if (isPremiumTrim) {
+    for (const o of [
+      { id: "leather_seat", ar: "مقاعد جلدية" }, { id: "navigation", ar: "ملاحة" },
+      { id: "smart_key", ar: "مفتاح ذكي" }, { id: "auto_ac", ar: "مكيّف تلقائي" },
+      { id: "camera_rear", ar: "كاميرا خلفية" }, { id: "heated_seat", ar: "مقاعد مدفأة" },
+    ]) add(o);
+  }
+  return result;
+}
+
+function extractFeatures(car: EncarCar): string[] {
+  const features: string[] = [];
+  const seen = new Set<string>();
+  const add = (label: string) => { if (!seen.has(label)) { seen.add(label); features.push(label); } };
+  const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
+  for (const { keywords, ar } of BADGE_FEATURE_MAP) {
+    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) add(ar);
+  }
+  for (const c of car.Condition ?? []) { const label = CONDITION_FEATURE_MAP[c]; if (label) add(label); }
+  for (const t of car.Trust ?? []) { const label = TRUST_FEATURE_MAP[t]; if (label) add(label); }
+  for (const sm of car.ServiceMark ?? []) { const label = SERVICE_MARK_MAP[sm]; if (label) { add(label); break; } }
+  const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
+  const fuelAr: Record<string, string> = {
+    gasoline: "بنزين", diesel: "ديزل", hybrid: "هايبرد",
+    electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG",
+  };
+  if (fuelAr[fuel]) add(fuelAr[fuel]);
+  const trans = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "";
+  if (trans === "auto") add("أوتوماتيك");
+  else if (trans === "manual") add("يدوي");
+  const condition2 = car.Condition ?? [];
+  const inspected = condition2.includes("Inspection") || condition2.includes("InspectionDirect");
+  if (inspected) add("فحص معتمد");
+  const year = parseInt(car.FormYear ?? "0", 10);
+  if (year >= 2023) add("موديل حديث");
+  else if (year >= 2020) add("موديل جيد");
+  if ((car.Mileage ?? 0) < 50000) add("ممشى منخفض");
+  return features;
+}
+
+/* ────────────────────────────
+   Mappers
+   ──────────────────────────── */
+
+function mapEncarCar(car: EncarCar) {
+  const sortedPhotos = (car.Photos ?? []).sort((a, b) => a.ordering - b.ordering);
+  const images = sortedPhotos.map(photo => getProxyUrl(`${ENCAR_PHOTO}${photo.location}`));
+  const imageUrl = images[0] || "";
+
+  const brandEn = MANUFACTURER_TO_EN[car.Manufacturer] ?? car.Manufacturer;
+  const fuelEn = FUEL_TO_EN[car.FuelType] ?? "gasoline";
+  const transmissionEn = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "auto";
+  const year = parseInt(car.FormYear, 10) || 0;
+  const price = Math.round(car.Price);
+  const model = car.Badge ? `${car.Model} ${car.Badge}` : car.Model;
+  const colorKr = car.Color ?? "";
+  const colorInfo = COLOR_MAP[colorKr];
+  const colorEn = colorInfo?.en ?? colorKr;
+  const colorAr = colorInfo?.ar;
+  const condition = car.Condition ?? [];
+  const inspected = condition.includes("Inspection") || condition.includes("InspectionDirect");
+  const features = extractFeatures(car);
+  const options = extractOptions(car);
+  const badgeText = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
+  const hasSunroof = ["선루프", "썬루프", "파노라마", "파노라믹", "파노"].some((kw) => badgeText.includes(kw));
+
+  return {
+    id: car.Id,
+    brand: brandEn,
+    model,
+    year,
+    price,
+    priceFormatted: formatPrice(price),
+    mileage: Math.round(car.Mileage),
+    fuelType: fuelEn,
+    transmission: transmissionEn,
+    bodyType: "sedan",
+    color: colorEn,
+    colorAr,
+    sunroof: hasSunroof,
+    inspected,
+    imageUrl,
+    thumbnailUrl: imageUrl,
+    images,
+    description: `${brandEn} ${car.Model} ${car.FormYear}`,
+    features,
+    options,
+    source: "Encar",
+    sourceUrl: `${ENCAR_DETAIL}${car.Id}`,
+    location: car.OfficeCityState ?? "كوريا",
+  };
+}
+
+function mapEncarCarExtended(car: EncarCarExtended) {
+  const base = mapEncarCar(car);
+  const bodyTypeRaw = (car.BodyType ?? "").trim();
+  const bodyTypeAr = BODY_TYPE_KR_TO_AR[bodyTypeRaw.toLowerCase()] ?? BODY_TYPE_KR_TO_AR[bodyTypeRaw] ?? bodyTypeRaw;
+
+  const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({
+    id: o.optionCd,
+    nameKr: o.optionName,
+    price: o.price ?? null,
+  }));
+
+  return {
+    ...base,
+    bodyType: bodyTypeRaw || base.bodyType,
+    bodyTypeAr,
+    vin: car.Vin ?? null,
+    seatCount: car.SeatCount ?? null,
+    seatColor: car.SeatColor ?? null,
+    displacement: car.Displacement ?? null,
+    generation: car.Generation ?? null,
+    choiceOptions,
+  };
+}
+
+/* ────────────────────────────
+   Query Builder
+   ──────────────────────────── */
 
 function buildEncarQuery(params: {
   brand?: string;
@@ -739,64 +1135,9 @@ function buildEncarQuery(params: {
   return { q, modelKr, modelRaw };
 }
 
-interface EncarCar {
-  Id: string;
-  Manufacturer: string;
-  Model: string;
-  Badge?: string;
-  GreenType: string;
-  FuelType: string;
-  Transmission?: string;
-  FormYear: string;
-  Mileage: number;
-  Price: number;
-  Color?: string;
-  Condition?: string[];
-  Trust?: string[];
-  ServiceMark?: string[];
-  BuyType?: string[];
-  HomeServiceVerification?: string;
-  OfficeCityState?: string;
-  Photos?: Array<{ location: string; ordering: number }>;
-  Year?: number;
-  Options?: string[];
-}
-
-// ==================== حقول موسّعة (VIN، نوع الهيكل، المقاعد، المحرك، المميزات الحقيقية) ====================
-interface EncarCarExtended extends EncarCar {
-  Vin?: string;
-  BodyType?: string;
-  SeatCount?: number;
-  SeatColor?: string;
-  Displacement?: number;
-  Generation?: string;
-  ChoiceOptions?: ChoiceOption[];
-}
-
-// bodyName القادم من Encar هو نص كوري مباشر (مو إنجليزي) - أمثلة حقيقية شفناها:
-// "SUV", "준중형차" (مدمجة), "대형차" (كبيرة), "소형차" (صغيرة), "경차" (صغيرة جدًا),
-// "스포츠카" (رياضية), "승합차" (فان/ركاب), "화물차" (شحن)
-const BODY_TYPE_KR_TO_AR: Record<string, string> = {
-  "suv": "دفع رباعي (SUV)",
-  "경차": "سيارة صغيرة جدًا",
-  "소형차": "سيارة صغيرة",
-  "준중형차": "سيارة مدمجة",
-  "중형차": "سيارة متوسطة",
-  "대형차": "سيارة كبيرة",
-  "스포츠카": "سيارة رياضية",
-  "승합차": "فان / حافلة صغيرة",
-  "화물차": "شاحنة / نقل",
-  "제네시스": "جينيسيس",
-};
-
-// ✅ مصدر choice options الحقيقي المكتشف: /v1/readside/vehicles/car/{id}/options/choice
-// يرجع اسم كل خيار اختياري مدفوع بالكوري + سعره. standard options (ABS، إلخ) ما زالت
-// تُستنتج بالطريقة القديمة (extractOptions) لأنه لا يوجد لها endpoint مباشر بنفس الطريقة.
-interface ChoiceOption {
-  optionCd: string;
-  optionName: string;
-  price?: number;
-}
+/* ────────────────────────────
+   External API Helpers
+   ──────────────────────────── */
 
 async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
   try {
@@ -817,359 +1158,9 @@ async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
   }
 }
 
-const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = [
-  { keywords: ["파노라마", "파노라믹", "파노라믹선루프"], id: "sunroof_pano", ar: "سقف بانورامي" },
-  { keywords: ["선루프", "썬루프", "sunroof"], id: "sunroof", ar: "فتحة سقف" },
-  { keywords: ["네비게이션", "내비게이션", "내비", "네비", "navi", "네비+"], id: "navigation", ar: "ملاحة" },
-  { keywords: ["후방카메라", "후방 카메라", "후카", "후방cam", "리어카메라"], id: "camera_rear", ar: "كاميرا خلفية" },
-  { keywords: ["360", "서라운드뷰", "어라운드뷰", "전방카메라"], id: "camera_360", ar: "كاميرا 360°" },
-  { keywords: ["열선시트", "열선 시트", "열선"], id: "heated_seat", ar: "مقاعد مدفأة" },
-  { keywords: ["통풍시트", "통풍 시트", "쿨링시트", "통풍"], id: "ventilated_seat", ar: "مقاعد مهوّاة" },
-  { keywords: ["스마트키", "스마트 키", "스마트키리스"], id: "smart_key", ar: "مفتاح ذكي" },
-  { keywords: ["가죽시트", "나파", "퀼팅시트", "천연가죽", "인조가죽"], id: "leather_seat", ar: "مقاعد جلدية" },
-  { keywords: ["오토에어컨", "듀얼에어컨", "풀오토에어컨", "풀오토 에어"], id: "auto_ac", ar: "مكيّف تلقائي" },
-  { keywords: ["파킹센서", "후방센서", "전방센서", "주차보조", "pdc", "주차센서"], id: "parking_sensor", ar: "حساسات وقوف" },
-  { keywords: ["led헤드", "led 헤드", "풀led", "풀 led", "헤드램프 led", "매트릭스led"], id: "led_lights", ar: "مصابيح LED" },
-  { keywords: ["어댑티브크루즈", "어댑티브 크루즈", "스마트크루즈", "acc", "scc"], id: "cruise_control", ar: "كروز تكيّفي" },
-  { keywords: ["차선이탈", "차선 이탈", "레인킵", "lka", "lda"], id: "lane_assist", ar: "مساعد الحارة" },
-  { keywords: ["사각지대", "bsd", "bcw", "후측방경보"], id: "blind_spot", ar: "كشف النقطة العمياء" },
-  { keywords: ["헤드업", "hud", "헤드업 디스플레이"], id: "hud", ar: "HUD" },
-  { keywords: ["전동시트", "파워시트", "전동 시트"], id: "power_seat", ar: "مقاعد كهربائية" },
-  { keywords: ["메모리시트", "메모리 시트"], id: "memory_seat", ar: "مقاعد بذاكرة" },
-  { keywords: ["4wd", "awd", "사륜", "4륜", "htrac", "xdrive", "quattro", "4motion"], id: "awd", ar: "دفع رباعي" },
-  { keywords: ["하이브리드", "hybrid", "hev"], id: "hybrid", ar: "هجين" },
-  { keywords: ["전기차", "전기", "electric", "ev6", "ev3", "ev9", "ioniq", "아이오닉", "모델"], id: "electric", ar: "كهربائي" },
-  { keywords: ["플러그인", "phev", "plug-in", "플러그"], id: "phev", ar: "هجين قابل للشحن" },
-];
-
-const KOREAN_DOMESTIC_BRANDS = new Set([
-  "현대", "기아", "제네시스", "쌍용", "르노삼성", "한국GM", "쉐보레", "쉐보레(GM대우)", "대우",
-  "hyundai", "kia", "genesis", "ssangyong",
-]);
-
-function getModelYear(car: EncarCar): number {
-  if (!car.Year) return 0;
-  return Math.floor(car.Year / 100);
-}
-
-function getKoreanBaselineOptions(brand: string, year: number): Array<{ id: string; ar: string }> {
-  const b = brand.toLowerCase();
-  const isKorean = [...KOREAN_DOMESTIC_BRANDS].some((k) => b.includes(k));
-  if (!isKorean || year < 2014) return [];
-  const opts: Array<{ id: string; ar: string }> = [];
-  if (year >= 2014) opts.push({ id: "navigation", ar: "ملاحة" });
-  if (year >= 2016) opts.push({ id: "smart_key", ar: "مفتاح ذكي" });
-  if (year >= 2017) opts.push({ id: "heated_seat", ar: "مقاعد مدفأة" });
-  if (year >= 2018) opts.push({ id: "camera_rear", ar: "كاميرا خلفية" });
-  if (year >= 2019) opts.push({ id: "auto_ac", ar: "مكيّف تلقائي" });
-  if (year >= 2020) opts.push({ id: "parking_sensor", ar: "حساسات وقوف" });
-  if (year >= 2021) opts.push({ id: "led_lights", ar: "مصابيح LED" });
-  return opts;
-}
-
-const TOP_TRIM_KEYWORDS = [
-  "칼리그라피", "인스퍼레이션", "익스클루시브", "풀옵션", "최고급", "플래티넘",
-  "시그니처", "그래비티", "마스터즈", "prestige", "프레스티지",
-];
-
-const PREMIUM_KEYWORDS = [
-  "럭셔리", "프리미엄", "어드밴스드", "모던", "리미티드",
-  "파인스펙", "스마트", "트렌디", "디럭스플러스",
-];
-
-const BADGE_FEATURE_MAP: Array<{ keywords: string[]; ar: string }> = [
-  { keywords: ["m 스포츠", "m스포츠", "m sport", "m-sport"], ar: "حزمة M الرياضية" },
-  { keywords: ["럭셔리", "프리미엄", "익스클루시브", "풀옵션", "최고급", "플래티넘", "칼리그라피", "어드밴스드", "인스퍼레이션"], ar: "فئة مميزة" },
-];
-
-const CONDITION_FEATURE_MAP: Record<string, string> = {
-  Record: "سجل الصيانة",
-  Resume: "تاريخ السيارة",
-};
-
-const TRUST_FEATURE_MAP: Record<string, string> = {
-  HomeService: "توصيل للمنزل",
-};
-
-const SERVICE_MARK_MAP: Record<string, string> = {
-  EncarDiagnosisP1: "تشخيص Encar",
-  EncarDiagnosisP2: "تشخيص Encar",
-  EncarMeetgo: "Encar Meetgo",
-};
-
-// خريطة كودات Encar → أسماء عربية
-// (نبنيها تدريجياً — الأرقام اللي تحت مؤكدة من لوقات حقيقية)
-const ENCAR_OPTION_CODE_MAP: Record<string, string> = {
-  // ── أنظمة الأمان الأساسية ──
-  "001": "ABS",
-  "004": "ESC (نظام التحكم بالثبات)",
-  "005": "TCS (نظام منع الانزلاق)",
-  "006": "HAC (مساعد الانطلاق على المرتفعات)",
-  "007": "TPMS (مراقبة ضغط الإطارات)",
-  "008": "فرملة طوارئ أوتوماتيكية",
-  
-  // ── وسائد هوائية ──
-  "010": "وسادة هوائية للسائق",
-  "014": "وسادة هوائية للراكب",
-  "015": "وسائد هوائية جانبية",
-  "017": "وسائد هوائية ستارية",
-  
-  // ── مساعدات القيادة ──
-  "019": "تحذير مغادرة المسار",
-  "020": "مساعد الحفاظ على المسار",
-  "021": "كشف النقطة العمياء",
-  "022": "تحذير النقطة العمياء الخلفية",
-  "023": "منع الاصطدام الأمامي",
-  "024": "كاميرا خلفية",
-  
-  // ── راحة ──
-  "026": "مثبت سرعة",
-  "027": "كروز تكيّفي / ذكي",
-  "030": "مفتاح ذكي",
-  "031": "تشغيل بالزر",
-  "032": "دخول بدون مفتاح",
-  
-  // ── مقاعد ──
-  "033": "مقاعد كهربائية",
-  "034": "مقاعد مدفأة",
-  "035": "مقاعد مهوّاة",
-  
-  // ── تكييف ──
-  "051": "مكيّف هواء أوتوماتيكي",
-  
-  // ── مرايا ونوافذ ──
-  "055": "مرايا جانبية كهربائية قابلة للطي",
-  "056": "نوافذ كهربائية",
-  "057": "إضاءة أوتوماتيكية",
-  
-  // ── ترفيه ──
-  "058": "بلوتوث",
-  "059": "نظام ملاحة",
-  
-  // ── إضاءة ──
-  "062": "مصابيح أمامية LED",
-  "063": "مصابيح خلفية LED",
-  
-  // ── كاميرات وحساسات ──
-  "072": "حساسات ركن",
-  "075": "كاميرا 360°",
-  
-  // ── سقف ──
-  "077": "فتحة سقف",
-  "078": "سقف بانورامي",
-  
-  // ── هيكل ودفع ──
-  "079": "دفع رباعي",
-  
-  // ── مقاعد متقدمة ──
-  "081": "مقاعد جلدية",
-  "082": "مقعد بذاكرة",
-  "083": "عجلة قيادة مدفأة",
-  "084": "عجلة قيادة مهواة",
-  "085": "شنطة كهربائية",
-  "086": "فتح الشنطة بالقدم",
-  "087": "قضبان سقف",
-  "088": "تظليل زجاج",
-  
-  // ── تقنية ──
-  "092": "Apple CarPlay",
-  "093": "Android Auto",
-  "094": "شاحن لاسلكي",
-  "095": "نظام دفع رسوم المرور",
-  "096": "مشغل أقراص CD",
-  "097": "منفذ USB/AUX",
-};
-
-
-function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; ar: string }> {
-  const result: Array<{ id: string; ar: string }> = [];
-  const seen = new Set<string>();
-  for (const code of options) {
-    const name = ENCAR_OPTION_CODE_MAP[code];
-    if (name && !seen.has(code)) {
-      seen.add(code);
-      result.push({ id: code, ar: name });
-    }
-  }
-  return result;
-}
-
-
-function extractOptions(car: EncarCar): Array<{ id: string; ar: string }> {
-  if (car.Options && car.Options.length > 0) {
-    const fromOptions = extractOptionsFromEncarOptions(car.Options);
-    if (fromOptions.length > 0) return fromOptions;
-  }
-  const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
-  const result: Array<{ id: string; ar: string }> = [];
-  const seen = new Set<string>();
-  const add = (o: { id: string; ar: string }) => { if (!seen.has(o.id)) { seen.add(o.id); result.push(o); } };
-  const isTopTrim = TOP_TRIM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
-  const isPremiumTrim = PREMIUM_KEYWORDS.some((kw) => text.includes(kw.toLowerCase()));
-  const priorityOrder = ["phev", "electric", "hybrid"];
-  const sorted = [...HARDWARE_OPTIONS].sort((a, b) => {
-    const ai = priorityOrder.indexOf(a.id);
-    const bi = priorityOrder.indexOf(b.id);
-    return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
-  });
-  for (const opt of sorted) {
-    if (opt.keywords.some((kw) => text.includes(kw.toLowerCase()))) {
-      if (opt.id === "hybrid" && seen.has("phev")) continue;
-      add(opt);
-    }
-  }
-  const year = getModelYear(car);
-  const brand = car.Manufacturer ?? "";
-  for (const o of getKoreanBaselineOptions(brand, year)) add(o);
-  if (isTopTrim) {
-    for (const o of [
-      { id: "leather_seat", ar: "مقاعد جلدية" }, { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
-      { id: "power_seat", ar: "مقاعد كهربائية" }, { id: "navigation", ar: "ملاحة" },
-      { id: "smart_key", ar: "مفتاح ذكي" }, { id: "auto_ac", ar: "مكيّف تلقائي" },
-      { id: "camera_rear", ar: "كاميرا خلفية" }, { id: "parking_sensor", ar: "حساسات وقوف" },
-      { id: "led_lights", ar: "مصابيح LED" }, { id: "heated_seat", ar: "مقاعد مدفأة" },
-    ]) add(o);
-  } else if (isPremiumTrim) {
-    for (const o of [
-      { id: "leather_seat", ar: "مقاعد جلدية" }, { id: "navigation", ar: "ملاحة" },
-      { id: "smart_key", ar: "مفتاح ذكي" }, { id: "auto_ac", ar: "مكيّف تلقائي" },
-      { id: "camera_rear", ar: "كاميرا خلفية" }, { id: "heated_seat", ar: "مقاعد مدفأة" },
-    ]) add(o);
-  }
-  return result;
-}
-
-function extractFeatures(car: EncarCar): string[] {
-  const features: string[] = [];
-  const seen = new Set<string>();
-  const add = (label: string) => { if (!seen.has(label)) { seen.add(label); features.push(label); } };
-  const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
-  for (const { keywords, ar } of BADGE_FEATURE_MAP) {
-    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) add(ar);
-  }
-  for (const c of car.Condition ?? []) { const label = CONDITION_FEATURE_MAP[c]; if (label) add(label); }
-  for (const t of car.Trust ?? []) { const label = TRUST_FEATURE_MAP[t]; if (label) add(label); }
-  for (const sm of car.ServiceMark ?? []) { const label = SERVICE_MARK_MAP[sm]; if (label) { add(label); break; } }
-  const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
-  const fuelAr: Record<string, string> = {
-    gasoline: "بنزين", diesel: "디젤", hybrid: "هايبرد",
-    electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG",
-  };
-  if (fuelAr[fuel]) add(fuelAr[fuel]);
-  const trans = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "";
-  if (trans === "auto") add("أوتوماتيك");
-  else if (trans === "manual") add("يدوي");
-  const condition2 = car.Condition ?? [];
-  const inspected = condition2.includes("Inspection") || condition2.includes("InspectionDirect");
-  if (inspected) add("فحص معتمد");
-  const year = parseInt(car.FormYear ?? "0", 10);
-  if (year >= 2023) add("موديل حديث");
-  else if (year >= 2020) add("موديل جيد");
-  if ((car.Mileage ?? 0) < 50000) add("ممشى منخفض");
-  return features;
-}
-
-interface EncarResponse {
-  Count: number;
-  SearchResults: EncarCar[];
-}
-
-function getProxyUrl(url: string): string {
-  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&af`;
-}
-
-function mapEncarCar(car: EncarCar) {
-  const sortedPhotos = (car.Photos ?? []).sort((a, b) => a.ordering - b.ordering);
-  const images = sortedPhotos.map(photo => getProxyUrl(`${ENCAR_PHOTO}${photo.location}`));
-  const imageUrl = images[0] || "";
-
-  const brandEn = MANUFACTURER_TO_EN[car.Manufacturer] ?? car.Manufacturer;
-  const fuelEn = FUEL_TO_EN[car.FuelType] ?? "gasoline";
-  const transmissionEn = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "auto";
-  const year = parseInt(car.FormYear, 10) || 0;
-  const price = Math.round(car.Price);
-  const model = car.Badge ? `${car.Model} ${car.Badge}` : car.Model;
-  const colorKr = car.Color ?? "";
-  const colorInfo = COLOR_MAP[colorKr];
-  const colorEn = colorInfo?.en ?? colorKr;
-  const colorAr = colorInfo?.ar;
-  const condition = car.Condition ?? [];
-  const inspected = condition.includes("Inspection") || condition.includes("InspectionDirect");
-  const features = extractFeatures(car);
-  const options = extractOptions(car);
-  const badgeText = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
-  const hasSunroof = ["선루프", "썬루프", "파노라마", "파노라믹", "파노"].some((kw) => badgeText.includes(kw));
-  return {
-    id: car.Id,
-    brand: brandEn,
-    model,
-    year,
-    price,
-    priceFormatted: formatPrice(price),
-    mileage: Math.round(car.Mileage),
-    fuelType: fuelEn,
-    transmission: transmissionEn,
-    bodyType: "sedan",
-    color: colorEn,
-    colorAr,
-    sunroof: hasSunroof,
-    inspected,
-    imageUrl,
-    thumbnailUrl: imageUrl,
-    images, 
-    description: `${brandEn} ${car.Model} ${car.FormYear}`,
-    features,
-    options,
-    source: "Encar",
-    sourceUrl: `${ENCAR_DETAIL}${car.Id}`,
-    location: car.OfficeCityState ?? "كوريا",
-  };
-}
-
-// ==================== النسخة الموسّعة من mapEncarCar - تُستخدم فقط في GET /:id ====================
-function mapEncarCarExtended(car: EncarCarExtended) {
-  const base = mapEncarCar(car);
-  const bodyTypeRaw = (car.BodyType ?? "").trim();
-  const bodyTypeAr = BODY_TYPE_KR_TO_AR[bodyTypeRaw.toLowerCase()] ?? BODY_TYPE_KR_TO_AR[bodyTypeRaw] ?? bodyTypeRaw;
-  
-    const car = mapEncarCarExtended(encarCarLike);
-
-    // ─── إضافة بيانات الفحص والتأمين ───
-    const inspection = {
-      hasDamage: inspectionData?.hasDamage ?? inspectionData?.damageCount > 0 ?? false,
-      damageCount: inspectionData?.damageCount ?? 0,
-      parts: inspectionData?.parts ?? inspectionData?.inspectionItems ?? [],
-      summary: inspectionData?.summary ?? inspectionData?.result ?? null,
-    };
-
-    const insurance = {
-      totalAccidents: insuranceData?.totalAccidents ?? insuranceData?.accidentCount ?? 0,
-      myAccidents: insuranceData?.myAccidents ?? insuranceData?.mySideAccidentCount ?? 0,
-      otherAccidents: insuranceData?.otherAccidents ?? insuranceData?.otherSideAccidentCount ?? 0,
-      ownerChanges: insuranceData?.ownerChanges ?? insuranceData?.ownerChangeCount ?? 0,
-      ownerChangeDates: insuranceData?.ownerChangeDates ?? insuranceData?.ownerChangeHistory ?? [],
-    };
-
-  // خيارات الـ choice الحقيقية (أسماء كورية + أسعار) من الـ endpoint المخصص
-  const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({
-    id: o.optionCd,
-    nameKr: o.optionName,
-    price: o.price ?? null,
-  }));
-
-  return {
-    ...base,
-    bodyType: bodyTypeRaw || base.bodyType,
-    bodyTypeAr,
-    vin: car.Vin ?? null,
-    seatCount: car.SeatCount ?? null,
-    seatColor: car.SeatColor ?? null,
-    displacement: car.Displacement ?? null,
-    generation: car.Generation ?? null,
-    // options: من extractOptions() القديمة (تخمين standard من كلمات الموديل/الفئة) - كما هي
-    choiceOptions, // إضافات مدفوعة حقيقية بأسمائها الفعلية من Encar
-  };
-}
+/* ────────────────────────────
+   Routes
+   ──────────────────────────── */
 
 router.get("/brands", (_req, res) => {
   res.json({
@@ -1357,7 +1348,6 @@ router.get("/search", async (req, res) => {
   }
 });
 
-// ==================== GET /:id - النسخة الجديدة: endpoint جديد + حقول موسّعة + DEBUG logging ====================
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   try {
@@ -1403,23 +1393,8 @@ router.get("/:id", async (req, res): Promise<void> => {
     const spec = raw.spec ?? {};
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
-        
-    // 🔍 DEBUG: نطبع شكل spec وcategory وoptions كامل - هذا أهم سطر لمعرفة أسماء الحقول الحقيقية
-    req.log.info(
-      {
-        carId: id,
-        specKeys: Object.keys(spec),
-        specSample: JSON.stringify(spec).slice(0, 1500),
-        categoryKeys: Object.keys(category),
-        categorySample: JSON.stringify(category).slice(0, 800),
-        topLevelVin: raw.vin ?? null,
-        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
-        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
-      },
-      "DEBUG: spec/category/options raw shapes"
-    );
 
-        // ─── جلب بيانات الفحص والتأمين ───
+    // ─── جلب بيانات الفحص والتأمين ───
     const inspectionUrl = `https://api.encar.com/v1/readside/vehicle/${id}/inspection`;
     const insuranceUrl = `https://api.encar.com/v1/readside/vehicle/${id}/insurance`;
 
@@ -1459,6 +1434,20 @@ router.get("/:id", async (req, res): Promise<void> => {
       insuranceSample: JSON.stringify(insuranceData).slice(0, 500),
     }, "DEBUG: inspection/insurance raw");
 
+    req.log.info(
+      {
+        carId: id,
+        specKeys: Object.keys(spec),
+        specSample: JSON.stringify(spec).slice(0, 1500),
+        categoryKeys: Object.keys(category),
+        categorySample: JSON.stringify(category).slice(0, 800),
+        topLevelVin: raw.vin ?? null,
+        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
+        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
+      },
+      "DEBUG: spec/category/options raw shapes"
+    );
+
     const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
       Manufacturer: category.manufacturerName ?? "",
@@ -1481,16 +1470,13 @@ router.get("/:id", async (req, res): Promise<void> => {
         ordering: p.ordering ?? i,
       })),
       Year: Number(category.formYear ?? category.yearMonth ?? 0),
-     
-Options: (() => {
-  const rawOpts = raw.options ?? {};
-  const standard = Array.isArray(rawOpts.standard) ? rawOpts.standard : [];
-  const etc = Array.isArray(rawOpts.etc) ? rawOpts.etc : [];
-  const tuning = Array.isArray(rawOpts.tuning) ? rawOpts.tuning : [];
-  return [...standard, ...etc, ...tuning];
-})(),
-
-      // ✅ أسماء الحقول هذه مؤكدة الآن من فحص الـ DEBUG logs الفعلية
+      Options: (() => {
+        const rawOpts = raw.options ?? {};
+        const standard = Array.isArray(rawOpts.standard) ? rawOpts.standard : [];
+        const etc = Array.isArray(rawOpts.etc) ? rawOpts.etc : [];
+        const tuning = Array.isArray(rawOpts.tuning) ? rawOpts.tuning : [];
+        return [...standard, ...etc, ...tuning];
+      })(),
       Vin: raw.vin ?? spec.vin ?? undefined,
       BodyType: spec.bodyName ?? category.bodyName ?? undefined,
       SeatCount: spec.seatCount ?? undefined,
@@ -1499,15 +1485,14 @@ Options: (() => {
       Generation: category.gradeName ?? category.carGradeName ?? undefined,
     };
 
-    // ✅ جلب خيارات choice الحقيقية (أسماء + أسعار) من endpoint مخصص
     const choiceOptions = await fetchChoiceOptions(id);
     encarCarLike.ChoiceOptions = choiceOptions;
 
     const car = mapEncarCarExtended(encarCarLike);
-        
+
     // ─── إضافة بيانات الفحص والتأمين ───
     const inspection = {
-      hasDamage: inspectionData?.hasDamage ?? inspectionData?.damageCount > 0 ?? false,
+      hasDamage: inspectionData?.hasDamage ?? (inspectionData?.damageCount > 0) ?? false,
       damageCount: inspectionData?.damageCount ?? 0,
       parts: inspectionData?.parts ?? inspectionData?.inspectionItems ?? [],
       summary: inspectionData?.summary ?? inspectionData?.result ?? null,
@@ -1520,7 +1505,7 @@ Options: (() => {
       ownerChanges: insuranceData?.ownerChanges ?? insuranceData?.ownerChangeCount ?? 0,
       ownerChangeDates: insuranceData?.ownerChangeDates ?? insuranceData?.ownerChangeHistory ?? [],
     };
-    
+
     req.log.info(
       {
         carId: id,
@@ -1534,11 +1519,10 @@ Options: (() => {
     );
 
     res.json({
-  ...car,
-  inspection,
-  insurance,
-});
-
+      ...car,
+      inspection,
+      insurance,
+    });
   } catch (err) {
     req.log.error({ err, id }, "Encar detail API error");
     res.status(502).json({
@@ -1549,3 +1533,4 @@ Options: (() => {
 });
 
 export default router;
+
