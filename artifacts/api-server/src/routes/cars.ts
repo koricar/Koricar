@@ -1394,7 +1394,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
 
-    // ─── جلب بيانات الفحص والتأمين ───
+       // ─── جلب بيانات الفحص والتأمين ───
     const inspectionUrl = `https://api.encar.com/v1/readside/vehicle/${id}/inspection`;
     const insuranceUrl = `https://api.encar.com/v1/readside/vehicle/${id}/insurance`;
 
@@ -1490,21 +1490,59 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    // ─── إضافة بيانات الفحص والتأمين ───
-    const inspection = {
-      hasDamage: inspectionData?.hasDamage ?? (inspectionData?.damageCount > 0) ?? false,
-      damageCount: inspectionData?.damageCount ?? 0,
-      parts: inspectionData?.parts ?? inspectionData?.inspectionItems ?? [],
-      summary: inspectionData?.summary ?? inspectionData?.result ?? null,
+Encar API ───
+    const inspection: any = {
+      hasDamage: false,
+      damageCount: 0,
+      parts: [],
+      summary: null,
     };
 
-    const insurance = {
-      totalAccidents: insuranceData?.totalAccidents ?? insuranceData?.accidentCount ?? 0,
-      myAccidents: insuranceData?.myAccidents ?? insuranceData?.mySideAccidentCount ?? 0,
-      otherAccidents: insuranceData?.otherAccidents ?? insuranceData?.otherSideAccidentCount ?? 0,
-      ownerChanges: insuranceData?.ownerChanges ?? insuranceData?.ownerChangeCount ?? 0,
-      ownerChangeDates: insuranceData?.ownerChangeDates ?? insuranceData?.ownerChangeHistory ?? [],
+    if (inspectionData) {
+      const checkInfo = inspectionData.carCheckInfo || inspectionData;
+      const items = checkInfo.checkItems || checkInfo.inspectionItems || [];
+      
+      if (items.length > 0) {
+        inspection.hasDamage = items.some((item: any) => 
+          item.grade === 'D' || item.grade === 'C' || item.status === 'DAMAGED' || item.damaged === true
+        );
+        inspection.damageCount = items.filter((item: any) => 
+          item.grade === 'D' || item.grade === 'C' || item.status === 'DAMAGED' || item.damaged === true
+        ).length;
+        
+        inspection.parts = items.map((item: any) => ({
+          name: item.itemName || item.name || item.partName || item.checkItemName || 'جزء غير مسمى',
+          grade: item.grade || item.status || 'A',
+          damaged: item.grade === 'D' || item.grade === 'C' || item.status === 'DAMAGED' || item.damaged === true,
+          section: item.section || item.category || 'general',
+        }));
+      } else if (inspectionData.hasDamage !== undefined) {
+        inspection.hasDamage = inspectionData.hasDamage;
+        inspection.damageCount = inspectionData.damageCount || 0;
+        inspection.parts = inspectionData.parts || [];
+      }
+      
+      inspection.summary = inspectionData.summary || inspectionData.result || null;
+    }
+
+    // ─── معالجة بيانات التأمين ───
+    const insurance: any = {
+      totalAccidents: 0,
+      myAccidents: 0,
+      otherAccidents: 0,
+      ownerChanges: 0,
+      ownerChangeDates: [],
     };
+
+    if (insuranceData) {
+      insurance.totalAccidents = insuranceData.accidentCount ?? insuranceData.totalAccidents ?? 0;
+      insurance.myAccidents = insuranceData.myAccidentCount ?? insuranceData.myAccidents ?? 0;
+      insurance.otherAccidents = insuranceData.otherAccidentCount ?? insuranceData.otherAccidents ?? 0;
+      insurance.ownerChanges = insuranceData.ownerChangeCount ?? insuranceData.ownerChanges ?? 0;
+      insurance.ownerChangeDates = (insuranceData.ownerChangeDateList ?? insuranceData.ownerChangeDates ?? [])
+        .map((d: any) => typeof d === 'string' ? d : (d.date || d.changeDate || ''))
+        .filter(Boolean);
+    }
 
     req.log.info(
       {
