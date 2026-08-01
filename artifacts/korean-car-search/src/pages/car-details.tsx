@@ -7,7 +7,7 @@ import {
   Loader2, Calendar, Settings2, Fuel, Gauge, Car, Palette,
   Armchair, MapPin, Hash, DollarSign, CheckCircle2, Shield,
   Fuel as FuelIcon, Cog, Ruler, Users, Paintbrush, AlertTriangle,
-  History, UserCheck, ShieldCheck
+  History, UserCheck, ShieldCheck, AlertCircle, XCircle
 } from "lucide-react";
 import QuoteRequestForm from "@/components/QuoteRequestForm";
 import { motion, AnimatePresence } from "framer-motion";
@@ -24,68 +24,54 @@ const TRANS_MAP: Record<string, string> = {
 const TABS = [
   { id: "specs", label: "المواصفات" },
   { id: "features", label: "المميزات" },
-  { id: "inspection", label: "الفحص والمميزات" },
+  { id: "inspection", label: "الفحص والتأمين" },
 ];
 
-// ─── SVG بسيط للهيكل الخارجي (من الأعلى) ───
+// ─── SVG محسّن للسيارة من الأعلى ───
 function CarTopViewSVG({ damagedParts = [] }: { damagedParts?: string[] }) {
   const isDamaged = (part: string) => damagedParts.includes(part);
-  const partClass = (part: string) =>
-    isDamaged(part) ? "fill-red-500/40 stroke-red-500" : "fill-gray-200/50 stroke-gray-400";
+  const okFill = "fill-gray-200/60 stroke-gray-400";
+  const badFill = "fill-red-500/50 stroke-red-500";
 
   return (
-    <svg viewBox="0 0 200 320" className="w-full h-full max-h-[280px]">
-      {/* الهيكل الأساسي */}
-      <rect x="60" y="40" width="80" height="240" rx="20" className="fill-gray-100 stroke-gray-300" strokeWidth="2"/>
-      {/* الزجاج الأمامي */}
-      <path d="M70 60 L130 60 L125 90 L75 90 Z" className="fill-blue-100/50 stroke-blue-300" strokeWidth="1.5"/>
-      {/* الزجاج الخلفي */}
-      <path d="M75 230 L125 230 L130 260 L70 260 Z" className="fill-blue-100/50 stroke-blue-300" strokeWidth="1.5"/>
-      {/* السقف */}
-      <rect x="75" y="95" width="50" height="130" rx="5" className="fill-gray-50 stroke-gray-300" strokeWidth="1.5"/>
-      {/* الكبوت */}
-      <rect x="65" y="45" width="70" height="40" rx="8" className={partClass("hood")}/>
-      {/* الصندوق */}
-      <rect x="65" y="235" width="70" height="40" rx="8" className={partClass("trunk")}/>
-      {/* الباب الأمامي الأيمن */}
-      <rect x="60" y="100" width="15" height="60" rx="3" className={partClass("frontDoorRight")}/>
-      {/* الباب الأمامي الأيسر */}
-      <rect x="125" y="100" width="15" height="60" rx="3" className={partClass("frontDoorLeft")}/>
-      {/* الباب الخلفي الأيمن */}
-      <rect x="60" y="165" width="15" height="60" rx="3" className={partClass("rearDoorRight")}/>
-      {/* الباب الخلفي الأيسر */}
-      <rect x="125" y="165" width="15" height="60" rx="3" className={partClass("rearDoorLeft")}/>
-      {/* العجلات */}
-      <circle cx="45" cy="80" r="12" className="fill-gray-300 stroke-gray-400" strokeWidth="2"/>
-      <circle cx="155" cy="80" r="12" className="fill-gray-300 stroke-gray-400" strokeWidth="2"/>
-      <circle cx="45" cy="240" r="12" className="fill-gray-300 stroke-gray-400" strokeWidth="2"/>
-      <circle cx="155" cy="240" r="12" className="fill-gray-300 stroke-gray-400" strokeWidth="2"/>
+    <svg viewBox="0 0 200 360" className="w-full h-full max-h-[320px] drop-shadow-lg">
+      <path d="M60 30 Q60 15 75 15 L125 15 Q140 15 140 30 L145 55 L150 85 L150 275 L145 305 L140 330 Q140 345 125 345 L75 345 Q60 345 60 330 L55 305 L50 275 L50 85 L55 55 Z" 
+        className="fill-slate-100 stroke-slate-400 dark:fill-slate-800 dark:stroke-slate-600" strokeWidth="2"/>
+      <path d="M65 60 L135 60 L132 80 L68 80 Z" className="fill-blue-100/60 stroke-blue-300 dark:fill-blue-900/30 dark:stroke-blue-700" strokeWidth="1.5"/>
+      <path d="M68 280 L132 280 L135 300 L65 300 Z" className="fill-blue-100/60 stroke-blue-300 dark:fill-blue-900/30 dark:stroke-blue-700" strokeWidth="1.5"/>
+      <rect x="70" y="90" width="60" height="170" rx="6" className="fill-slate-50 stroke-slate-300 dark:fill-slate-700 dark:stroke-slate-500" strokeWidth="1.5"/>
+      <path d="M62 35 L138 35 L142 55 L58 55 Z" className={isDamaged("hood") ? badFill : okFill} strokeWidth="1.5"/>
+      <path d="M58 305 L142 305 L138 325 L62 325 Z" className={isDamaged("trunk") ? badFill : okFill} strokeWidth="1.5"/>
+      <rect x="52" y="95" width="14" height="75" rx="3" className={isDamaged("frontDoorLeft") ? badFill : okFill} strokeWidth="1.5"/>
+      <rect x="134" y="95" width="14" height="75" rx="3" className={isDamaged("frontDoorRight") ? badFill : okFill} strokeWidth="1.5"/>
+      <rect x="52" y="175" width="14" height="75" rx="3" className={isDamaged("rearDoorLeft") ? badFill : okFill} strokeWidth="1.5"/>
+      <rect x="134" y="175" width="14" height="75" rx="3" className={isDamaged("rearDoorRight") ? badFill : okFill} strokeWidth="1.5"/>
+      <circle cx="38" cy="75" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
+      <circle cx="162" cy="75" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
+      <circle cx="38" cy="285" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
+      <circle cx="162" cy="285" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
     </svg>
   );
 }
 
-// ─── SVG للهيكل الأساسي (من الأمام) ───
+// ─── SVG محسّن للسيارة من الأمام ───
 function CarFrontViewSVG({ damagedParts = [] }: { damagedParts?: string[] }) {
   const isDamaged = (part: string) => damagedParts.includes(part);
-  const partClass = (part: string) =>
-    isDamaged(part) ? "fill-red-500/40 stroke-red-500" : "fill-gray-200/50 stroke-gray-400";
+  const okFill = "fill-gray-200/60 stroke-gray-400";
+  const badFill = "fill-red-500/50 stroke-red-500";
 
   return (
-    <svg viewBox="0 0 200 280" className="w-full h-full max-h-[280px]">
-      {/* الهيكل */}
-      <path d="M40 80 Q40 40 100 40 Q160 40 160 80 L160 200 Q160 240 100 240 Q40 240 40 200 Z" className="fill-gray-100 stroke-gray-300" strokeWidth="2"/>
-      {/* الزجاج الأمامي */}
-      <path d="M55 85 Q55 55 100 55 Q145 55 145 85 L140 110 L60 110 Z" className="fill-blue-100/50 stroke-blue-300" strokeWidth="1.5"/>
-      {/* الشبكة */}
-      <rect x="70" y="120" width="60" height="30" rx="5" className={partClass("grille")}/>
-      {/* المصابيح */}
-      <circle cx="55" cy="135" r="12" className={partClass("headlightLeft")}/>
-      <circle cx="145" cy="135" r="12" className={partClass("headlightRight")}/>
-      {/* الصدام */}
-      <rect x="45" y="160" width="110" height="25" rx="8" className={partClass("bumperFront")}/>
-      {/* العجلات */}
-      <circle cx="45" cy="210" r="18" className="fill-gray-300 stroke-gray-400" strokeWidth="2"/>
-      <circle cx="155" cy="210" r="18" className="fill-gray-300 stroke-gray-400" strokeWidth="2"/>
+    <svg viewBox="0 0 200 280" className="w-full h-full max-h-[320px] drop-shadow-lg">
+      <path d="M40 70 Q40 40 65 40 L135 40 Q160 40 160 70 L165 110 L170 150 L170 210 Q170 240 145 240 L55 240 Q30 240 30 210 L30 150 L35 110 Z" 
+        className="fill-slate-100 stroke-slate-400 dark:fill-slate-800 dark:stroke-slate-600" strokeWidth="2"/>
+      <path d="M50 75 Q50 55 70 55 L130 55 Q150 55 150 75 L145 100 L55 100 Z" 
+        className="fill-blue-100/60 stroke-blue-300 dark:fill-blue-900/30 dark:stroke-blue-700" strokeWidth="1.5"/>
+      <rect x="80" y="115" width="40" height="25" rx="5" className={isDamaged("grille") ? badFill : okFill} strokeWidth="1.5"/>
+      <circle cx="60" cy="125" r="14" className={isDamaged("headlightLeft") ? badFill : okFill} strokeWidth="1.5"/>
+      <circle cx="140" cy="125" r="14" className={isDamaged("headlightRight") ? badFill : okFill} strokeWidth="1.5"/>
+      <rect x="45" y="155" width="110" height="30" rx="8" className={isDamaged("bumperFront") ? badFill : okFill} strokeWidth="1.5"/>
+      <circle cx="45" cy="200" r="20" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
+      <circle cx="155" cy="200" r="20" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
     </svg>
   );
 }
@@ -143,7 +129,6 @@ export default function CarDetails() {
     );
   }
 
-  // ─── بيانات المواصفات ───
   const specsList = [
     { label: "الشركة المصنعة", value: car?.brand || "—", icon: <Car className="w-4 h-4" /> },
     { label: "الموديل", value: car?.model || "—", icon: <Hash className="w-4 h-4" /> },
@@ -161,16 +146,15 @@ export default function CarDetails() {
     { label: "رقم الهيكل (VIN)", value: car?.vin || "—", icon: <Hash className="w-4 h-4" /> },
   ];
 
-  // ─── بيانات الفحص ───
   const inspection = car?.inspection;
   const insurance = car?.insurance;
   const hasInspectionData = !!inspection || !!insurance;
   const hasDamage = inspection?.hasDamage || (inspection?.damageCount || 0) > 0;
   const damagedParts = inspection?.parts?.filter((p: any) => p.damaged).map((p: any) => p.name) || [];
+  const allParts = inspection?.parts || [];
 
   return (
     <Layout>
-      {/* ─── Header ─── */}
       <div className="bg-muted border-b border-border/50 pt-24 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl md:text-5xl font-black text-foreground mb-2">
@@ -185,10 +169,7 @@ export default function CarDetails() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           
-          {/* ─── العمود الأيسر (الصور + التبويبات) ─── */}
           <div className="lg:col-span-2 space-y-6">
-            
-            {/* معرض الصور */}
             <motion.div className="rounded-3xl overflow-hidden shadow-2xl bg-card aspect-[16/10] relative group">
               {carImages.length > 0 ? (
                 <div className="w-full h-full relative bg-black flex items-center justify-center">
@@ -225,7 +206,6 @@ export default function CarDetails() {
               )}
             </motion.div>
 
-            {/* الصور المصغرة */}
             {carImages.length > 1 && (
               <div className="flex gap-2 overflow-x-auto pb-2">
                 {carImages.map((img, i) => (
@@ -242,9 +222,7 @@ export default function CarDetails() {
               </div>
             )}
 
-            {/* ─── التبويبات ─── */}
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
-              {/* رأس التبويبات */}
               <div className="flex border-b border-border">
                 {TABS.map((tab) => (
                   <button
@@ -267,11 +245,9 @@ export default function CarDetails() {
                 ))}
               </div>
 
-              {/* محتوى التبويبات */}
               <div className="p-6">
                 <AnimatePresence mode="wait">
                   
-                  {/* ═══ تبويب المواصفات ═══ */}
                   {activeTab === "specs" && (
                     <motion.div
                       key="specs"
@@ -295,7 +271,6 @@ export default function CarDetails() {
                     </motion.div>
                   )}
 
-                  {/* ═══ تبويب المميزات ═══ */}
                   {activeTab === "features" && (
                     <motion.div
                       key="features"
@@ -372,7 +347,6 @@ export default function CarDetails() {
                     </motion.div>
                   )}
 
-                  {/* ═══ تبويب الفحص والمميزات ═══ */}
                   {activeTab === "inspection" && (
                     <motion.div
                       key="inspection"
@@ -381,7 +355,6 @@ export default function CarDetails() {
                       exit={{ opacity: 0, y: -10 }}
                       className="space-y-8"
                     >
-                      {/* ─── تقرير الفحص ─── */}
                       <div>
                         <h3 className="text-xl font-black mb-4 flex items-center gap-2">
                           <ShieldCheck className="w-6 h-6 text-primary" />
@@ -389,29 +362,85 @@ export default function CarDetails() {
                         </h3>
 
                         {hasInspectionData ? (
-                          <div className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${
-                            hasDamage
-                              ? "bg-red-500/5 border-red-500/20"
-                              : "bg-green-500/5 border-green-500/20"
-                          }`}>
-                            <div className={`p-3 rounded-full ${
-                              hasDamage ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                          <>
+                            <div className={`p-5 rounded-2xl border-2 flex items-center gap-4 mb-6 ${
+                              hasDamage
+                                ? "bg-red-500/5 border-red-500/20"
+                                : "bg-green-500/5 border-green-500/20"
                             }`}>
-                              {hasDamage ? <AlertTriangle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
-                            </div>
-                            <div>
-                              <p className={`font-bold text-lg ${hasDamage ? "text-red-700" : "text-green-700"}`}>
-                                {hasDamage
-                                  ? `يوجد ${inspection?.damageCount || damagedParts.length} ضرر مسجل على هيكل السيارة`
-                                  : "لا توجد أضرار مُسجّلة على هيكل هذه السيارة"}
-                              </p>
-                              {!hasDamage && (
-                                <p className="text-sm text-green-600 mt-1">
-                                  الهيكل الخارجي والأساسي بحالة ممتازة
+                              <div className={`p-3 rounded-full ${
+                                hasDamage ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                              }`}>
+                                {hasDamage ? <XCircle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
+                              </div>
+                              <div>
+                                <p className={`font-bold text-lg ${hasDamage ? "text-red-700" : "text-green-700"}`}>
+                                  {hasDamage
+                                    ? `يوجد ${inspection?.damageCount || 0} ضرر مسجل على هيكل السيارة`
+                                    : "لا توجد أضرار مُسجّلة على هيكل هذه السيارة"}
                                 </p>
-                              )}
+                                {!hasDamage && (
+                                  <p className="text-sm text-green-600 mt-1">
+                                    الهيكل الخارجي والأساسي بحالة ممتازة
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          </div>
+
+                            {allParts.length > 0 && (
+                              <div className="mb-6">
+                                <div className="flex items-center justify-center gap-8 mb-4 text-sm font-bold text-muted-foreground">
+                                  <span>الهيكل الخارجي</span>
+                                  <span>الهيكل الأساسي</span>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-muted/30 dark:bg-slate-800/50 rounded-2xl p-6 border border-border/50">
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-xs text-muted-foreground mb-2">من الأمام</span>
+                                    <CarFrontViewSVG damagedParts={damagedParts} />
+                                  </div>
+                                  <div className="flex flex-col items-center">
+                                    <span className="text-xs text-muted-foreground mb-2">من الأعلى</span>
+                                    <CarTopViewSVG damagedParts={damagedParts} />
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+
+                            {allParts.length > 0 && (
+                              <div className="overflow-hidden rounded-xl border border-border">
+                                <table className="w-full text-sm">
+                                  <thead className="bg-muted/80">
+                                    <tr>
+                                      <th className="text-right px-4 py-3 font-bold">الجزء</th>
+                                      <th className="text-center px-4 py-3 font-bold">الحالة</th>
+                                      <th className="text-right px-4 py-3 font-bold">القسم</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-border">
+                                    {allParts.map((part: any, i: number) => (
+                                      <tr key={i} className={part.damaged ? "bg-red-500/5" : ""}>
+                                        <td className="px-4 py-3 font-medium">{part.name}</td>
+                                        <td className="px-4 py-3 text-center">
+                                          {part.damaged ? (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/10 text-red-600 text-xs font-bold">
+                                              <AlertCircle className="w-3 h-3" />
+                                              متضرر
+                                            </span>
+                                          ) : (
+                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-bold">
+                                              <CheckCircle2 className="w-3 h-3" />
+                                              سليم
+                                            </span>
+                                          )}
+                                        </td>
+                                        <td className="px-4 py-3 text-muted-foreground">{part.section}</td>
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+                            )}
+                          </>
                         ) : (
                           <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 text-center">
                             <p className="text-muted-foreground">لا توجد بيانات فحص متوفرة لهذه السيارة</p>
@@ -419,27 +448,6 @@ export default function CarDetails() {
                         )}
                       </div>
 
-                      {/* ─── الهيكل الخارجي والأساسي ─── */}
-                      {hasInspectionData && (
-                        <div>
-                          <div className="flex items-center gap-4 mb-4">
-                            <h4 className="font-bold text-lg">الهيكل الخارجي</h4>
-                            <h4 className="font-bold text-lg text-muted-foreground">الهيكل الأساسي</h4>
-                          </div>
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-muted/30 rounded-2xl p-6 border border-border/50">
-                            <div className="flex flex-col items-center">
-                              <span className="text-xs text-muted-foreground mb-2">الهيكل الخارجي</span>
-                              <CarTopViewSVG damagedParts={damagedParts} />
-                            </div>
-                            <div className="flex flex-col items-center">
-                              <span className="text-xs text-muted-foreground mb-2">الهيكل الأساسي</span>
-                              <CarFrontViewSVG damagedParts={damagedParts} />
-                            </div>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* ─── سجل التأمين ─── */}
                       {insurance && (
                         <div>
                           <h3 className="text-xl font-black mb-4 flex items-center gap-2">
@@ -448,25 +456,25 @@ export default function CarDetails() {
                           </h3>
 
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="bg-card p-4 rounded-xl border border-border text-center">
+                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
                               <span className="text-xs text-muted-foreground block mb-1">إجمالي الحوادث</span>
-                              <span className={`text-2xl font-black ${insurance.totalAccidents > 0 ? "text-red-500" : "text-green-600"}`}>
+                              <span className={`text-2xl font-black ${insurance.totalAccidents > 0 ? "text-red-500" : "text-green-500"}`}>
                                 {insurance.totalAccidents ?? 0}
                               </span>
                             </div>
-                            <div className="bg-card p-4 rounded-xl border border-border text-center">
+                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
                               <span className="text-xs text-muted-foreground block mb-1">حوادث من جانبي</span>
-                              <span className={`text-2xl font-black ${insurance.myAccidents > 0 ? "text-red-500" : "text-green-600"}`}>
+                              <span className={`text-2xl font-black ${insurance.myAccidents > 0 ? "text-red-500" : "text-green-500"}`}>
                                 {insurance.myAccidents ?? 0}
                               </span>
                             </div>
-                            <div className="bg-card p-4 rounded-xl border border-border text-center">
+                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
                               <span className="text-xs text-muted-foreground block mb-1">حوادث الطرف الآخر</span>
-                              <span className={`text-2xl font-black ${insurance.otherAccidents > 0 ? "text-orange-500" : "text-green-600"}`}>
+                              <span className={`text-2xl font-black ${insurance.otherAccidents > 0 ? "text-orange-500" : "text-green-500"}`}>
                                 {insurance.otherAccidents ?? 0}
                               </span>
                             </div>
-                            <div className="bg-card p-4 rounded-xl border border-border text-center">
+                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
                               <span className="text-xs text-muted-foreground block mb-1">تغييرات الملكية</span>
                               <span className="text-2xl font-black text-foreground">
                                 {insurance.ownerChanges ?? 0}
@@ -474,7 +482,6 @@ export default function CarDetails() {
                             </div>
                           </div>
 
-                          {/* تواريخ تغيير الملكية */}
                           {insurance.ownerChangeDates?.length > 0 && (
                             <div className="mt-4">
                               <span className="text-sm text-muted-foreground block mb-2">تاريخ تغيير الملكية</span>
@@ -482,7 +489,7 @@ export default function CarDetails() {
                                 {insurance.ownerChangeDates.map((date: string, i: number) => (
                                   <span
                                     key={i}
-                                    className="px-3 py-1.5 rounded-lg bg-muted border border-border text-sm font-medium"
+                                    className="px-3 py-1.5 rounded-lg bg-muted dark:bg-slate-700 border border-border text-sm font-medium"
                                   >
                                     {date}
                                   </span>
@@ -493,8 +500,7 @@ export default function CarDetails() {
                         </div>
                       )}
 
-                      {/* ─── سجل الصيانة / إضافي ─── */}
-                      <div className="bg-card rounded-xl border border-border p-5">
+                      <div className="bg-card dark:bg-slate-800 rounded-xl border border-border p-5">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-bold">سجل الصيانة</h4>
                           <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
@@ -517,11 +523,9 @@ export default function CarDetails() {
             </div>
           </div>
 
-          {/* ─── العمود الأيمن (السعر + نموذج الطلب) ─── */}
           <div className="lg:col-span-1">
             <div className="sticky top-28 space-y-6">
               
-              {/* بطاقة السعر */}
               <div className="bg-card rounded-2xl border border-border shadow-sm p-6 text-center">
                 <span className="text-muted-foreground text-sm block mb-1">السعر</span>
                 <div className="text-3xl font-black text-primary mb-1">
@@ -534,14 +538,12 @@ export default function CarDetails() {
                 )}
               </div>
 
-              {/* نموذج طلب عرض السعر */}
               <QuoteRequestForm
                 carName={car?.title || car?.model}
                 carPrice={car?.priceFormatted || formatPriceKRW(car?.price || 0)}
                 carId={car?.id}
               />
 
-              {/* زر الواتساب السريع */}
               <a
                 href={`https://wa.me/?text=استفسار عن ${car?.model} - ${car?.priceFormatted}`}
                 target="_blank"
