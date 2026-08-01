@@ -770,7 +770,7 @@ interface EncarCarExtended extends EncarCar {
   SeatColor?: string;
   Displacement?: number;
   Generation?: string;
-  RawOptions?: any;
+  ChoiceOptions?: ChoiceOption[];
 }
 
 // bodyName القادم من Encar هو نص كوري مباشر (مو إنجليزي) - أمثلة حقيقية شفناها:
@@ -789,19 +789,32 @@ const BODY_TYPE_KR_TO_AR: Record<string, string> = {
   "제네시스": "جينيسيس",
 };
 
-function extractRealOptions(rawOptions: any): Array<{ id: string; ar: string; category?: string }> {
-  if (!rawOptions) return [];
-  const list: any[] = Array.isArray(rawOptions)
-    ? rawOptions
-    : Array.isArray(rawOptions?.standard) || Array.isArray(rawOptions?.choice)
-    ? [...(rawOptions.standard ?? []), ...(rawOptions.choice ?? [])]
-    : [];
+// ✅ مصدر choice options الحقيقي المكتشف: /v1/readside/vehicles/car/{id}/options/choice
+// يرجع اسم كل خيار اختياري مدفوع بالكوري + سعره. standard options (ABS، إلخ) ما زالت
+// تُستنتج بالطريقة القديمة (extractOptions) لأنه لا يوجد لها endpoint مباشر بنفس الطريقة.
+interface ChoiceOption {
+  optionCd: string;
+  optionName: string;
+  price?: number;
+}
 
-  return list.map((o: any, i: number) => ({
-    id: o.code ?? o.id ?? `opt_${i}`,
-    ar: o.name ?? o.nameKr ?? o.optionName ?? JSON.stringify(o).slice(0, 40),
-    category: o.category ?? o.groupName ?? undefined,
-  }));
+async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
+  try {
+    const url = `https://api.encar.com/v1/readside/vehicles/car/${carId}/options/choice`;
+    const resp = await fetch(url, {
+      headers: {
+        Referer: `https://fem.encar.com/cars/detail/${carId}`,
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        Accept: "application/json",
+      },
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!resp.ok) return [];
+    const data = (await resp.json()) as any;
+    return Array.isArray(data) ? data : [];
+  } catch {
+    return [];
+  }
 }
 
 const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = [
@@ -1056,6 +1069,13 @@ function mapEncarCarExtended(car: EncarCarExtended) {
   const bodyTypeRaw = (car.BodyType ?? "").trim();
   const bodyTypeAr = BODY_TYPE_KR_TO_AR[bodyTypeRaw.toLowerCase()] ?? BODY_TYPE_KR_TO_AR[bodyTypeRaw] ?? bodyTypeRaw;
 
+  // خيارات الـ choice الحقيقية (أسماء كورية + أسعار) من الـ endpoint المخصص
+  const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({
+    id: o.optionCd,
+    nameKr: o.optionName,
+    price: o.price ?? null,
+  }));
+
   return {
     ...base,
     bodyType: bodyTypeRaw || base.bodyType,
@@ -1065,7 +1085,8 @@ function mapEncarCarExtended(car: EncarCarExtended) {
     seatColor: car.SeatColor ?? null,
     displacement: car.Displacement ?? null,
     generation: car.Generation ?? null,
-    realOptions: extractRealOptions(car.RawOptions),
+    // options: من extractOptions() القديمة (تخمين standard من كلمات الموديل/الفئة) - كما هي
+    choiceOptions, // إضافات مدفوعة حقيقية بأسمائها الفعلية من Encar
   };
 }
 
@@ -1340,16 +1361,18 @@ router.get("/:id", async (req, res): Promise<void> => {
       })),
       Year: Number(category.formYear ?? category.yearMonth ?? 0),
       Options: [],
-      // الحقول الجديدة - أسماء الحقول أدناه تخمين أولي بناءً على الأنماط الشائعة في Encar،
-      // سنصححها بدقة بعد رؤية سطر الـ DEBUG أعلاه
+      // ✅ أسماء الحقول هذه مؤكدة الآن من فحص الـ DEBUG logs الفعلية
       Vin: raw.vin ?? spec.vin ?? undefined,
       BodyType: spec.bodyName ?? category.bodyName ?? undefined,
       SeatCount: spec.seatCount ?? undefined,
       SeatColor: spec.seatColorName ?? undefined,
       Displacement: spec.displacement ?? undefined,
       Generation: category.gradeName ?? category.carGradeName ?? undefined,
-      RawOptions: raw.options,
     };
+
+    // ✅ جلب خيارات choice الحقيقية (أسماء + أسعار) من endpoint مخصص
+    const choiceOptions = await fetchChoiceOptions(id);
+    encarCarLike.ChoiceOptions = choiceOptions;
 
     const car = mapEncarCarExtended(encarCarLike);
 
@@ -1359,7 +1382,8 @@ router.get("/:id", async (req, res): Promise<void> => {
         totalImages: car.images.length,
         vin: car.vin,
         bodyType: car.bodyType,
-        realOptionsCount: car.realOptions.length,
+        bodyTypeAr: car.bodyTypeAr,
+        choiceOptionsCount: car.choiceOptions.length,
       },
       "DEBUG: final extended car mapped"
     );
