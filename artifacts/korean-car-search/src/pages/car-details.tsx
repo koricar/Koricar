@@ -117,7 +117,7 @@ export default function CarDetails() {
 
   const prevImage = () => {
     if (carImages.length <= 1) return;
-    setCurrentImgIndex((prev) => (prev - 1 + car.images.length) % carImages.length);
+    setCurrentImgIndex((prev) => (prev - 1 + carImages.length) % carImages.length);
   };
 
   if (isLoading) {
@@ -506,7 +506,7 @@ export default function CarDetails() {
                           التقرير يشمل فحص الهيكل، المحرك، ناقل الحركة، والحالة العامة للسيارة.
                         </p>
                         <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                          <CarCrash className="w-4 h-4" />
+                          <Car className="w-4 h-4" />
                           <span>المصدر: Encar Korea</span>
                         </div>
                       </div>
