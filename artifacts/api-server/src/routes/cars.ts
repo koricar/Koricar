@@ -1150,13 +1150,6 @@ function mapEncarCarExtended(car: EncarCarExtended) {
       ownerChangeDates: insuranceData?.ownerChangeDates ?? insuranceData?.ownerChangeHistory ?? [],
     };
 
-    // في الـ res.json أضفهم:
-    res.json({
-      ...car,
-      inspection,
-      insurance,
-    });
-
   // خيارات الـ choice الحقيقية (أسماء كورية + أسعار) من الـ endpoint المخصص
   const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({
     id: o.optionCd,
@@ -1410,6 +1403,22 @@ router.get("/:id", async (req, res): Promise<void> => {
     const spec = raw.spec ?? {};
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
+        
+    // 🔍 DEBUG: نطبع شكل spec وcategory وoptions كامل - هذا أهم سطر لمعرفة أسماء الحقول الحقيقية
+    req.log.info(
+      {
+        carId: id,
+        specKeys: Object.keys(spec),
+        specSample: JSON.stringify(spec).slice(0, 1500),
+        categoryKeys: Object.keys(category),
+        categorySample: JSON.stringify(category).slice(0, 800),
+        topLevelVin: raw.vin ?? null,
+        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
+        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
+      },
+      "DEBUG: spec/category/options raw shapes"
+    );
+
         // ─── جلب بيانات الفحص والتأمين ───
     const inspectionUrl = `https://api.encar.com/v1/readside/vehicle/${id}/inspection`;
     const insuranceUrl = `https://api.encar.com/v1/readside/vehicle/${id}/insurance`;
@@ -1449,22 +1458,6 @@ router.get("/:id", async (req, res): Promise<void> => {
       inspectionSample: JSON.stringify(inspectionData).slice(0, 500),
       insuranceSample: JSON.stringify(insuranceData).slice(0, 500),
     }, "DEBUG: inspection/insurance raw");
-
-
-    // 🔍 DEBUG: نطبع شكل spec وcategory وoptions كامل - هذا أهم سطر لمعرفة أسماء الحقول الحقيقية
-    req.log.info(
-      {
-        carId: id,
-        specKeys: Object.keys(spec),
-        specSample: JSON.stringify(spec).slice(0, 1500),
-        categoryKeys: Object.keys(category),
-        categorySample: JSON.stringify(category).slice(0, 800),
-        topLevelVin: raw.vin ?? null,
-        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
-        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
-      },
-      "DEBUG: spec/category/options raw shapes"
-    );
 
     const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
@@ -1511,7 +1504,23 @@ Options: (() => {
     encarCarLike.ChoiceOptions = choiceOptions;
 
     const car = mapEncarCarExtended(encarCarLike);
+        
+    // ─── إضافة بيانات الفحص والتأمين ───
+    const inspection = {
+      hasDamage: inspectionData?.hasDamage ?? inspectionData?.damageCount > 0 ?? false,
+      damageCount: inspectionData?.damageCount ?? 0,
+      parts: inspectionData?.parts ?? inspectionData?.inspectionItems ?? [],
+      summary: inspectionData?.summary ?? inspectionData?.result ?? null,
+    };
 
+    const insurance = {
+      totalAccidents: insuranceData?.totalAccidents ?? insuranceData?.accidentCount ?? 0,
+      myAccidents: insuranceData?.myAccidents ?? insuranceData?.mySideAccidentCount ?? 0,
+      otherAccidents: insuranceData?.otherAccidents ?? insuranceData?.otherSideAccidentCount ?? 0,
+      ownerChanges: insuranceData?.ownerChanges ?? insuranceData?.ownerChangeCount ?? 0,
+      ownerChangeDates: insuranceData?.ownerChangeDates ?? insuranceData?.ownerChangeHistory ?? [],
+    };
+    
     req.log.info(
       {
         carId: id,
@@ -1524,7 +1533,12 @@ Options: (() => {
       "DEBUG: final extended car mapped"
     );
 
-    res.json(car);
+    res.json({
+  ...car,
+  inspection,
+  insurance,
+});
+
   } catch (err) {
     req.log.error({ err, id }, "Encar detail API error");
     res.status(502).json({
