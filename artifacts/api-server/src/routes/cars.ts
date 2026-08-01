@@ -762,6 +762,42 @@ interface EncarCar {
   Options?: string[];
 }
 
+// ==================== حقول موسّعة (VIN، نوع الهيكل، المقاعد، المحرك، المميزات الحقيقية) ====================
+interface EncarCarExtended extends EncarCar {
+  Vin?: string;
+  BodyType?: string;
+  SeatCount?: number;
+  SeatColor?: string;
+  Displacement?: number;
+  Generation?: string;
+  RawOptions?: any;
+}
+
+const BODY_TYPE_AR: Record<string, string> = {
+  sedan: "سيدان",
+  suv: "دفع رباعي (SUV)",
+  hatchback: "هاتشباك",
+  coupe: "كوبيه",
+  wagon: "ستيشن",
+  van: "فان",
+  truck: "بيك أب",
+};
+
+function extractRealOptions(rawOptions: any): Array<{ id: string; ar: string; category?: string }> {
+  if (!rawOptions) return [];
+  const list: any[] = Array.isArray(rawOptions)
+    ? rawOptions
+    : Array.isArray(rawOptions?.standard) || Array.isArray(rawOptions?.choice)
+    ? [...(rawOptions.standard ?? []), ...(rawOptions.choice ?? [])]
+    : [];
+
+  return list.map((o: any, i: number) => ({
+    id: o.code ?? o.id ?? `opt_${i}`,
+    ar: o.name ?? o.nameKr ?? o.optionName ?? JSON.stringify(o).slice(0, 40),
+    category: o.category ?? o.groupName ?? undefined,
+  }));
+}
+
 const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = [
   { keywords: ["파노라마", "파노라믹", "파노라믹선루프"], id: "sunroof_pano", ar: "سقف بانورامي" },
   { keywords: ["선루프", "썬루프", "sunroof"], id: "sunroof", ar: "فتحة سقف" },
@@ -934,7 +970,7 @@ function extractFeatures(car: EncarCar): string[] {
   for (const sm of car.ServiceMark ?? []) { const label = SERVICE_MARK_MAP[sm]; if (label) { add(label); break; } }
   const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
   const fuelAr: Record<string, string> = {
-    gasoline: "بنزين", diesel: "디زل", hybrid: "هايبرد",
+    gasoline: "بنزين", diesel: "디젤", hybrid: "هايبرد",
     electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG",
   };
   if (fuelAr[fuel]) add(fuelAr[fuel]);
@@ -1005,6 +1041,25 @@ function mapEncarCar(car: EncarCar) {
     source: "Encar",
     sourceUrl: `${ENCAR_DETAIL}${car.Id}`,
     location: car.OfficeCityState ?? "كوريا",
+  };
+}
+
+// ==================== النسخة الموسّعة من mapEncarCar - تُستخدم فقط في GET /:id ====================
+function mapEncarCarExtended(car: EncarCarExtended) {
+  const base = mapEncarCar(car);
+  const bodyTypeRaw = (car.BodyType ?? "").toLowerCase();
+  const bodyTypeAr = BODY_TYPE_AR[bodyTypeRaw] ?? car.BodyType ?? "";
+
+  return {
+    ...base,
+    bodyType: bodyTypeRaw || base.bodyType,
+    bodyTypeAr,
+    vin: car.Vin ?? null,
+    seatCount: car.SeatCount ?? null,
+    seatColor: car.SeatColor ?? null,
+    displacement: car.Displacement ?? null,
+    generation: car.Generation ?? null,
+    realOptions: extractRealOptions(car.RawOptions),
   };
 }
 
@@ -1193,15 +1248,11 @@ router.get("/search", async (req, res) => {
     });
   }
 });
-// دالة جلب سيارة محددة بالـ id - نسخة معدّلة: نطلب كل الأقسام صراحة من endpoint الجديد
-// ⚠️ هذا الملف يحتوي فقط على الـ route المعدّل الخاص بـ GET /:id
-// انسخ هذا الجزء وضعه بدل الـ route القديم في ملف cars.ts
-// (باقي الملف - كل الجداول والدوال فوق - يبقى بدون أي تغيير)
 
+// ==================== GET /:id - النسخة الجديدة: endpoint جديد + حقول موسّعة + DEBUG logging ====================
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   try {
-    // ✅ لازم نطلب كل الأقسام صراحة، وإلا يرجع فقط القسم اللي حددناه (CONTENTS) والباقي null
     const includeParams = [
       "CATEGORY",
       "SPEC",
@@ -1233,40 +1284,34 @@ router.get("/:id", async (req, res): Promise<void> => {
       }
       req.log.error(
         { carId: id, url, status: resp.status, statusText: resp.statusText, bodySample: bodyText },
-        "DEBUG: new vehicle endpoint failed (not ok)"
+        "DEBUG: vehicle endpoint failed (not ok)"
       );
       res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
       return;
     }
 
     const raw = (await resp.json()) as any;
-
-    // 🔍 DEBUG: نتأكد الآن إن الأقسام صارت مليانة مو null
-    req.log.info(
-      {
-        carId: id,
-        hasCategory: !!raw.category,
-        hasSpec: !!raw.spec,
-        hasPhotos: !!raw.photos,
-        photosType: Array.isArray(raw.photos) ? "array" : typeof raw.photos,
-        photosLength: Array.isArray(raw.photos) ? raw.photos.length : null,
-        samplePhotoObj: Array.isArray(raw.photos) ? raw.photos[0] : null,
-      },
-      "DEBUG: new vehicle endpoint sections check"
-    );
-
     const rawPhotos = Array.isArray(raw.photos) ? raw.photos : [];
-
-    req.log.info(
-      { carId: id, foundPhotoCount: rawPhotos.length },
-      "DEBUG: extracted photo count from new endpoint"
-    );
-
     const spec = raw.spec ?? {};
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
 
-    const encarCarLike: EncarCar = {
+    // 🔍 DEBUG: نطبع شكل spec وcategory وoptions كامل - هذا أهم سطر لمعرفة أسماء الحقول الحقيقية
+    req.log.info(
+      {
+        carId: id,
+        specKeys: Object.keys(spec),
+        specSample: JSON.stringify(spec).slice(0, 1500),
+        categoryKeys: Object.keys(category),
+        categorySample: JSON.stringify(category).slice(0, 800),
+        topLevelVin: raw.vin ?? null,
+        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
+        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
+      },
+      "DEBUG: spec/category/options raw shapes"
+    );
+
+    const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
       Manufacturer: category.manufacturerName ?? "",
       Model: category.modelName ?? "",
@@ -1289,13 +1334,28 @@ router.get("/:id", async (req, res): Promise<void> => {
       })),
       Year: Number(category.formYear ?? category.yearMonth ?? 0),
       Options: [],
+      // الحقول الجديدة - أسماء الحقول أدناه تخمين أولي بناءً على الأنماط الشائعة في Encar،
+      // سنصححها بدقة بعد رؤية سطر الـ DEBUG أعلاه
+      Vin: raw.vin ?? spec.vin ?? undefined,
+      BodyType: spec.bodyName ?? category.bodyName ?? undefined,
+      SeatCount: spec.seatCount ?? undefined,
+      SeatColor: spec.seatColorName ?? undefined,
+      Displacement: spec.displacement ?? undefined,
+      Generation: category.gradeName ?? category.carGradeName ?? undefined,
+      RawOptions: raw.options,
     };
 
-    const car = mapEncarCar(encarCarLike);
+    const car = mapEncarCarExtended(encarCarLike);
 
     req.log.info(
-      { carId: id, totalImages: car.images.length },
-      "DEBUG: final mapped car images count"
+      {
+        carId: id,
+        totalImages: car.images.length,
+        vin: car.vin,
+        bodyType: car.bodyType,
+        realOptionsCount: car.realOptions.length,
+      },
+      "DEBUG: final extended car mapped"
     );
 
     res.json(car);
