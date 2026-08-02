@@ -1382,7 +1382,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     let inspectionData: any = null;
     try {
       const inspResp = await fetch(
-       `https://api.encar.com/v1/readside/vehicles/car/${id}/inspection`;
+       `https://api.encar.com/v1/readside/vehicles/car/${id}/inspection`,
         {
           headers: {
             Referer: `https://fem.encar.com/cars/detail/${id}`,
@@ -1402,7 +1402,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     let insuranceData: any = null;
     try {
       const insResp = await fetch(
-       `https://api.encar.com/v1/readside/vehicles/car/${id}/insurance`;
+       `https://api.encar.com/v1/readside/vehicles/car/${id}/insurance`,
         {
           headers: {
             Referer: `https://fem.encar.com/cars/detail/${id}`,
