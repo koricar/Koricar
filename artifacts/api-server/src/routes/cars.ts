@@ -1352,17 +1352,11 @@ router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   try {
     const includeParams = [
-      "CATEGORY",
-      "SPEC",
-      "PHOTOS",
-      "CONTENTS",
-      "ADVERTISEMENT",
-      "MANAGE",
-      "OPTIONS",
-      "CONDITION",
-      "PARTNERSHIP",
-      "CONTACT",
+      "CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT",
+      "MANAGE", "OPTIONS", "CONDITION", "PARTNERSHIP", "CONTACT",
     ].join(",");
+
+    // ─── جلب بيانات السيارة الأساسية ───
     const url = `https://api.encar.com/v1/readside/vehicle/${id}?include=${includeParams}`;
     const resp = await fetch(url, {
       headers: {
@@ -1374,16 +1368,6 @@ router.get("/:id", async (req, res): Promise<void> => {
     });
 
     if (!resp.ok) {
-      let bodyText = "";
-      try {
-        bodyText = (await resp.text()).slice(0, 500);
-      } catch {
-        bodyText = "(تعذر قراءة نص الرد)";
-      }
-      req.log.error(
-        { carId: id, url, status: resp.status, statusText: resp.statusText, bodySample: bodyText },
-        "DEBUG: vehicle endpoint failed (not ok)"
-      );
       res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
       return;
     }
@@ -1394,60 +1378,120 @@ router.get("/:id", async (req, res): Promise<void> => {
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
 
-       // ─── جلب بيانات الفحص والتأمين ───
-    const inspectionUrl = `https://api.encar.com/v1/readside/vehicle/${id}/inspection`;
-    const insuranceUrl = `https://api.encar.com/v1/readside/vehicle/${id}/insurance`;
-
+    // ─── جلب الفحص ───
     let inspectionData: any = null;
-    let insuranceData: any = null;
-
     try {
-      const inspResp = await fetch(inspectionUrl, {
-        headers: {
-          Referer: `https://fem.encar.com/cars/detail/${id}`,
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(8000),
-      });
+      const inspResp = await fetch(
+        `https://api.encar.com/v1/readside/vehicle/${id}/inspection`,
+        {
+          headers: {
+            Referer: `https://fem.encar.com/cars/detail/${id}`,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
       if (inspResp.ok) inspectionData = await inspResp.json();
-    } catch { /* ignore */ }
+      else req.log.warn({ status: inspResp.status, carId: id }, "inspection endpoint non-ok");
+    } catch (e) {
+      req.log.warn({ carId: id, err: e }, "inspection fetch failed");
+    }
 
+    // ─── جلب التأمين ───
+    let insuranceData: any = null;
     try {
-      const insResp = await fetch(insuranceUrl, {
-        headers: {
-          Referer: `https://fem.encar.com/cars/detail/${id}`,
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-          Accept: "application/json",
-        },
-        signal: AbortSignal.timeout(8000),
-      });
+      const insResp = await fetch(
+        `https://api.encar.com/v1/readside/vehicle/${id}/insurance`,
+        {
+          headers: {
+            Referer: `https://fem.encar.com/cars/detail/${id}`,
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+            Accept: "application/json",
+          },
+          signal: AbortSignal.timeout(8000),
+        }
+      );
       if (insResp.ok) insuranceData = await insResp.json();
-    } catch { /* ignore */ }
+      else req.log.warn({ status: insResp.status, carId: id }, "insurance endpoint non-ok");
+    } catch (e) {
+      req.log.warn({ carId: id, err: e }, "insurance fetch failed");
+    }
 
-    // DEBUG
-    req.log.info({
-      carId: id,
-      hasInspection: !!inspectionData,
-      hasInsurance: !!insuranceData,
-      inspectionSample: JSON.stringify(inspectionData).slice(0, 500),
-      insuranceSample: JSON.stringify(insuranceData).slice(0, 500),
-    }, "DEBUG: inspection/insurance raw");
-
+    // ─── DEBUG: اطبع الهيكل الحقيقي ───
     req.log.info(
       {
         carId: id,
-        specKeys: Object.keys(spec),
-        specSample: JSON.stringify(spec).slice(0, 1500),
-        categoryKeys: Object.keys(category),
-        categorySample: JSON.stringify(category).slice(0, 800),
-        topLevelVin: raw.vin ?? null,
-        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
-        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
+        inspectionKeys: inspectionData ? Object.keys(inspectionData) : null,
+        inspectionRaw: JSON.stringify(inspectionData).slice(0, 1000),
+        insuranceKeys: insuranceData ? Object.keys(insuranceData) : null,
+        insuranceRaw: JSON.stringify(insuranceData).slice(0, 1000),
       },
-      "DEBUG: spec/category/options raw shapes"
+      "DEBUG: inspection/insurance structure"
     );
 
+    // ─── بناء كائن الفحص ───
+    const inspection: any = {
+      hasDamage: false,
+      damageCount: 0,
+      parts: [],
+      summary: null,
+      images: [] as string[],
+    };
+
+    if (inspectionData) {
+      // Encar يرجع البيانات إما مباشرة أو داخل carCheckInfo
+      const checkRoot = inspectionData.carCheckInfo ?? inspectionData;
+      const items = checkRoot.checkItems ?? checkRoot.inspectionItems ?? [];
+
+      if (items.length > 0) {
+        inspection.parts = items.map((item: any) => {
+          const grade = item.grade ?? item.status ?? "A";
+          const isBad = ["D", "C", "E"].includes(grade) || item.damaged === true;
+          return {
+            name: item.itemName ?? item.name ?? item.partName ?? item.checkItemName ?? "جزء غير مسمى",
+            grade,
+            damaged: isBad,
+            section: item.section ?? item.category ?? "general",
+          };
+        });
+        inspection.damageCount = inspection.parts.filter((p: any) => p.damaged).length;
+        inspection.hasDamage = inspection.damageCount > 0;
+      }
+
+      // جلب صور الفحص إن وجدت
+      const rawImages = inspectionData.checkImages ?? inspectionData.images ?? [];
+      inspection.images = rawImages.map((img: any) => {
+        const loc = img.location ?? img.path ?? img.url ?? "";
+        return loc.startsWith("http") ? loc : `https://ci.encar.com${loc}`;
+      }).filter(Boolean);
+
+      inspection.summary = inspectionData.summary ?? inspectionData.result ?? null;
+    }
+
+    // ─── بناء كائن التأمين ───
+    const insurance: any = {
+      totalAccidents: 0,
+      myAccidents: 0,
+      otherAccidents: 0,
+      ownerChanges: 0,
+      ownerChangeDates: [],
+    };
+
+    if (insuranceData) {
+      // جرب الحقول المختلفة اللي ممكن Encar يرجعها
+      insurance.totalAccidents = insuranceData.accidentCount ?? insuranceData.totalAccidents ?? 0;
+      insurance.myAccidents = insuranceData.myAccidentCount ?? insuranceData.myAccidents ?? 0;
+      insurance.otherAccidents = insuranceData.otherAccidentCount ?? insuranceData.otherAccidents ?? 0;
+      insurance.ownerChanges = insuranceData.ownerChangeCount ?? insuranceData.ownerChanges ?? 0;
+
+      const dates = insuranceData.ownerChangeDateList ?? insuranceData.ownerChangeDates ?? [];
+      insurance.ownerChangeDates = dates.map((d: any) =>
+        typeof d === "string" ? d : (d.date ?? d.changeDate ?? "")
+      ).filter(Boolean);
+    }
+
+    // ─── بناء كائن السيارة ───
     const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
       Manufacturer: category.manufacturerName ?? "",
@@ -1490,69 +1534,15 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    const inspection: any = {
-      hasDamage: false,
-      damageCount: 0,
-      parts: [],
-      summary: null,
-    };
-
-    if (inspectionData) {
-      const checkInfo = inspectionData.carCheckInfo || inspectionData;
-      const items = checkInfo.checkItems || checkInfo.inspectionItems || [];
-      
-      if (items.length > 0) {
-        inspection.hasDamage = items.some((item: any) => 
-          item.grade === 'D' || item.grade === 'C' || item.status === 'DAMAGED' || item.damaged === true
-        );
-        inspection.damageCount = items.filter((item: any) => 
-          item.grade === 'D' || item.grade === 'C' || item.status === 'DAMAGED' || item.damaged === true
-        ).length;
-        
-        inspection.parts = items.map((item: any) => ({
-          name: item.itemName || item.name || item.partName || item.checkItemName || 'جزء غير مسمى',
-          grade: item.grade || item.status || 'A',
-          damaged: item.grade === 'D' || item.grade === 'C' || item.status === 'DAMAGED' || item.damaged === true,
-          section: item.section || item.category || 'general',
-        }));
-      } else if (inspectionData.hasDamage !== undefined) {
-        inspection.hasDamage = inspectionData.hasDamage;
-        inspection.damageCount = inspectionData.damageCount || 0;
-        inspection.parts = inspectionData.parts || [];
-      }
-      
-      inspection.summary = inspectionData.summary || inspectionData.result || null;
-    }
-
-    // ─── معالجة بيانات التأمين ───
-    const insurance: any = {
-      totalAccidents: 0,
-      myAccidents: 0,
-      otherAccidents: 0,
-      ownerChanges: 0,
-      ownerChangeDates: [],
-    };
-
-    if (insuranceData) {
-      insurance.totalAccidents = insuranceData.accidentCount ?? insuranceData.totalAccidents ?? 0;
-      insurance.myAccidents = insuranceData.myAccidentCount ?? insuranceData.myAccidents ?? 0;
-      insurance.otherAccidents = insuranceData.otherAccidentCount ?? insuranceData.otherAccidents ?? 0;
-      insurance.ownerChanges = insuranceData.ownerChangeCount ?? insuranceData.ownerChanges ?? 0;
-      insurance.ownerChangeDates = (insuranceData.ownerChangeDateList ?? insuranceData.ownerChangeDates ?? [])
-        .map((d: any) => typeof d === 'string' ? d : (d.date || d.changeDate || ''))
-        .filter(Boolean);
-    }
-
     req.log.info(
       {
         carId: id,
-        totalImages: car.images.length,
-        vin: car.vin,
-        bodyType: car.bodyType,
-        bodyTypeAr: car.bodyTypeAr,
-        choiceOptionsCount: car.choiceOptions.length,
+        inspectionParts: inspection.parts.length,
+        hasDamage: inspection.hasDamage,
+        insuranceAccidents: insurance.totalAccidents,
+        insuranceOwnerChanges: insurance.ownerChanges,
       },
-      "DEBUG: final extended car mapped"
+      "DEBUG: final inspection/insurance mapped"
     );
 
     res.json({
@@ -1569,5 +1559,4 @@ router.get("/:id", async (req, res): Promise<void> => {
   }
 });
 
-export default router;
-
+        
