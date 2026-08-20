@@ -3,9 +3,6 @@ import { Search, Car, Menu, X, Heart, User, ChevronLeft, Phone, Mail, MapPin, In
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
-import { AlertBell } from "@/components/alert-bell";
-import { AlertModal } from "@/components/alert-modal";
-import { useAlertContext } from "@/contexts/alert-context";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -15,7 +12,6 @@ export function Layout({ children }: LayoutProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
-  const { open: alertOpen, defaultFilters, openModal, closeModal } = useAlertContext();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -68,10 +64,6 @@ export function Layout({ children }: LayoutProps) {
             </nav>
 
             <div className="hidden md:flex items-center gap-4">
-              <AlertBell
-                onClick={() => openModal()}
-                className={cn(!isScrolled && location === '/' ? "text-white/80 hover:bg-white/10" : "text-foreground/70")}
-              />
               <button className={cn("p-2.5 rounded-full transition-colors",
                 !isScrolled && location === '/' ? "text-white/80 hover:bg-white/10" : "text-foreground/70 hover:bg-muted")}>
                 <User className="w-5 h-5" />
@@ -121,8 +113,6 @@ export function Layout({ children }: LayoutProps) {
           </motion.div>
         )}
       </AnimatePresence>
-
-      <AlertModal open={alertOpen} onClose={closeModal} currentFilters={defaultFilters} />
 
       <main className="flex-1 w-full flex flex-col">{children}</main>
 
