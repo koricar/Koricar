@@ -293,7 +293,6 @@ function HowItWorks() {
 
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
-  const { openModal } = useAlertContext();
   const [debouncedModel] = useDebounce(filters.model, 500);
   const apiParams = { ...filters, query: undefined, model: debouncedModel || undefined };
 
@@ -359,10 +358,7 @@ export default function Home() {
                   </span>
                 )}
               </h2>
-              <button onClick={() => openModal(filters)} className="flex items-center gap-2 px-4 py-2.5 rounded-xl border-2 border-primary/30 text-primary text-sm font-bold hover:bg-primary/10 hover:border-primary transition-all">
-                <Bell className="w-4 h-4" />
-                تنبيه بهذا البحث
-              </button>
+           
             </div>
 
             {isLoading ? (
