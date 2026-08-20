@@ -6,7 +6,6 @@ import { useCarFilters } from "@/hooks/use-car-filters";
 import { Layout } from "@/components/layout";
 import { CarCard } from "@/components/car-card";
 import { FilterSidebar } from "@/components/filter-sidebar";
-import { useAlertContext } from "@/contexts/alert-context";
 import { useState, useEffect, useRef } from "react";
 import { TickerBanner } from "@/components/ticker-banner";
 import { DealOfDay } from "@/components/deal-of-day";
