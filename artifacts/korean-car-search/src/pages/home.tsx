@@ -1,5 +1,5 @@
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Loader2, FilterX, ChevronLeft, ChevronRight, Car, Bell } from "lucide-react";
+import { Search, Loader2, FilterX, ChevronLeft, ChevronRight, Car, } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useSearchCars } from "@workspace/api-client-react";
 import { useCarFilters } from "@/hooks/use-car-filters";
