@@ -2,7 +2,6 @@ import { Switch, Route, Router as WouterRouter } from "wouter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { AlertProvider } from "@/contexts/alert-context";
 
 import Home from "@/pages/home";
 import CarDetails from "@/pages/car-details";
@@ -98,13 +97,13 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <TooltipProvider>
-        <AlertProvider>
+        <>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
             <Router />
           </WouterRouter>
           <Toaster />
           <WhatsAppButton />
-        </AlertProvider>
+        </>
       </TooltipProvider>
     </QueryClientProvider>
   );
