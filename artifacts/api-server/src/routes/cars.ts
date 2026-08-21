@@ -1319,20 +1319,20 @@ router.get("/:id", async (req, res): Promise<void> => {
     const manage = raw.manage ?? {};
     const conditionData = raw.condition ?? {};
 
-    // ✅ استخراج Condition (فحص / سجل / حوادث) من الأماكن المحتملة
+    // ✅ استخراج Condition flags
     const conditions: string[] = [];
     const pushCond = (val: any) => {
       if (typeof val === "string") conditions.push(val);
       else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && conditions.push(v));
     };
     pushCond(manage.condition);
-    pushCond(conditionData.inspection ? "Inspection" : undefined);
-    pushCond(conditionData.record ? "Record" : undefined);
-    pushCond(conditionData.resume ? "Resume" : undefined);
+    if (conditionData.inspection) conditions.push("Inspection");
+    if (conditionData.record) conditions.push("Record");
+    if (conditionData.resume) conditions.push("Resume");
     pushCond(raw.condition?.types);
     pushCond(raw.condition?.list);
 
-    // ✅ استخراج Trust (HomeService, Meetgo, إلخ)
+    // ✅ استخراج Trust
     const trusts: string[] = [];
     const pushTrust = (val: any) => {
       if (typeof val === "string") trusts.push(val);
@@ -1350,7 +1350,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     pushSm(advertisement.serviceMark);
     pushSm(raw.serviceMark);
 
-    // ✅ استخراج Options (الخيارات القياسية من detail endpoint)
+    // ✅ استخراج Options
     const optionsList: string[] = [];
     const rawOpts = raw.options ?? manage.options ?? [];
     if (Array.isArray(rawOpts)) {
@@ -1361,17 +1361,60 @@ router.get("/:id", async (req, res): Promise<void> => {
       }
     }
 
+    // ✅ استخراج بيانات الفحص والحوادث (Performance Check / Inspection / History)
+    const performanceCheck = manage.performanceCheck ?? conditionData.performanceCheck ?? raw.performanceCheck ?? null;
+    const insurance = manage.insurance ?? conditionData.insurance ?? raw.insurance ?? null;
+    const accident = manage.accident ?? conditionData.accident ?? raw.accident ?? null;
+    const history = raw.history ?? manage.history ?? null;
+
+    // بناء تقرير الفحص للواجهة
+    let inspectionReport: any = null;
+
+    if (performanceCheck || insurance || accident || history) {
+      inspectionReport = {
+        hasReport: true,
+        performanceCheck: performanceCheck ? {
+          date: performanceCheck.checkDate ?? performanceCheck.date ?? performanceCheck.inspectionDate ?? null,
+          result: performanceCheck.result ?? performanceCheck.status ?? performanceCheck.grade ?? null,
+          details: performanceCheck.details ?? performanceCheck.items ?? performanceCheck.checkItems ?? null,
+        } : null,
+        insurance: insurance ? {
+          totalLoss: insurance.totalLoss ?? insurance.isTotalLoss ?? false,
+          flood: insurance.flood ?? insurance.isFlood ?? false,
+          theft: insurance.theft ?? insurance.isTheft ?? false,
+          repairCount: insurance.repairCount ?? insurance.repair ?? null,
+          ownerChanges: insurance.ownerChanges ?? insurance.ownerCount ?? null,
+        } : null,
+        accident: accident ? {
+          hasAccident: accident.hasAccident ?? accident.isAccident ?? false,
+          damage: accident.damage ?? accident.repairAmount ?? null,
+          parts: accident.parts ?? accident.damagedParts ?? null,
+        } : null,
+        history: history ? {
+          accidents: history.accidents ?? history.accidentCount ?? 0,
+          previousOwners: history.previousOwners ?? history.ownerCount ?? null,
+          firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null,
+          accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
+        } : null,
+      };
+    } else if (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis"))) {
+      // السيارة مفحوصة لكن ما في بيانات مفصلة متاحة
+      inspectionReport = { hasReport: true, performanceCheck: null, insurance: null, accident: null, history: null };
+    } else {
+      inspectionReport = { hasReport: false };
+    }
+
     log.info?.(
       {
         carId: id,
         conditions,
-        trusts,
-        serviceMarks,
-        optionsCount: optionsList.length,
-        optionsSample: optionsList.slice(0, 10),
+        hasPerformanceCheck: !!performanceCheck,
+        hasInsurance: !!insurance,
+        hasAccident: !!accident,
+        hasHistory: !!history,
       },
-      "DEBUG: extracted detail fields"
-    ) ?? console.log("DEBUG detail fields", { conditions, trusts, serviceMarks, optionsCount: optionsList.length });
+      "DEBUG: extracted inspection data"
+    ) ?? console.log("DEBUG inspection", { hasPerformanceCheck: !!performanceCheck, hasHistory: !!history });
 
     const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
@@ -1409,20 +1452,13 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    log.info?.(
-      {
-        carId: id,
-        totalImages: car.images.length,
-        vin: car.vin,
-        bodyType: car.bodyType,
-        features: car.features,
-        options: car.options,
-        choiceOptionsCount: car.choiceOptions.length,
-      },
-      "DEBUG: final extended car mapped"
-    ) ?? console.log("DEBUG final mapped");
+    // ✅ إضافة تقرير الفحص إلى الـ response
+    const finalCar = {
+      ...car,
+      inspectionReport,
+    };
 
-    res.json(car);
+    res.json(finalCar);
     return;
   } catch (err) {
     log.error?.({ err, id }, "Encar detail API error") ?? console.error(err);
