@@ -27,51 +27,199 @@ const TABS = [
   { id: "inspection", label: "الفحص والتأمين" },
 ];
 
-// ─── SVG محسّن للسيارة من الأعلى ───
-function CarTopViewSVG({ damagedParts = [] }: { damagedParts?: string[] }) {
-  const isDamaged = (part: string) => damagedParts.includes(part);
-  const okFill = "fill-gray-200/60 stroke-gray-400";
-  const badFill = "fill-red-500/50 stroke-red-500";
+// ─── Color map for damage status codes ───
+const STATUS_COLORS: Record<string, { bg: string; text: string; fill: string; stroke: string }> = {
+  X: { bg: "bg-red-500",      text: "text-red-400",      fill: "#ef4444", stroke: "#dc2626" },
+  W: { bg: "bg-blue-500",     text: "text-blue-400",     fill: "#3b82f6", stroke: "#2563eb" },
+  C: { bg: "bg-orange-500",   text: "text-orange-400",   fill: "#f97316", stroke: "#ea580c" },
+  A: { bg: "bg-sky-400",      text: "text-sky-400",      fill: "#38bdf8", stroke: "#0ea5e9" },
+  U: { bg: "bg-emerald-500",  text: "text-emerald-400",  fill: "#10b981", stroke: "#059669" },
+  T: { bg: "bg-gray-500",     text: "text-gray-400",     fill: "#6b7280", stroke: "#4b5563" },
+};
 
+const LEGEND_ITEMS = [
+  { code: "X", labelAr: "تغيير", labelEn: "Exchange" },
+  { code: "W", labelAr: "رش", labelEn: "Sheet Metal" },
+  { code: "C", labelAr: "صدأ", labelEn: "Corrosion" },
+  { code: "A", labelAr: "خدش", labelEn: "Scratch" },
+  { code: "U", labelAr: "انبعاج", labelEn: "Dent" },
+  { code: "T", labelAr: "تلف", labelEn: "Damage" },
+];
+
+// ─── Types for inspection data ───
+interface DamageItem {
+  part: string;
+  partAr: string;
+  status: string;
+  statusAr: string;
+  statusCode: string;
+  rank: string;
+}
+
+interface AccidentDetail {
+  date: string;
+  type: string;
+  typeAr: string;
+  amount: number;
+  description?: string;
+}
+
+interface InspectionDetailed {
+  hasReport: boolean;
+  source?: string;
+  message?: string | null;
+  diagram?: {
+    exterior?: Array<{ x: number; y: number; code: string; label: string }>;
+    interior?: Array<{ x: number; y: number; code: string; label: string }>;
+  };
+  damages?: DamageItem[];
+  insuranceSummary?: {
+    totalAccidents: number;
+    myAccidents: number;
+    otherAccidents: number;
+    ownerChanges: number;
+    ownerChangeDates: string[];
+  };
+  accidentDetails?: AccidentDetail[];
+  totalMyAccidentCost?: number;
+  performanceCheck?: {
+    checked: boolean;
+    date?: string | null;
+    result?: string | null;
+  } | null;
+}
+
+// ─── SVG: Car Top View with colored dots ───
+function CarTopViewSVG({
+  dots = [],
+}: {
+  dots?: Array<{ x: number; y: number; code: string; label: string }>;
+}) {
   return (
-    <svg viewBox="0 0 200 360" className="w-full h-full max-h-[320px] drop-shadow-lg">
-      <path d="M60 30 Q60 15 75 15 L125 15 Q140 15 140 30 L145 55 L150 85 L150 275 L145 305 L140 330 Q140 345 125 345 L75 345 Q60 345 60 330 L55 305 L50 275 L50 85 L55 55 Z" 
-        className="fill-slate-100 stroke-slate-400 dark:fill-slate-800 dark:stroke-slate-600" strokeWidth="2"/>
-      <path d="M65 60 L135 60 L132 80 L68 80 Z" className="fill-blue-100/60 stroke-blue-300 dark:fill-blue-900/30 dark:stroke-blue-700" strokeWidth="1.5"/>
-      <path d="M68 280 L132 280 L135 300 L65 300 Z" className="fill-blue-100/60 stroke-blue-300 dark:fill-blue-900/30 dark:stroke-blue-700" strokeWidth="1.5"/>
-      <rect x="70" y="90" width="60" height="170" rx="6" className="fill-slate-50 stroke-slate-300 dark:fill-slate-700 dark:stroke-slate-500" strokeWidth="1.5"/>
-      <path d="M62 35 L138 35 L142 55 L58 55 Z" className={isDamaged("hood") ? badFill : okFill} strokeWidth="1.5"/>
-      <path d="M58 305 L142 305 L138 325 L62 325 Z" className={isDamaged("trunk") ? badFill : okFill} strokeWidth="1.5"/>
-      <rect x="52" y="95" width="14" height="75" rx="3" className={isDamaged("frontDoorLeft") ? badFill : okFill} strokeWidth="1.5"/>
-      <rect x="134" y="95" width="14" height="75" rx="3" className={isDamaged("frontDoorRight") ? badFill : okFill} strokeWidth="1.5"/>
-      <rect x="52" y="175" width="14" height="75" rx="3" className={isDamaged("rearDoorLeft") ? badFill : okFill} strokeWidth="1.5"/>
-      <rect x="134" y="175" width="14" height="75" rx="3" className={isDamaged("rearDoorRight") ? badFill : okFill} strokeWidth="1.5"/>
-      <circle cx="38" cy="75" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
-      <circle cx="162" cy="75" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
-      <circle cx="38" cy="285" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
-      <circle cx="162" cy="285" r="14" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
+    <svg viewBox="0 0 200 360" className="w-full h-auto max-h-80">
+      {/* Car body */}
+      <path
+        d="M60 20 Q100 5 140 20 L155 50 L160 100 L165 150 L165 210 L160 260 L155 310 L140 340 Q100 355 60 340 L45 310 L40 260 L35 210 L35 150 L40 100 L45 50 Z"
+        fill="#f8fafc"
+        stroke="#94a3b8"
+        strokeWidth="1.5"
+      />
+      {/* Windshield */}
+      <path d="M55 80 Q100 70 145 80 L142 110 Q100 105 58 110 Z" fill="#e2e8f0" />
+      {/* Rear window */}
+      <path d="M58 250 Q100 245 142 250 L140 280 Q100 285 60 280 Z" fill="#e2e8f0" />
+      {/* Roof */}
+      <rect x="58" y="110" width="84" height="140" rx="4" fill="#f1f5f9" />
+      {/* Side windows */}
+      <rect x="48" y="115" width="10" height="60" rx="2" fill="#e2e8f0" />
+      <rect x="142" y="115" width="10" height="60" rx="2" fill="#e2e8f0" />
+      <rect x="48" y="185" width="10" height="60" rx="2" fill="#e2e8f0" />
+      <rect x="142" y="185" width="10" height="60" rx="2" fill="#e2e8f0" />
+      {/* Wheels */}
+      <circle cx="35" cy="90" r="14" fill="#cbd5e1" stroke="#94a3b8" />
+      <circle cx="165" cy="90" r="14" fill="#cbd5e1" stroke="#94a3b8" />
+      <circle cx="35" cy="270" r="14" fill="#cbd5e1" stroke="#94a3b8" />
+      <circle cx="165" cy="270" r="14" fill="#cbd5e1" stroke="#94a3b8" />
+      {/* Headlights */}
+      <ellipse cx="55" cy="35" rx="8" ry="5" fill="#e2e8f0" />
+      <ellipse cx="145" cy="35" rx="8" ry="5" fill="#e2e8f0" />
+      {/* Taillights */}
+      <ellipse cx="55" cy="325" rx="8" ry="5" fill="#e2e8f0" />
+      <ellipse cx="145" cy="325" rx="8" ry="5" fill="#e2e8f0" />
+
+      {/* Damage dots */}
+      {dots.map((dot, i) => {
+        const colors = STATUS_COLORS[dot.code] || STATUS_COLORS.T;
+        return (
+          <g key={i}>
+            <circle
+              cx={dot.x}
+              cy={dot.y}
+              r="7"
+              fill={colors.fill}
+              stroke="white"
+              strokeWidth="1.5"
+            />
+            <text
+              x={dot.x}
+              y={dot.y + 1}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="white"
+              fontSize="9"
+              fontWeight="bold"
+            >
+              {dot.code}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
 
-// ─── SVG محسّن للسيارة من الأمام ───
-function CarFrontViewSVG({ damagedParts = [] }: { damagedParts?: string[] }) {
-  const isDamaged = (part: string) => damagedParts.includes(part);
-  const okFill = "fill-gray-200/60 stroke-gray-400";
-  const badFill = "fill-red-500/50 stroke-red-500";
-
+// ─── SVG: Car Front View with colored dots ───
+function CarFrontViewSVG({
+  dots = [],
+}: {
+  dots?: Array<{ x: number; y: number; code: string; label: string }>;
+}) {
   return (
-    <svg viewBox="0 0 200 280" className="w-full h-full max-h-[320px] drop-shadow-lg">
-      <path d="M40 70 Q40 40 65 40 L135 40 Q160 40 160 70 L165 110 L170 150 L170 210 Q170 240 145 240 L55 240 Q30 240 30 210 L30 150 L35 110 Z" 
-        className="fill-slate-100 stroke-slate-400 dark:fill-slate-800 dark:stroke-slate-600" strokeWidth="2"/>
-      <path d="M50 75 Q50 55 70 55 L130 55 Q150 55 150 75 L145 100 L55 100 Z" 
-        className="fill-blue-100/60 stroke-blue-300 dark:fill-blue-900/30 dark:stroke-blue-700" strokeWidth="1.5"/>
-      <rect x="80" y="115" width="40" height="25" rx="5" className={isDamaged("grille") ? badFill : okFill} strokeWidth="1.5"/>
-      <circle cx="60" cy="125" r="14" className={isDamaged("headlightLeft") ? badFill : okFill} strokeWidth="1.5"/>
-      <circle cx="140" cy="125" r="14" className={isDamaged("headlightRight") ? badFill : okFill} strokeWidth="1.5"/>
-      <rect x="45" y="155" width="110" height="30" rx="8" className={isDamaged("bumperFront") ? badFill : okFill} strokeWidth="1.5"/>
-      <circle cx="45" cy="200" r="20" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
-      <circle cx="155" cy="200" r="20" className="fill-slate-300 stroke-slate-500 dark:fill-slate-600 dark:stroke-slate-400" strokeWidth="2"/>
+    <svg viewBox="0 0 200 360" className="w-full h-auto max-h-80">
+      {/* Car body */}
+      <path
+        d="M40 40 Q40 20 65 20 L135 20 Q160 20 160 40 L170 80 L175 140 L175 220 L170 280 L160 320 Q100 340 40 320 L30 280 L25 220 L25 140 L30 80 Z"
+        fill="#f8fafc"
+        stroke="#94a3b8"
+        strokeWidth="1.5"
+      />
+      {/* Windshield */}
+      <path d="M45 60 Q100 45 155 60 L150 100 Q100 90 50 100 Z" fill="#e2e8f0" />
+      {/* Hood */}
+      <rect x="45" y="105" width="110" height="50" rx="4" fill="#f1f5f9" />
+      {/* Grille */}
+      <rect x="60" y="160" width="80" height="25" rx="3" fill="#e2e8f0" />
+      {/* Headlights */}
+      <ellipse cx="55" cy="170" rx="12" ry="8" fill="#e2e8f0" />
+      <ellipse cx="145" cy="170" rx="12" ry="8" fill="#e2e8f0" />
+      {/* Bumper */}
+      <rect x="40" y="190" width="120" height="30" rx="6" fill="#f1f5f9" />
+      {/* License plate */}
+      <rect x="70" y="200" width="60" height="15" rx="2" fill="#e2e8f0" />
+      {/* Wheels */}
+      <circle cx="35" cy="240" r="18" fill="#cbd5e1" stroke="#94a3b8" />
+      <circle cx="165" cy="240" r="18" fill="#cbd5e1" stroke="#94a3b8" />
+      {/* Side mirrors */}
+      <rect x="15" y="85" width="15" height="8" rx="3" fill="#e2e8f0" />
+      <rect x="170" y="85" width="15" height="8" rx="3" fill="#e2e8f0" />
+
+      {/* Damage dots */}
+      {dots.map((dot, i) => {
+        const colors = STATUS_COLORS[dot.code] || STATUS_COLORS.T;
+        return (
+          <g key={i}>
+            <circle
+              cx={dot.x}
+              cy={dot.y}
+              r="7"
+              fill={colors.fill}
+              stroke="white"
+              strokeWidth="1.5"
+            />
+            <text
+              x={dot.x}
+              y={dot.y + 1}
+              textAnchor="middle"
+              dominantBaseline="middle"
+              fill="white"
+              fontSize="9"
+              fontWeight="bold"
+            >
+              {dot.code}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -80,6 +228,7 @@ export default function CarDetails() {
   const { id } = useParams();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<"specs" | "features" | "inspection">("specs");
+  const [inspectionView, setInspectionView] = useState<"exterior" | "interior">("exterior");
 
   const { data: carData, isLoading, isError } = useGetCarById(id || "", {
     query: { enabled: !!id }
@@ -90,6 +239,7 @@ export default function CarDetails() {
   useEffect(() => {
     setCurrentImgIndex(0);
     setActiveTab("specs");
+    setInspectionView("exterior");
   }, [id]);
 
   const carImages: string[] = Array.isArray(car?.images) && car.images.length > 0
@@ -146,12 +296,42 @@ export default function CarDetails() {
     { label: "رقم الهيكل (VIN)", value: car?.vin || "—", icon: <Hash className="w-4 h-4" /> },
   ];
 
-  const inspection = car?.inspection;
-  const insurance = car?.insurance;
-  const hasInspectionData = !!inspection || !!insurance;
-  const hasDamage = inspection?.hasDamage || (inspection?.damageCount || 0) > 0;
-  const damagedParts = inspection?.parts?.filter((p: any) => p.damaged).map((p: any) => p.name) || [];
-  const allParts = inspection?.parts || [];
+  // ─── Inspection data handling ──────────────────────────────
+  const det: InspectionDetailed | null = car?.inspectionDetailed || null;
+  const legacyInspection = car?.inspection;
+  const legacyInsurance = car?.insurance;
+
+  const hasDetailedReport = det?.hasReport ?? false;
+  const hasLegacyReport = !!legacyInspection || !!legacyInsurance;
+  const hasAnyReport = hasDetailedReport || hasLegacyReport;
+
+  // Damage data
+  const damages = det?.damages || [];
+  const hasDamage = damages.length > 0 || legacyInspection?.hasDamage || (legacyInspection?.damageCount || 0) > 0;
+  const damageCount = damages.length || legacyInspection?.damageCount || 0;
+
+  // Diagram dots (use backend coordinates if available, else generate from damages)
+  const exteriorDots = det?.diagram?.exterior || (damages.length > 0
+    ? damages.map((d, i) => ({
+        x: 70 + (i % 3) * 30 + (Math.random() * 20),
+        y: 60 + Math.floor(i / 3) * 70 + (Math.random() * 30),
+        code: d.statusCode,
+        label: d.partAr,
+      }))
+    : []);
+  const interiorDots = det?.diagram?.interior || [];
+
+  // Insurance data
+  const insSummary = det?.insuranceSummary;
+  const accidentDetails = det?.accidentDetails || [];
+  const totalMyCost = det?.totalMyAccidentCost || 0;
+
+  // Legacy fallback values
+  const totalAccidents = insSummary?.totalAccidents ?? legacyInsurance?.totalAccidents ?? 0;
+  const myAccidents = insSummary?.myAccidents ?? legacyInsurance?.myAccidents ?? 0;
+  const otherAccidents = insSummary?.otherAccidents ?? legacyInsurance?.otherAccidents ?? 0;
+  const ownerChanges = insSummary?.ownerChanges ?? legacyInsurance?.ownerChanges ?? 0;
+  const ownerChangeDates = insSummary?.ownerChangeDates ?? legacyInsurance?.ownerChangeDates ?? [];
 
   return (
     <Layout>
@@ -168,7 +348,7 @@ export default function CarDetails() {
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          
+
           <div className="lg:col-span-2 space-y-6">
             <motion.div className="rounded-3xl overflow-hidden shadow-2xl bg-card aspect-[16/10] relative group">
               {carImages.length > 0 ? (
@@ -247,7 +427,7 @@ export default function CarDetails() {
 
               <div className="p-6">
                 <AnimatePresence mode="wait">
-                  
+
                   {activeTab === "specs" && (
                     <motion.div
                       key="specs"
@@ -347,6 +527,9 @@ export default function CarDetails() {
                     </motion.div>
                   )}
 
+                  {/* ═══════════════════════════════════════════════════════
+                       TAB: INSPECTION & INSURANCE — NEW DETAILED DESIGN
+                      ═══════════════════════════════════════════════════════ */}
                   {activeTab === "inspection" && (
                     <motion.div
                       key="inspection"
@@ -355,167 +538,292 @@ export default function CarDetails() {
                       exit={{ opacity: 0, y: -10 }}
                       className="space-y-8"
                     >
-                      <div>
-                        <h3 className="text-xl font-black mb-4 flex items-center gap-2">
-                          <ShieldCheck className="w-6 h-6 text-primary" />
-                          تقرير الفحص
-                        </h3>
-
-                        {hasInspectionData ? (
-                          <>
-                            <div className={`p-5 rounded-2xl border-2 flex items-center gap-4 mb-6 ${
-                              hasDamage
-                                ? "bg-red-500/5 border-red-500/20"
-                                : "bg-green-500/5 border-green-500/20"
-                            }`}>
-                              <div className={`p-3 rounded-full ${
-                                hasDamage ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
-                              }`}>
-                                {hasDamage ? <XCircle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
-                              </div>
-                              <div>
-                                <p className={`font-bold text-lg ${hasDamage ? "text-red-700" : "text-green-700"}`}>
-                                  {hasDamage
-                                    ? `يوجد ${inspection?.damageCount || 0} ضرر مسجل على هيكل السيارة`
-                                    : "لا توجد أضرار مُسجّلة على هيكل هذه السيارة"}
-                                </p>
-                                {!hasDamage && (
-                                  <p className="text-sm text-green-600 mt-1">
-                                    الهيكل الخارجي والأساسي بحالة ممتازة
-                                  </p>
-                                )}
-                              </div>
-                            </div>
-
-                            {allParts.length > 0 && (
-                              <div className="mb-6">
-                                <div className="flex items-center justify-center gap-8 mb-4 text-sm font-bold text-muted-foreground">
-                                  <span>الهيكل الخارجي</span>
-                                  <span>الهيكل الأساسي</span>
-                                </div>
-                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 bg-muted/30 dark:bg-slate-800/50 rounded-2xl p-6 border border-border/50">
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-xs text-muted-foreground mb-2">من الأمام</span>
-                                    <CarFrontViewSVG damagedParts={damagedParts} />
-                                  </div>
-                                  <div className="flex flex-col items-center">
-                                    <span className="text-xs text-muted-foreground mb-2">من الأعلى</span>
-                                    <CarTopViewSVG damagedParts={damagedParts} />
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                            {allParts.length > 0 && (
-                              <div className="overflow-hidden rounded-xl border border-border">
-                                <table className="w-full text-sm">
-                                  <thead className="bg-muted/80">
-                                    <tr>
-                                      <th className="text-right px-4 py-3 font-bold">الجزء</th>
-                                      <th className="text-center px-4 py-3 font-bold">الحالة</th>
-                                      <th className="text-right px-4 py-3 font-bold">القسم</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody className="divide-y divide-border">
-                                    {allParts.map((part: any, i: number) => (
-                                      <tr key={i} className={part.damaged ? "bg-red-500/5" : ""}>
-                                        <td className="px-4 py-3 font-medium">{part.name}</td>
-                                        <td className="px-4 py-3 text-center">
-                                          {part.damaged ? (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/10 text-red-600 text-xs font-bold">
-                                              <AlertCircle className="w-3 h-3" />
-                                              متضرر
-                                            </span>
-                                          ) : (
-                                            <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-bold">
-                                              <CheckCircle2 className="w-3 h-3" />
-                                              سليم
-                                            </span>
-                                          )}
-                                        </td>
-                                        <td className="px-4 py-3 text-muted-foreground">{part.section}</td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            )}
-                          </>
-                        ) : (
-                          <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 text-center">
-                            <p className="text-muted-foreground">لا توجد بيانات فحص متوفرة لهذه السيارة</p>
-                          </div>
-                        )}
+                      {/* ── Header ── */}
+                      <div className="flex items-center justify-between">
+                        <h2 className="text-xl font-bold">تقرير الفحص</h2>
+                        <div className="flex items-center gap-2 text-emerald-400">
+                          <ShieldCheck className="w-5 h-5" />
+                          <span className="text-sm">فحص معتمد</span>
+                        </div>
                       </div>
 
-                      {insurance && (
-                        <div>
-                          <h3 className="text-xl font-black mb-4 flex items-center gap-2">
-                            <History className="w-6 h-6 text-primary" />
-                            سجل التأمين
-                          </h3>
-
-                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
-                              <span className="text-xs text-muted-foreground block mb-1">إجمالي الحوادث</span>
-                              <span className={`text-2xl font-black ${insurance.totalAccidents > 0 ? "text-red-500" : "text-green-500"}`}>
-                                {insurance.totalAccidents ?? 0}
-                              </span>
+                      {hasAnyReport ? (
+                        <>
+                          {/* ── Status Banner ── */}
+                          <div className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${
+                            hasDamage
+                              ? "bg-red-500/5 border-red-500/20"
+                              : "bg-green-500/5 border-green-500/20"
+                          }`}>
+                            <div className={`p-3 rounded-full ${
+                              hasDamage ? "bg-red-500/10 text-red-600" : "bg-green-500/10 text-green-600"
+                            }`}>
+                              {hasDamage ? <XCircle className="w-8 h-8" /> : <CheckCircle2 className="w-8 h-8" />}
                             </div>
-                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
-                              <span className="text-xs text-muted-foreground block mb-1">حوادث من جانبي</span>
-                              <span className={`text-2xl font-black ${insurance.myAccidents > 0 ? "text-red-500" : "text-green-500"}`}>
-                                {insurance.myAccidents ?? 0}
-                              </span>
-                            </div>
-                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
-                              <span className="text-xs text-muted-foreground block mb-1">حوادث الطرف الآخر</span>
-                              <span className={`text-2xl font-black ${insurance.otherAccidents > 0 ? "text-orange-500" : "text-green-500"}`}>
-                                {insurance.otherAccidents ?? 0}
-                              </span>
-                            </div>
-                            <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
-                              <span className="text-xs text-muted-foreground block mb-1">تغييرات الملكية</span>
-                              <span className="text-2xl font-black text-foreground">
-                                {insurance.ownerChanges ?? 0}
-                              </span>
+                            <div>
+                              <p className={`font-bold text-lg ${hasDamage ? "text-red-700" : "text-green-700"}`}>
+                                {hasDamage
+                                  ? `يوجد ${damageCount} ضرر مسجل على هيكل السيارة`
+                                  : "لا توجد أضرار مُسجّلة على هيكل هذه السيارة"}
+                              </p>
+                              {!hasDamage && (
+                                <p className="text-sm text-green-600 mt-1">
+                                  الهيكل الخارجي والأساسي بحالة ممتازة
+                                </p>
+                              )}
                             </div>
                           </div>
 
-                          {insurance.ownerChangeDates?.length > 0 && (
-                            <div className="mt-4">
-                              <span className="text-sm text-muted-foreground block mb-2">تاريخ تغيير الملكية</span>
-                              <div className="flex flex-wrap gap-2">
-                                {insurance.ownerChangeDates.map((date: string, i: number) => (
-                                  <span
-                                    key={i}
-                                    className="px-3 py-1.5 rounded-lg bg-muted dark:bg-slate-700 border border-border text-sm font-medium"
-                                  >
-                                    {date}
-                                  </span>
+                          {/* ── Car Diagrams ── */}
+                          {(hasDetailedReport || legacyInspection?.parts?.length > 0) && (
+                            <div className="bg-card dark:bg-slate-800 rounded-2xl border border-border p-4">
+                              {/* Tabs */}
+                              <div className="flex gap-4 mb-4 border-b border-border pb-3">
+                                <button
+                                  onClick={() => setInspectionView("exterior")}
+                                  className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
+                                    inspectionView === "exterior"
+                                      ? "border-red-500 text-foreground"
+                                      : "border-transparent text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  الهيكل الخارجي {hasDamage ? `— ضرر ${damageCount}` : "— لا يوجد"}
+                                </button>
+                                <button
+                                  onClick={() => setInspectionView("interior")}
+                                  className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
+                                    inspectionView === "interior"
+                                      ? "border-red-500 text-foreground"
+                                      : "border-transparent text-muted-foreground hover:text-foreground"
+                                  }`}
+                                >
+                                  الهيكل الأساسي
+                                </button>
+                              </div>
+
+                              {/* Diagrams Grid */}
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="bg-white rounded-xl p-3 flex flex-col items-center">
+                                  <span className="text-xs text-muted-foreground mb-2">من الأعلى</span>
+                                  <CarTopViewSVG
+                                    dots={inspectionView === "exterior" ? exteriorDots : interiorDots}
+                                  />
+                                </div>
+                                <div className="bg-white rounded-xl p-3 flex flex-col items-center">
+                                  <span className="text-xs text-muted-foreground mb-2">من الأمام</span>
+                                  <CarFrontViewSVG
+                                    dots={inspectionView === "exterior" ? exteriorDots : interiorDots}
+                                  />
+                                </div>
+                              </div>
+
+                              {/* Legend */}
+                              <div className="flex flex-wrap gap-3 mt-4 justify-center">
+                                {LEGEND_ITEMS.map((item) => (
+                                  <div key={item.code} className="flex items-center gap-1.5">
+                                    <span
+                                      className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                                        STATUS_COLORS[item.code]?.bg || "bg-gray-500"
+                                      }`}
+                                    >
+                                      {item.code}
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">{item.labelAr}</span>
+                                  </div>
                                 ))}
                               </div>
                             </div>
                           )}
+
+                          {/* ── Damages Table ── */}
+                          {damages.length > 0 && (
+                            <div className="bg-card dark:bg-slate-800 rounded-2xl border border-border overflow-hidden">
+                              <div className="grid grid-cols-3 text-xs text-muted-foreground px-4 py-3 bg-muted/50">
+                                <span>القطعة</span>
+                                <span className="text-center">الحالة</span>
+                                <span className="text-right">الدرجة</span>
+                              </div>
+                              {damages.map((d, i) => (
+                                <div
+                                  key={i}
+                                  className="grid grid-cols-3 items-center px-4 py-3 border-t border-border"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                                        STATUS_COLORS[d.statusCode]?.bg || "bg-gray-500"
+                                      }`}
+                                    >
+                                      {d.statusCode}
+                                    </span>
+                                    <div className="flex flex-col">
+                                      <span className="text-sm font-medium">{d.partAr}</span>
+                                      <span className="text-[10px] text-muted-foreground">{d.part}</span>
+                                    </div>
+                                  </div>
+                                  <div className="text-center">
+                                    <span className="text-sm">{d.statusAr}</span>
+                                    <span className="text-xs text-muted-foreground mr-1">/ {d.status}</span>
+                                  </div>
+                                  <div className="text-right">
+                                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                                      {d.rank}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* ── Legacy parts table fallback ── */}
+                          {!hasDetailedReport && legacyInspection?.parts?.length > 0 && (
+                            <div className="overflow-hidden rounded-xl border border-border">
+                              <table className="w-full text-sm">
+                                <thead className="bg-muted/80">
+                                  <tr>
+                                    <th className="text-right px-4 py-3 font-bold">الجزء</th>
+                                    <th className="text-center px-4 py-3 font-bold">الحالة</th>
+                                    <th className="text-right px-4 py-3 font-bold">القسم</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border">
+                                  {legacyInspection.parts.map((part: any, i: number) => (
+                                    <tr key={i} className={part.damaged ? "bg-red-500/5" : ""}>
+                                      <td className="px-4 py-3 font-medium">{part.name}</td>
+                                      <td className="px-4 py-3 text-center">
+                                        {part.damaged ? (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-red-500/10 text-red-600 text-xs font-bold">
+                                            <AlertCircle className="w-3 h-3" />
+                                            متضرر
+                                          </span>
+                                        ) : (
+                                          <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-green-500/10 text-green-600 text-xs font-bold">
+                                            <CheckCircle2 className="w-3 h-3" />
+                                            سليم
+                                          </span>
+                                        )}
+                                      </td>
+                                      <td className="px-4 py-3 text-muted-foreground">{part.section}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          )}
+
+                          {/* ── Insurance Summary ── */}
+                          {(hasDetailedReport || legacyInsurance) && (
+                            <div>
+                              <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+                                <History className="w-6 h-6 text-primary" />
+                                سجل التأمين
+                              </h3>
+
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+                                <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
+                                  <span className="text-xs text-muted-foreground block mb-1">تغييرات الملكية</span>
+                                  <span className="text-2xl font-black text-foreground">{ownerChanges}</span>
+                                </div>
+                                <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
+                                  <span className="text-xs text-muted-foreground block mb-1">حوادث الطرف الآخر</span>
+                                  <span className={`text-2xl font-black ${otherAccidents > 0 ? "text-orange-500" : "text-green-500"}`}>
+                                    {otherAccidents}
+                                  </span>
+                                </div>
+                                <div className="bg-card dark:bg-slate-800 p-4 rounded-xl border border-border text-center">
+                                  <span className="text-xs text-muted-foreground block mb-1">حوادث من جانبي</span>
+                                  <span className={`text-2xl font-black ${myAccidents > 0 ? "text-red-500" : "text-green-500"}`}>
+                                    {myAccidents}
+                                  </span>
+                                </div>
+                                <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/20 text-center">
+                                  <span className="text-xs text-red-300 block mb-1">إجمالي الحوادث</span>
+                                  <span className="text-2xl font-black text-red-400">{totalAccidents}</span>
+                                </div>
+                              </div>
+
+                              {/* Accident Details Table */}
+                              {accidentDetails.length > 0 && (
+                                <div className="mb-6">
+                                  <h4 className="text-sm font-bold text-muted-foreground mb-3">سجل الحوادث</h4>
+                                  <div className="space-y-2">
+                                    {accidentDetails.map((a, i) => (
+                                      <div
+                                        key={i}
+                                        className="flex items-center justify-between bg-card dark:bg-slate-800 rounded-xl px-4 py-3 border border-border"
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <span className="text-red-400 font-bold text-sm">
+                                            ﷼ {a.amount.toLocaleString()}
+                                          </span>
+                                        </div>
+                                        <div className="text-right">
+                                          <p className="text-sm text-foreground">{a.typeAr}</p>
+                                          <p className="text-xs text-muted-foreground">{a.type}</p>
+                                        </div>
+                                        <div className="text-left text-sm text-muted-foreground">
+                                          {a.date}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Owner Change Dates */}
+                              {ownerChangeDates.length > 0 && (
+                                <div className="mb-4">
+                                  <h4 className="text-sm font-bold text-muted-foreground mb-3">
+                                    تاريخ تغيير الملكية
+                                  </h4>
+                                  <div className="flex flex-wrap gap-2">
+                                    {ownerChangeDates.map((date: string, i: number) => (
+                                      <span
+                                        key={i}
+                                        className="px-3 py-1.5 rounded-full text-sm bg-muted dark:bg-slate-700 text-foreground border border-border"
+                                      >
+                                        {date}
+                                      </span>
+                                    ))}
+                                  </div>
+                                </div>
+                              )}
+
+                              {/* Total Cost */}
+                              {totalMyCost > 0 && (
+                                <div className="bg-red-500/5 rounded-xl p-4 border border-red-500/20">
+                                  <p className="text-sm text-red-300 mb-1">إجمالي تكلفة حوادثي</p>
+                                  <p className="text-2xl font-black text-red-400">
+                                    ﷼ {totalMyCost.toLocaleString()}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {/* ── Performance Check ── */}
+                          <div className="bg-card dark:bg-slate-800 rounded-xl border border-border p-5">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="font-bold">سجل الصيانة</h4>
+                              <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
+                                متاح
+                              </span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              يمكنك طلب تقرير فحص مفصل من خلال فريق المبيعات.
+                              التقرير يشمل فحص الهيكل، المحرك، ناقل الحركة، والحالة العامة للسيارة.
+                            </p>
+                            <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+                              <Car className="w-4 h-4" />
+                              <span>المصدر: Encar Korea</span>
+                            </div>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="p-5 rounded-2xl bg-muted/50 border border-border/50 text-center">
+                          <p className="text-muted-foreground">لا توجد بيانات فحص متوفرة لهذه السيارة</p>
                         </div>
                       )}
-
-                      <div className="bg-card dark:bg-slate-800 rounded-xl border border-border p-5">
-                        <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-bold">سجل الصيانة</h4>
-                          <span className="px-3 py-1 rounded-full bg-primary/10 text-primary text-xs font-bold">
-                            متاح
-                          </span>
-                        </div>
-                        <p className="text-sm text-muted-foreground">
-                          يمكنك طلب تقرير فحص مفصل من خلال فريق المبيعات. 
-                          التقرير يشمل فحص الهيكل، المحرك، ناقل الحركة، والحالة العامة للسيارة.
-                        </p>
-                        <div className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
-                          <Car className="w-4 h-4" />
-                          <span>المصدر: Encar Korea</span>
-                        </div>
-                      </div>
                     </motion.div>
                   )}
                 </AnimatePresence>
@@ -525,7 +833,7 @@ export default function CarDetails() {
 
           <div className="lg:col-span-1">
             <div className="sticky top-28 space-y-6">
-              
+
               <div className="bg-card rounded-2xl border border-border shadow-sm p-6 text-center">
                 <span className="text-muted-foreground text-sm block mb-1">السعر</span>
                 <div className="text-3xl font-black text-primary mb-1">
