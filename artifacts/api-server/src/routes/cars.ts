@@ -226,7 +226,28 @@ router.get("/search", async (req: Request, res: Response) => {
 });
 
 // GET /api/cars/filters
-router.get("/filters", async (_req: Request, res: Response) => {
+router.get("/filters", async (req: Request, res: Response) => {
+  const brand = req.query.brand as string;
+  const modelGroup = req.query.modelGroup as string;
+
+  // If brand is provided, return model groups
+  if (brand) {
+    const models = BRAND_MODELS[brand] || [];
+
+    // If modelGroup is provided, return models
+    if (modelGroup) {
+      return res.json({
+        models: models.map((m) => ({ value: m, label: m, count: 1 })),
+      });
+    }
+
+    // Return model groups (simplified: one group with all models)
+    return res.json({
+      modelGroups: [{ value: "all", label: "كل الموديلات", count: models.length }],
+    });
+  }
+
+  // Default: return all filters
   res.json({
     brands: Object.keys(BRAND_MODELS),
     models: BRAND_MODELS,
