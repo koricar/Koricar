@@ -1439,7 +1439,42 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    res.json({ ...car, inspectionReport });
+    // ✅ Map inspectionReport to frontend-compatible fields
+    const inspection = inspectionReport?.accident
+      ? {
+          hasDamage: inspectionReport.accident.hasAccident,
+          damageCount: inspectionReport.accident.accidentCount || 0,
+          parts: Array.isArray(inspectionReport.accident.parts)
+            ? inspectionReport.accident.parts.map((p: any) => ({
+                name: typeof p === "string" ? p : p.name || p.partName || "جزء",
+                damaged: typeof p === "string" ? true : p.damaged !== false,
+                section: typeof p === "string" ? "خارجي" : p.section || p.location || "خارجي",
+              }))
+            : [],
+        }
+      : inspectionReport?.performanceCheck?.checked
+        ? { hasDamage: false, damageCount: 0, parts: [] }
+        : null;
+
+    const insurance = inspectionReport?.insurance
+      ? {
+          totalAccidents: inspectionReport.history?.accidents || inspectionReport.accident?.accidentCount || 0,
+          myAccidents: 0,
+          otherAccidents: 0,
+          ownerChanges: inspectionReport.insurance.ownerChanges || inspectionReport.history?.previousOwners || 0,
+          ownerChangeDates: [],
+        }
+      : inspectionReport?.history
+        ? {
+            totalAccidents: inspectionReport.history.accidents || 0,
+            myAccidents: 0,
+            otherAccidents: 0,
+            ownerChanges: inspectionReport.history.previousOwners || 0,
+            ownerChangeDates: [],
+          }
+        : null;
+
+    res.json({ ...car, inspectionReport, inspection, insurance });
     return;
   } catch (err) {
     log.error?.({ err, id }, "Encar detail API error") ?? console.error(err);
