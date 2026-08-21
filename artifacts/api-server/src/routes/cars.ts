@@ -1668,7 +1668,7 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
         if (Array.isArray(accidents)) {
           accidentDetails = accidents.map((a: any) => {
             const typeStr = a.type || a.accidentType || "";
-            const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차");
+            const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차") || typeStr.includes("내사고");
             const amount = a.amount || a.cost || a.repairCost || a.claimAmount || 0;
             if (isMyAccident) {
               myAccidents++;
@@ -1687,21 +1687,31 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
         }
         const owners = insuranceData.owners || insuranceData.ownerChanges || [];
         if (Array.isArray(owners)) {
+          const currentYear = new Date().getFullYear();
           ownerChangeDates = owners
             .map((o: any) => o.date || o.changeDate || o.regDate)
-            .filter(Boolean);
+            .filter((d: any) => {
+              if (!d) return false;
+              const year = parseInt(String(d).slice(0, 4));
+              return year >= 1990 && year <= currentYear;
+            });
         }
       }
 
       // ── استخراج من history ───────────────────────────────────
       const historyData = carData.history ?? carData.carHistory ?? null;
       if (historyData) {
+        const currentYear = new Date().getFullYear();
         if (ownerChangeDates.length === 0) {
           const owners = historyData.owners || historyData.ownerChanges || [];
           if (Array.isArray(owners)) {
             ownerChangeDates = owners
               .map((o: any) => o.date || o.changeDate || o.regDate)
-              .filter(Boolean);
+              .filter((d: any) => {
+                if (!d) return false;
+                const year = parseInt(String(d).slice(0, 4));
+                return year >= 1990 && year <= currentYear;
+              });
           }
         }
         if (accidentDetails.length === 0 && historyData.accidents) {
