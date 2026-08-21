@@ -1433,3 +1433,4 @@ router.get("/:id", async (req, res): Promise<void> => {
     return;
   }
 });
+export default router;
