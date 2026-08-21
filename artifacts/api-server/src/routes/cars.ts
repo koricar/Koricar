@@ -1289,12 +1289,13 @@ router.get("/:id", async (req, res): Promise<void> => {
   const log = safeLog(req);
 
   try {
+    // ── 1. الجلب من API الرئيسي ─────────────────────────────
     const includeParams = [
       "CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT",
       "MANAGE", "OPTIONS", "CONDITION", "PARTNERSHIP", "CONTACT",
     ].join(",");
-    const url = `https://api.encar.com/v1/readside/vehicle/${id}?include=${includeParams}`;
-    const resp = await fetch(url, {
+    const apiUrl = `https://api.encar.com/v1/readside/vehicle/${id}?include=${includeParams}`;
+    const resp = await fetch(apiUrl, {
       headers: {
         Referer: `https://fem.encar.com/cars/detail/${id}`,
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -1319,7 +1320,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     const manage = raw.manage ?? {};
     const conditionData = raw.condition ?? {};
 
-    // ✅ استخراج Condition flags
+    // ── 2. استخراج البيانات الأساسية ─────────────────────────
     const conditions: string[] = [];
     const pushCond = (val: any) => {
       if (typeof val === "string") conditions.push(val);
@@ -1332,7 +1333,6 @@ router.get("/:id", async (req, res): Promise<void> => {
     pushCond(raw.condition?.types);
     pushCond(raw.condition?.list);
 
-    // ✅ استخراج Trust
     const trusts: string[] = [];
     const pushTrust = (val: any) => {
       if (typeof val === "string") trusts.push(val);
@@ -1341,7 +1341,6 @@ router.get("/:id", async (req, res): Promise<void> => {
     pushTrust(advertisement.trust);
     pushTrust(raw.trust);
 
-    // ✅ استخراج ServiceMark
     const serviceMarks: string[] = [];
     const pushSm = (val: any) => {
       if (typeof val === "string") serviceMarks.push(val);
@@ -1350,7 +1349,6 @@ router.get("/:id", async (req, res): Promise<void> => {
     pushSm(advertisement.serviceMark);
     pushSm(raw.serviceMark);
 
-    // ✅ استخراج Options
     const optionsList: string[] = [];
     const rawOpts = raw.options ?? manage.options ?? [];
     if (Array.isArray(rawOpts)) {
@@ -1361,46 +1359,37 @@ router.get("/:id", async (req, res): Promise<void> => {
       }
     }
 
-    // ✅ استخراج بيانات الفحص والحوادث (Performance Check / Inspection / History)
-    const performanceCheck = manage.performanceCheck ?? conditionData.performanceCheck ?? raw.performanceCheck ?? null;
-    const insurance = manage.insurance ?? conditionData.insurance ?? raw.insurance ?? null;
-    const accident = manage.accident ?? conditionData.accident ?? raw.accident ?? null;
-    const history = raw.history ?? manage.history ?? null;
-
-    // بناء تقرير الفحص للواجهة
+    // ── 3. جلب بيانات الفحص من HTML الصفحة ───────────────────
     let inspectionReport: any = null;
+    try {
+      const htmlResp = await fetch(`https://fem.encar.com/cars/detail/${id}`, {
+        headers: {
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+        },
+        signal: AbortSignal.timeout(8000),
+      });
+      if (htmlResp.ok) {
+        const html = await htmlResp.text();
+        inspectionReport = extractInspectionFromHtml(html, id);
+      }
+    } catch (htmlErr) {
+      log.warn?.({ carId: id, err: htmlErr }, "HTML scrape failed") ?? console.log("HTML scrape failed", htmlErr);
+    }
 
-    if (performanceCheck || insurance || accident || history) {
+    // لو ما طلع شي من HTML لكن السيارة مفحوصة، نرجع report بسيط
+    if (!inspectionReport && (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis")))) {
       inspectionReport = {
         hasReport: true,
-        performanceCheck: performanceCheck ? {
-          date: performanceCheck.checkDate ?? performanceCheck.date ?? performanceCheck.inspectionDate ?? null,
-          result: performanceCheck.result ?? performanceCheck.status ?? performanceCheck.grade ?? null,
-          details: performanceCheck.details ?? performanceCheck.items ?? performanceCheck.checkItems ?? null,
-        } : null,
-        insurance: insurance ? {
-          totalLoss: insurance.totalLoss ?? insurance.isTotalLoss ?? false,
-          flood: insurance.flood ?? insurance.isFlood ?? false,
-          theft: insurance.theft ?? insurance.isTheft ?? false,
-          repairCount: insurance.repairCount ?? insurance.repair ?? null,
-          ownerChanges: insurance.ownerChanges ?? insurance.ownerCount ?? null,
-        } : null,
-        accident: accident ? {
-          hasAccident: accident.hasAccident ?? accident.isAccident ?? false,
-          damage: accident.damage ?? accident.repairAmount ?? null,
-          parts: accident.parts ?? accident.damagedParts ?? null,
-        } : null,
-        history: history ? {
-          accidents: history.accidents ?? history.accidentCount ?? 0,
-          previousOwners: history.previousOwners ?? history.ownerCount ?? null,
-          firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null,
-          accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
-        } : null,
+        source: "basic",
+        message: "فحص معتمد من Encar",
+        performanceCheck: null,
+        insurance: null,
+        accident: null,
+        history: null,
       };
-    } else if (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis"))) {
-      // السيارة مفحوصة لكن ما في بيانات مفصلة متاحة
-      inspectionReport = { hasReport: true, performanceCheck: null, insurance: null, accident: null, history: null };
-    } else {
+    } else if (!inspectionReport) {
       inspectionReport = { hasReport: false };
     }
 
@@ -1408,13 +1397,11 @@ router.get("/:id", async (req, res): Promise<void> => {
       {
         carId: id,
         conditions,
-        hasPerformanceCheck: !!performanceCheck,
-        hasInsurance: !!insurance,
-        hasAccident: !!accident,
-        hasHistory: !!history,
+        inspectionHasReport: inspectionReport?.hasReport,
+        inspectionSource: inspectionReport?.source,
       },
-      "DEBUG: extracted inspection data"
-    ) ?? console.log("DEBUG inspection", { hasPerformanceCheck: !!performanceCheck, hasHistory: !!history });
+      "DEBUG: final inspection report"
+    ) ?? console.log("DEBUG final inspection", { hasReport: inspectionReport?.hasReport, source: inspectionReport?.source });
 
     const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
@@ -1452,13 +1439,7 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    // ✅ إضافة تقرير الفحص إلى الـ response
-    const finalCar = {
-      ...car,
-      inspectionReport,
-    };
-
-    res.json(finalCar);
+    res.json({ ...car, inspectionReport });
     return;
   } catch (err) {
     log.error?.({ err, id }, "Encar detail API error") ?? console.error(err);
@@ -1469,4 +1450,106 @@ router.get("/:id", async (req, res): Promise<void> => {
     return;
   }
 });
+
+// ── دالة استخراج الفحص من HTML ───────────────────────────────
+function extractInspectionFromHtml(html: string, carId: string): any | null {
+  // نبحث عن JSON مضمن في الـ HTML (Next.js / React hydration data)
+  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
+  if (nextDataMatch) {
+    try {
+      const nextData = JSON.parse(nextDataMatch[1]);
+      const pageProps = nextData.props?.pageProps ?? {};
+      const inspection = pageProps.inspection ?? pageProps.performanceCheck ?? pageProps.car?.inspection ?? null;
+      const insurance = pageProps.insurance ?? pageProps.car?.insurance ?? null;
+      const accident = pageProps.accident ?? pageProps.car?.accident ?? null;
+      const history = pageProps.history ?? pageProps.car?.history ?? null;
+
+      if (inspection || insurance || accident || history) {
+        return buildInspectionReport(inspection, insurance, accident, history);
+      }
+    } catch { /* ignore */ }
+  }
+
+  // نبحث عن window.__INITIAL_STATE__ أو window.__DATA__
+  const initialStateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s) ||
+                              html.match(/window\.__DATA__\s*=\s*({.*?});/s);
+  if (initialStateMatch) {
+    try {
+      const data = JSON.parse(initialStateMatch[1]);
+      const inspection = data.inspection ?? data.performanceCheck ?? data.car?.inspection ?? null;
+      const insurance = data.insurance ?? data.car?.insurance ?? null;
+      const accident = data.accident ?? data.car?.accident ?? null;
+      const history = data.history ?? data.car?.history ?? null;
+
+      if (inspection || insurance || accident || history) {
+        return buildInspectionReport(inspection, insurance, accident, history);
+      }
+    } catch { /* ignore */ }
+  }
+
+  // نبحث عن بيانات الفحص مباشرة في الـ HTML (rendered server-side)
+  const hasInspection = html.includes("성능점검") || html.includes("performance check") || html.includes("inspection");
+  const hasInsurance = html.includes("보험처리이력") || html.includes("insurance history");
+  const hasAccident = html.includes("사고이력") || html.includes("accident history");
+
+  if (hasInspection || hasInsurance || hasAccident) {
+    // استخراج أرقام من الـ HTML (مثل عدد الحوادث، مبلغ التصليح)
+    const accidentCountMatch = html.match(/사고\s*(\d+)\s*회/) || html.match(/accident[s]?\s*[:\\s]*(\d+)/i);
+    const repairAmountMatch = html.match(/보험\s*([\d,]+)\s*만원/) || html.match(/repair\s*[:\\s]*([\d,]+)/i);
+    const ownerChangeMatch = html.match(/소유자\s*변경\s*(\d+)\s*회/) || html.match(/owner\s*change[s]?\s*[:\\s]*(\d+)/i);
+
+    return {
+      hasReport: true,
+      source: "html_scrape",
+      message: "تقرير الفحص مستخرج من صفحة Encar",
+      performanceCheck: hasInspection ? { checked: true, date: null, result: null } : null,
+      insurance: hasInsurance ? {
+        totalLoss: html.includes("전손") || html.includes("total loss"),
+        flood: html.includes("침수") || html.includes("flood"),
+        theft: html.includes("도난") || html.includes("theft"),
+        repairCount: accidentCountMatch ? parseInt(accidentCountMatch[1], 10) : null,
+        repairAmount: repairAmountMatch ? parseInt(repairAmountMatch[1].replace(/,/g, ""), 10) : null,
+        ownerChanges: ownerChangeMatch ? parseInt(ownerChangeMatch[1], 10) : null,
+      } : null,
+      accident: hasAccident ? {
+        hasAccident: true,
+        accidentCount: accidentCountMatch ? parseInt(accidentCountMatch[1], 10) : null,
+        repairAmount: repairAmountMatch ? parseInt(repairAmountMatch[1].replace(/,/g, ""), 10) : null,
+      } : null,
+      history: null,
+    };
+  }
+
+  return null;
+}
+
+function buildInspectionReport(inspection: any, insurance: any, accident: any, history: any): any {
+  return {
+    hasReport: true,
+    source: "next_data",
+    performanceCheck: inspection ? {
+      date: inspection.checkDate ?? inspection.date ?? inspection.inspectionDate ?? null,
+      result: inspection.result ?? inspection.status ?? inspection.grade ?? null,
+      details: inspection.details ?? inspection.items ?? inspection.checkItems ?? null,
+    } : null,
+    insurance: insurance ? {
+      totalLoss: insurance.totalLoss ?? insurance.isTotalLoss ?? false,
+      flood: insurance.flood ?? insurance.isFlood ?? false,
+      theft: insurance.theft ?? insurance.isTheft ?? false,
+      repairCount: insurance.repairCount ?? insurance.repair ?? null,
+      ownerChanges: insurance.ownerChanges ?? insurance.ownerCount ?? null,
+    } : null,
+    accident: accident ? {
+      hasAccident: accident.hasAccident ?? accident.isAccident ?? false,
+      damage: accident.damage ?? accident.repairAmount ?? null,
+      parts: accident.parts ?? accident.damagedParts ?? null,
+    } : null,
+    history: history ? {
+      accidents: history.accidents ?? history.accidentCount ?? 0,
+      previousOwners: history.previousOwners ?? history.ownerCount ?? null,
+      firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null,
+      accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
+    } : null,
+  };
+}
 export default router;
