@@ -1284,11 +1284,10 @@ router.get("/search", async (req, res) => {
     return;
   }
 });
-
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   const log = safeLog(req);
-  
+
   try {
     const includeParams = [
       "CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT",
@@ -1306,15 +1305,8 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     if (!resp.ok) {
       let bodyText = "";
-      try {
-        bodyText = (await resp.text()).slice(0, 500);
-      } catch {
-        bodyText = "(تعذر قراءة نص الرد)";
-      }
-      log.error?.(
-        { carId: id, url, status: resp.status, statusText: resp.statusText, bodySample: bodyText },
-        "DEBUG: vehicle endpoint failed"
-      ) ?? console.error("vehicle endpoint failed", resp.status);
+      try { bodyText = (await resp.text()).slice(0, 500); } catch { bodyText = "(تعذر قراءة نص الرد)"; }
+      log.error?.({ carId: id, status: resp.status, bodySample: bodyText }, "vehicle endpoint failed") ?? console.error("vehicle failed", resp.status);
       res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
       return;
     }
@@ -1324,20 +1316,62 @@ router.get("/:id", async (req, res): Promise<void> => {
     const spec = raw.spec ?? {};
     const category = raw.category ?? {};
     const advertisement = raw.advertisement ?? {};
+    const manage = raw.manage ?? {};
+    const conditionData = raw.condition ?? {};
+
+    // ✅ استخراج Condition (فحص / سجل / حوادث) من الأماكن المحتملة
+    const conditions: string[] = [];
+    const pushCond = (val: any) => {
+      if (typeof val === "string") conditions.push(val);
+      else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && conditions.push(v));
+    };
+    pushCond(manage.condition);
+    pushCond(conditionData.inspection ? "Inspection" : undefined);
+    pushCond(conditionData.record ? "Record" : undefined);
+    pushCond(conditionData.resume ? "Resume" : undefined);
+    pushCond(raw.condition?.types);
+    pushCond(raw.condition?.list);
+
+    // ✅ استخراج Trust (HomeService, Meetgo, إلخ)
+    const trusts: string[] = [];
+    const pushTrust = (val: any) => {
+      if (typeof val === "string") trusts.push(val);
+      else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && trusts.push(v));
+    };
+    pushTrust(advertisement.trust);
+    pushTrust(raw.trust);
+
+    // ✅ استخراج ServiceMark
+    const serviceMarks: string[] = [];
+    const pushSm = (val: any) => {
+      if (typeof val === "string") serviceMarks.push(val);
+      else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && serviceMarks.push(v));
+    };
+    pushSm(advertisement.serviceMark);
+    pushSm(raw.serviceMark);
+
+    // ✅ استخراج Options (الخيارات القياسية من detail endpoint)
+    const optionsList: string[] = [];
+    const rawOpts = raw.options ?? manage.options ?? [];
+    if (Array.isArray(rawOpts)) {
+      for (const opt of rawOpts) {
+        if (typeof opt === "string") optionsList.push(opt);
+        else if (opt && typeof opt.optionName === "string") optionsList.push(opt.optionName);
+        else if (opt && typeof opt.name === "string") optionsList.push(opt.name);
+      }
+    }
 
     log.info?.(
       {
         carId: id,
-        specKeys: Object.keys(spec),
-        specSample: JSON.stringify(spec).slice(0, 1500),
-        categoryKeys: Object.keys(category),
-        categorySample: JSON.stringify(category).slice(0, 800),
-        topLevelVin: raw.vin ?? null,
-        optionsType: Array.isArray(raw.options) ? "array" : typeof raw.options,
-        optionsSample: JSON.stringify(raw.options).slice(0, 1500),
+        conditions,
+        trusts,
+        serviceMarks,
+        optionsCount: optionsList.length,
+        optionsSample: optionsList.slice(0, 10),
       },
-      "DEBUG: spec/category/options raw shapes"
-    ) ?? console.log("DEBUG shapes logged");
+      "DEBUG: extracted detail fields"
+    ) ?? console.log("DEBUG detail fields", { conditions, trusts, serviceMarks, optionsCount: optionsList.length });
 
     const encarCarLike: EncarCarExtended = {
       Id: String(raw.vehicleId ?? id),
@@ -1351,9 +1385,9 @@ router.get("/:id", async (req, res): Promise<void> => {
       Mileage: Number(spec.mileage ?? 0),
       Price: Number(advertisement.price ?? 0),
       Color: spec.colorName ?? "",
-      Condition: [],
-      Trust: [],
-      ServiceMark: [],
+      Condition: conditions,
+      Trust: trusts,
+      ServiceMark: serviceMarks,
       BuyType: [],
       OfficeCityState: advertisement.city ?? "",
       Photos: rawPhotos.map((p: any, i: number) => ({
@@ -1361,7 +1395,7 @@ router.get("/:id", async (req, res): Promise<void> => {
         ordering: p.ordering ?? i,
       })),
       Year: Number(category.formYear ?? category.yearMonth ?? 0),
-      Options: [],
+      Options: optionsList,
       Vin: raw.vin ?? spec.vin ?? undefined,
       BodyType: spec.bodyName ?? category.bodyName ?? undefined,
       SeatCount: spec.seatCount ?? undefined,
@@ -1381,7 +1415,8 @@ router.get("/:id", async (req, res): Promise<void> => {
         totalImages: car.images.length,
         vin: car.vin,
         bodyType: car.bodyType,
-        bodyTypeAr: car.bodyTypeAr,
+        features: car.features,
+        options: car.options,
         choiceOptionsCount: car.choiceOptions.length,
       },
       "DEBUG: final extended car mapped"
@@ -1398,5 +1433,3 @@ router.get("/:id", async (req, res): Promise<void> => {
     return;
   }
 });
-
-export default router;
