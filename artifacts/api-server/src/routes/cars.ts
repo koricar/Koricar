@@ -793,6 +793,106 @@ const BODY_TYPE_KR_TO_AR: Record<string, string> = {
   "제네시스": "جينيسيس",
 };
 
+// ── Maps for inspection translations ──────────────────────────────────────
+const PART_NAME_KR_TO_AR: Record<string, string> = {
+  "전면패널": "اللوجة الأمامية",
+  "보닛": "غطاء المحرك",
+  "프론트휀더": "الرفرف الأمامي",
+  "도어": "الباب",
+  "사이드미러": "المرآة الجانبية",
+  "루프패널": "سقف السيارة",
+  "쿼터패널": "الرفرف الخلفي",
+  "트렁크리드": "غطاء الصندوق",
+  "트렁크": "الصندوق الخلفي",
+  "리어범퍼": "الصدام الخلفي",
+  "프론트범퍼": "الصدام الأمامي",
+  "라디에이터서포트": "دعامة الرادياتير",
+  "사이드실패널": "عتبة الباب",
+  "필러": "العمود",
+  "후드": "غطاء المحرك",
+  "앞도어": "الباب الأمامي",
+  "뒷도어": "الباب الخلفي",
+  "슬라이딩도어": "الباب المنزلق",
+  "테일게이트": "باب الصندوق",
+  "리어패널": "اللوحة الخلفية",
+  "프론트패널": "اللوحة الأمامية",
+  "사이드패널": "اللوحة الجانبية",
+  "휀더": "الرفرف",
+};
+
+const DAMAGE_STATUS_KR_TO_AR: Record<string, string> = {
+  "교환": "تغيير",
+  "판금": "رش",
+  "도장": "رش",
+  "부식": "صدأ",
+  "스크래치": "خدش",
+  "찌그러짐": "انبعاج",
+  "손상": "تلف",
+  "파손": "تلف",
+  "교환(이력)": "تغيير",
+  "판금/도장": "رش",
+  "W": "رش",
+  "C": "صدأ",
+  "A": "خدش",
+  "U": "انبعاج",
+  "T": "تلف",
+  "X": "تغيير",
+};
+
+const DAMAGE_STATUS_TO_CODE: Record<string, string> = {
+  "교환": "X",
+  "판금": "W",
+  "도장": "W",
+  "부식": "C",
+  "스크래치": "A",
+  "찌그러짐": "U",
+  "손상": "T",
+  "파손": "T",
+  "W": "W",
+  "C": "C",
+  "A": "A",
+  "U": "U",
+  "T": "T",
+  "X": "X",
+};
+
+const ACCIDENT_TYPE_KR_TO_AR: Record<string, string> = {
+  "내차피해": "حادثي",
+  "상대차피해": "الطرف الآخر تحمّل",
+  "자차": "حادثي",
+  "타차": "الطرف الآخر تحمّل",
+  "내차": "حادثي",
+  "상대": "الطرف الآخر تحمّل",
+};
+
+function translatePartToAr(partName: string): string {
+  for (const [kr, ar] of Object.entries(PART_NAME_KR_TO_AR)) {
+    if (partName.includes(kr)) return ar;
+  }
+  return partName;
+}
+
+function translateStatusToAr(status: string): string {
+  for (const [kr, ar] of Object.entries(DAMAGE_STATUS_KR_TO_AR)) {
+    if (status.includes(kr)) return ar;
+  }
+  return status;
+}
+
+function translateAccidentTypeToAr(type: string): string {
+  for (const [kr, ar] of Object.entries(ACCIDENT_TYPE_KR_TO_AR)) {
+    if (type.includes(kr)) return ar;
+  }
+  return type;
+}
+
+function getStatusCode(status: string): string {
+  for (const [kr, code] of Object.entries(DAMAGE_STATUS_TO_CODE)) {
+    if (status.includes(kr)) return code;
+  }
+  return "W";
+}
+
 interface ChoiceOption {
   optionCd: string;
   optionName: string;
@@ -1439,7 +1539,7 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    // ✅ Map inspectionReport to frontend-compatible fields
+    // ✅ Map inspectionReport to frontend-compatible fields (legacy)
     const inspection = inspectionReport?.accident
       ? {
           hasDamage: inspectionReport.accident.hasAccident,
@@ -1459,22 +1559,52 @@ router.get("/:id", async (req, res): Promise<void> => {
     const insurance = inspectionReport?.insurance
       ? {
           totalAccidents: inspectionReport.history?.accidents || inspectionReport.accident?.accidentCount || 0,
-          myAccidents: 0,
-          otherAccidents: 0,
+          myAccidents: inspectionReport.myAccidents || 0,
+          otherAccidents: inspectionReport.otherAccidents || 0,
           ownerChanges: inspectionReport.insurance.ownerChanges || inspectionReport.history?.previousOwners || 0,
-          ownerChangeDates: [],
+          ownerChangeDates: inspectionReport.ownerChangeDates || [],
         }
       : inspectionReport?.history
         ? {
             totalAccidents: inspectionReport.history.accidents || 0,
-            myAccidents: 0,
-            otherAccidents: 0,
+            myAccidents: inspectionReport.myAccidents || 0,
+            otherAccidents: inspectionReport.otherAccidents || 0,
             ownerChanges: inspectionReport.history.previousOwners || 0,
-            ownerChangeDates: [],
+            ownerChangeDates: inspectionReport.ownerChangeDates || [],
           }
         : null;
 
-    res.json({ ...car, inspectionReport, inspection, insurance });
+    // ✅ Detailed inspection data for the new frontend UI
+    const inspectionDetailed = inspectionReport
+      ? {
+          hasReport: inspectionReport.hasReport,
+          source: inspectionReport.source,
+          message: inspectionReport.message || null,
+          // الرسم التوضيحي
+          diagram: {
+            exterior: inspectionReport.diagramExterior || [],
+            interior: inspectionReport.diagramInterior || [],
+          },
+          // جدول الأعطال
+          damages: inspectionReport.damages || [],
+          // ملخص التأمين
+          insuranceSummary: {
+            totalAccidents: (inspectionReport.accidentDetails || []).length,
+            myAccidents: inspectionReport.myAccidents || 0,
+            otherAccidents: inspectionReport.otherAccidents || 0,
+            ownerChanges: inspectionReport.insurance?.ownerChanges || inspectionReport.history?.previousOwners || 0,
+            ownerChangeDates: inspectionReport.ownerChangeDates || [],
+          },
+          // تفاصيل الحوادث
+          accidentDetails: inspectionReport.accidentDetails || [],
+          // إجمالي تكلفة حوادثي
+          totalMyAccidentCost: inspectionReport.totalMyAccidentCost || 0,
+          // الفحص الأساسي
+          performanceCheck: inspectionReport.performanceCheck || null,
+        }
+      : null;
+
+    res.json({ ...car, inspectionReport, inspection, insurance, inspectionDetailed });
     return;
   } catch (err) {
     log.error?.({ err, id }, "Encar detail API error") ?? console.error(err);
@@ -1488,50 +1618,158 @@ router.get("/:id", async (req, res): Promise<void> => {
 
 // ── دالة استخراج الفحص من HTML ───────────────────────────────
 function extractInspectionFromHtml(html: string, carId: string): any | null {
-  // نبحث عن JSON مضمن في الـ HTML (Next.js / React hydration data)
+  let damages: any[] = [];
+  let accidentDetails: any[] = [];
+  let ownerChangeDates: string[] = [];
+  let totalMyAccidentCost = 0;
+  let myAccidents = 0;
+  let otherAccidents = 0;
+  let diagramExterior: any[] = [];
+  let diagramInterior: any[] = [];
+
+  // ── 1. JSON مضمن في الـ HTML (Next.js / React hydration data) ──
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
   if (nextDataMatch) {
     try {
       const nextData = JSON.parse(nextDataMatch[1]);
       const pageProps = nextData.props?.pageProps ?? {};
-      const inspection = pageProps.inspection ?? pageProps.performanceCheck ?? pageProps.car?.inspection ?? null;
-      const insurance = pageProps.insurance ?? pageProps.car?.insurance ?? null;
-      const accident = pageProps.accident ?? pageProps.car?.accident ?? null;
-      const history = pageProps.history ?? pageProps.car?.history ?? null;
+      const carData = pageProps.car ?? pageProps.vehicle ?? pageProps;
 
-      if (inspection || insurance || accident || history) {
-        return buildInspectionReport(inspection, insurance, accident, history);
+      // ── استخراج الأضرار ──────────────────────────────────────
+      const inspection = carData.inspection ?? carData.performanceCheck ?? null;
+      if (inspection) {
+        const rawDamages = inspection.damages || inspection.parts || inspection.bodyDamages || [];
+        if (Array.isArray(rawDamages)) {
+          damages = rawDamages.map((d: any) => {
+            const partName = d.partName || d.name || d.part || d.panel || "جزء";
+            const status = d.status || d.type || d.repairType || d.damageType || "판금";
+            const rank = d.rank || d.grade || d.level || "Rank 1";
+            return {
+              part: partName,
+              partAr: translatePartToAr(partName),
+              status,
+              statusAr: translateStatusToAr(status),
+              statusCode: getStatusCode(status),
+              rank,
+            };
+          });
+        }
+        const rawDiagram = inspection.diagram || inspection.bodyDiagram || inspection.damageMap || null;
+        if (rawDiagram) {
+          diagramExterior = rawDiagram.exterior || rawDiagram.outer || [];
+          diagramInterior = rawDiagram.interior || rawDiagram.inner || rawDiagram.frame || [];
+        }
+      }
+
+      // ── استخراج بيانات التأمين ──────────────────────────────
+      const insuranceData = carData.insurance ?? carData.insuranceHistory ?? null;
+      if (insuranceData) {
+        const accidents = insuranceData.accidents || insuranceData.claims || [];
+        if (Array.isArray(accidents)) {
+          accidentDetails = accidents.map((a: any) => {
+            const typeStr = a.type || a.accidentType || "";
+            const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차");
+            const amount = a.amount || a.cost || a.repairCost || a.claimAmount || 0;
+            if (isMyAccident) {
+              myAccidents++;
+              totalMyAccidentCost += amount;
+            } else {
+              otherAccidents++;
+            }
+            return {
+              date: a.date || a.accidentDate || a.occurrenceDate,
+              type: typeStr,
+              typeAr: translateAccidentTypeToAr(typeStr),
+              amount,
+              description: a.description || "",
+            };
+          });
+        }
+        const owners = insuranceData.owners || insuranceData.ownerChanges || [];
+        if (Array.isArray(owners)) {
+          ownerChangeDates = owners
+            .map((o: any) => o.date || o.changeDate || o.regDate)
+            .filter(Boolean);
+        }
+      }
+
+      // ── استخراج من history ───────────────────────────────────
+      const historyData = carData.history ?? carData.carHistory ?? null;
+      if (historyData) {
+        if (ownerChangeDates.length === 0) {
+          const owners = historyData.owners || historyData.ownerChanges || [];
+          if (Array.isArray(owners)) {
+            ownerChangeDates = owners
+              .map((o: any) => o.date || o.changeDate || o.regDate)
+              .filter(Boolean);
+          }
+        }
+        if (accidentDetails.length === 0 && historyData.accidents) {
+          accidentDetails = historyData.accidents.map((a: any) => ({
+            date: a.date || a.accidentDate,
+            type: a.type || a.accidentType,
+            typeAr: translateAccidentTypeToAr(a.type || a.accidentType),
+            amount: a.amount || a.cost || 0,
+            description: a.description || "",
+          }));
+        }
+      }
+
+      if (damages.length > 0 || accidentDetails.length > 0 || ownerChangeDates.length > 0 || inspection) {
+        return buildInspectionReport(inspection, insuranceData, null, historyData, {
+          damages,
+          accidentDetails,
+          ownerChangeDates,
+          totalMyAccidentCost,
+          myAccidents,
+          otherAccidents,
+          diagramExterior,
+          diagramInterior,
+        });
       }
     } catch { /* ignore */ }
   }
 
-  // نبحث عن window.__INITIAL_STATE__ أو window.__DATA__
+  // ── 2. window.__INITIAL_STATE__ أو window.__DATA__ ───────────
   const initialStateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s) ||
                               html.match(/window\.__DATA__\s*=\s*({.*?});/s);
   if (initialStateMatch) {
     try {
       const data = JSON.parse(initialStateMatch[1]);
       const inspection = data.inspection ?? data.performanceCheck ?? data.car?.inspection ?? null;
-      const insurance = data.insurance ?? data.car?.insurance ?? null;
-      const accident = data.accident ?? data.car?.accident ?? null;
-      const history = data.history ?? data.car?.history ?? null;
+      const insuranceData = data.insurance ?? data.car?.insurance ?? null;
+      const historyData = data.history ?? data.car?.history ?? null;
 
-      if (inspection || insurance || accident || history) {
-        return buildInspectionReport(inspection, insurance, accident, history);
+      if (inspection || insuranceData || historyData) {
+        return buildInspectionReport(inspection, insuranceData, null, historyData, {
+          damages,
+          accidentDetails,
+          ownerChangeDates,
+          totalMyAccidentCost,
+          myAccidents,
+          otherAccidents,
+          diagramExterior,
+          diagramInterior,
+        });
       }
     } catch { /* ignore */ }
   }
 
-  // نبحث عن بيانات الفحص مباشرة في الـ HTML (rendered server-side)
+  // ── 3. استخراج من HTML مباشرة (rendered server-side) ─────────
   const hasInspection = html.includes("성능점검") || html.includes("performance check") || html.includes("inspection");
   const hasInsurance = html.includes("보험처리이력") || html.includes("insurance history");
   const hasAccident = html.includes("사고이력") || html.includes("accident history");
 
   if (hasInspection || hasInsurance || hasAccident) {
-    // استخراج أرقام من الـ HTML (مثل عدد الحوادث، مبلغ التصليح)
     const accidentCountMatch = html.match(/사고\s*(\d+)\s*회/) || html.match(/accident[s]?\s*[:\\s]*(\d+)/i);
     const repairAmountMatch = html.match(/보험\s*([\d,]+)\s*만원/) || html.match(/repair\s*[:\\s]*([\d,]+)/i);
     const ownerChangeMatch = html.match(/소유자\s*변경\s*(\d+)\s*회/) || html.match(/owner\s*change[s]?\s*[:\\s]*(\d+)/i);
+
+    // محاولة استخراج تواريخ تغيير الملكية
+    const dateMatches = html.match(/(\d{4}[-./]\d{2}[-./]\d{2})/g);
+    if (dateMatches) {
+      ownerChangeDates = [...new Set(dateMatches)].slice(0, 10);
+    }
 
     return {
       hasReport: true,
@@ -1552,13 +1790,38 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
         repairAmount: repairAmountMatch ? parseInt(repairAmountMatch[1].replace(/,/g, ""), 10) : null,
       } : null,
       history: null,
+      damages,
+      accidentDetails,
+      ownerChangeDates,
+      totalMyAccidentCost: 0,
+      myAccidents: 0,
+      otherAccidents: 0,
+      diagramExterior,
+      diagramInterior,
     };
   }
 
   return null;
 }
 
-function buildInspectionReport(inspection: any, insurance: any, accident: any, history: any): any {
+function buildInspectionReport(
+  inspection: any,
+  insurance: any,
+  accident: any,
+  history: any,
+  extras?: {
+    damages?: any[];
+    accidentDetails?: any[];
+    ownerChangeDates?: string[];
+    totalMyAccidentCost?: number;
+    myAccidents?: number;
+    otherAccidents?: number;
+    diagramExterior?: any[];
+    diagramInterior?: any[];
+  }
+): any {
+  const ext = extras || {};
+
   return {
     hasReport: true,
     source: "next_data",
@@ -1585,6 +1848,15 @@ function buildInspectionReport(inspection: any, insurance: any, accident: any, h
       firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null,
       accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
     } : null,
+    // الحقول الجديدة للعرض التفصيلي
+    damages: ext.damages ?? [],
+    accidentDetails: ext.accidentDetails ?? [],
+    ownerChangeDates: ext.ownerChangeDates ?? [],
+    totalMyAccidentCost: ext.totalMyAccidentCost ?? 0,
+    myAccidents: ext.myAccidents ?? 0,
+    otherAccidents: ext.otherAccidents ?? 0,
+    diagramExterior: ext.diagramExterior ?? [],
+    diagramInterior: ext.diagramInterior ?? [],
   };
 }
 export default router;
