@@ -1,3 +1,5 @@
+"use client";
+
 import { useParams, Link } from "wouter";
 import { useGetCarById } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
@@ -28,144 +30,10 @@ const TABS = [
   { id: "inspection", label: "الفحص والتأمين" },
 ];
 
-// ─── Inspection sub-tabs (matching Encar) ───
-const INSPECTION_TABS = [
-  { id: "diagnosis", label: "تشخيص كورياكار" },
-  { id: "performance", label: "فحص الأداء" },
-  { id: "insurance", label: "سجل التأمين" },
-];
-
-// ─── Color map for damage status codes ───
-const STATUS_COLORS: Record<string, { bg: string; text: string; fill: string; stroke: string; twBg: string }> = {
-  X: { bg: "bg-red-500",      text: "text-red-400",      fill: "#ef4444", stroke: "#dc2626", twBg: "bg-red-500" },
-  W: { bg: "bg-blue-500",     text: "text-blue-400",     fill: "#3b82f6", stroke: "#2563eb", twBg: "bg-blue-500" },
-  C: { bg: "bg-orange-500",   text: "text-orange-400",   fill: "#f97316", stroke: "#ea580c", twBg: "bg-orange-500" },
-  A: { bg: "bg-sky-400",      text: "text-sky-400",      fill: "#38bdf8", stroke: "#0ea5e9", twBg: "bg-sky-400" },
-  U: { bg: "bg-emerald-500",  text: "text-emerald-400",  fill: "#10b981", stroke: "#059669", twBg: "bg-emerald-500" },
-  T: { bg: "bg-gray-500",     text: "text-gray-400",     fill: "#6b7280", stroke: "#4b5563", twBg: "bg-gray-500" },
-};
-
-const LEGEND_ITEMS = [
-  { code: "X", labelAr: "استبدال", labelEn: "Exchange" },
-  { code: "W", labelAr: "سمكرة / لحام", labelEn: "Sheet Metal" },
-  { code: "C", labelAr: "تآكل", labelEn: "Corrosion" },
-  { code: "A", labelAr: "خدوش", labelEn: "Scratch" },
-  { code: "U", labelAr: "تجاعيد", labelEn: "Dent" },
-  { code: "T", labelAr: "تلف", labelEn: "Damage" },
-];
-
-// ─── Encar inspect images ───
-// ⚠️ حمل هذه الصور على سيرفرك: public/images/inspect/
-const INSPECT_IMAGES = {
-  exterior: "/images/inspect/bg_inspect_front.png",  // الهيكل الخارجي (أبواب مفتوحة)
-  interior: "/images/inspect/bg_inspect_back.png",     // الهيكل الداخلي
-};
-
-// ─── Types for inspection data ───
-interface DamageItem {
-  part: string;
-  partAr: string;
-  status: string;
-  statusAr: string;
-  statusCode: string;
-  rank: string;
-}
-
-interface AccidentDetail {
-  date: string;
-  type: string;
-  typeAr: string;
-  amount: number;
-  description?: string;
-}
-
-interface InspectionDetailed {
-  hasReport: boolean;
-  source?: string;
-  message?: string | null;
-  diagram?: {
-    exterior?: Array<{ x: number; y: number; code: string; label: string }>;
-    interior?: Array<{ x: number; y: number; code: string; label: string }>;
-  };
-  damages?: DamageItem[];
-  insuranceSummary?: {
-    totalAccidents: number;
-    myAccidents: number;
-    otherAccidents: number;
-    ownerChanges: number;
-    ownerChangeDates: string[];
-  };
-  accidentDetails?: AccidentDetail[];
-  totalMyAccidentCost?: number;
-  performanceCheck?: {
-    checked: boolean;
-    date?: string | null;
-    result?: string | null;
-  } | null;
-}
-
-// ─── Car Diagram Component with REAL Encar Images ───
-function CarDiagram({
-  view,
-  dots = [],
-}: {
-  view: "exterior" | "interior";
-  dots?: Array<{ x: number; y: number; code: string; label: string }>;
-}) {
-  const imageUrl = INSPECT_IMAGES[view];
-
-  return (
-    <div className="relative w-full max-w-[540px] mx-auto">
-      {/* Real Encar car diagram image */}
-      <img
-        src={imageUrl}
-        alt={view === "exterior" ? "الهيكل الخارجي" : "الهيكل الداخلي"}
-        className="w-full h-auto select-none"
-        draggable={false}
-      />
-
-      {/* Damage dots overlay */}
-      {dots.map((dot, i) => {
-        const colors = STATUS_COLORS[dot.code] || STATUS_COLORS.T;
-        return (
-          <div
-            key={i}
-            className="absolute group cursor-pointer"
-            style={{
-              left: `${dot.x}%`,
-              top: `${dot.y}%`,
-              transform: "translate(-50%, -50%)",
-            }}
-          >
-            {/* Dot */}
-            <div
-              className={`w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[9px] font-bold text-white transition-transform duration-200 group-hover:scale-150 ${colors.twBg}`}
-            >
-              {dot.code}
-            </div>
-
-            {/* Tooltip */}
-            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
-              <div className="bg-slate-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap shadow-xl">
-                {dot.label}
-                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
-              </div>
-            </div>
-          </div>
-        );
-      })}
-    </div>
-  );
-}
-
 export default function CarDetails() {
   const { id } = useParams();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<"specs" | "features" | "inspection">("specs");
-  
-  // ─── Inspection sub-state ───
-  const [inspectTab, setInspectTab] = useState<"diagnosis" | "performance" | "insurance">("performance");
-  const [inspectView, setInspectView] = useState<"exterior" | "interior">("exterior");
 
   const { data: carData, isLoading, isError } = useGetCarById(id || "", {
     query: { enabled: !!id }
@@ -176,8 +44,6 @@ export default function CarDetails() {
   useEffect(() => {
     setCurrentImgIndex(0);
     setActiveTab("specs");
-    setInspectTab("performance");
-    setInspectView("exterior");
   }, [id]);
 
   const carImages: string[] = Array.isArray(car?.images) && car.images.length > 0
@@ -234,66 +100,8 @@ export default function CarDetails() {
     { label: "رقم الهيكل (VIN)", value: car?.vin || "—", icon: <Hash className="w-4 h-4" /> },
   ];
 
-  // ─── Inspection data handling ──────────────────────────────
-  const det: InspectionDetailed | null = car?.inspectionDetailed || null;
-  const legacyInspection = car?.inspection;
-  const legacyInsurance = car?.insurance;
-
-  const hasDetailedReport = det?.hasReport ?? false;
-  const hasLegacyReport = !!legacyInspection || !!legacyInsurance;
-  const hasAnyReport = hasDetailedReport || hasLegacyReport;
-
-  // Damage data
-  const damages = det?.damages || [];
-  const hasDamage = damages.length > 0 || legacyInspection?.hasDamage || (legacyInspection?.damageCount || 0) > 0;
-  const damageCount = damages.length || legacyInspection?.damageCount || 0;
-
-  // Display number (제시번호) — from API or fallback
+  const det = car?.inspectionDetailed || null;
   const displayNum = det?.source || car?.displayNumber || car?.inspectDisplayNo || "—";
-
-  // Diagram dots — use backend coordinates if available
-  const exteriorDots = det?.diagram?.exterior || (damages.length > 0
-    ? damages.map((d, i) => {
-        const partLower = d.part.toLowerCase();
-        let pos = { x: 50 + (i % 2 === 0 ? -15 : 15), y: 50 + (i * 10) % 40 };
-        if (partLower.includes("후드") || partLower.includes("보닛") || partLower.includes("hood")) {
-          pos = { x: 50, y: 22 };
-        } else if (partLower.includes("트렁크") || partLower.includes("trunk")) {
-          pos = { x: 50, y: 88 };
-        } else if (partLower.includes("앞도어") || partLower.includes("front door")) {
-          pos = { x: i % 2 === 0 ? 22 : 78, y: 38 };
-        } else if (partLower.includes("뒷도어") || partLower.includes("rear door")) {
-          pos = { x: i % 2 === 0 ? 22 : 78, y: 55 };
-        } else if (partLower.includes("휀더") || partLower.includes("fender")) {
-          pos = { x: i % 2 === 0 ? 18 : 82, y: 28 };
-        } else if (partLower.includes("쿼터") || partLower.includes("quarter")) {
-          pos = { x: i % 2 === 0 ? 18 : 82, y: 68 };
-        } else if (partLower.includes("범퍼") || partLower.includes("bumper")) {
-          pos = { x: 50, y: partLower.includes("front") || partLower.includes("앞") ? 12 : 94 };
-        } else if (partLower.includes("루프") || partLower.includes("roof")) {
-          pos = { x: 45 + (i * 8) % 15, y: 45 };
-        }
-        return { x: pos.x, y: pos.y, code: d.statusCode, label: d.partAr };
-      })
-    : []);
-  const interiorDots = det?.diagram?.interior || [];
-
-  // Insurance data
-  const insSummary = det?.insuranceSummary;
-  const accidentDetails = det?.accidentDetails || [];
-  const totalMyCost = det?.totalMyAccidentCost || 0;
-
-  const totalAccidents = insSummary?.totalAccidents ?? legacyInsurance?.totalAccidents ?? 0;
-  const myAccidents = insSummary?.myAccidents ?? legacyInsurance?.myAccidents ?? 0;
-  const otherAccidents = insSummary?.otherAccidents ?? legacyInsurance?.otherAccidents ?? 0;
-  const ownerChanges = insSummary?.ownerChanges ?? legacyInsurance?.ownerChanges ?? 0;
-  const ownerChangeDates = insSummary?.ownerChangeDates ?? legacyInsurance?.ownerChangeDates ?? [];
-
-  // ─── Pagination dots for inspect view ───
-  const inspectViews = [
-    { key: "exterior" as const, label: "الهيكل الخارجي" },
-    { key: "interior" as const, label: "الهيكل الداخلي" },
-  ];
 
   return (
     <Layout>
@@ -312,7 +120,7 @@ export default function CarDetails() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
 
           <div className="lg:col-span-2 space-y-6">
-            {/* ... صور السيارة (نفس الكود) ... */}
+            {/* Images */}
             <motion.div className="rounded-3xl overflow-hidden shadow-2xl bg-card aspect-[16/10] relative group">
               {carImages.length > 0 ? (
                 <div className="w-full h-full relative bg-black flex items-center justify-center">
@@ -365,7 +173,7 @@ export default function CarDetails() {
               </div>
             )}
 
-            {/* ─── TABS ─── */}
+            {/* TABS */}
             <div className="bg-card rounded-2xl border border-border shadow-sm overflow-hidden">
               <div className="flex border-b border-border">
                 {TABS.map((tab) => (
@@ -392,9 +200,7 @@ export default function CarDetails() {
               <div className="p-6">
                 <AnimatePresence mode="wait">
 
-                  {/* ═══════════════════════════════════════════════
-                       TAB: SPECS (نفس الكود)
-                      ═══════════════════════════════════════════════ */}
+                  {/* SPECS */}
                   {activeTab === "specs" && (
                     <motion.div
                       key="specs"
@@ -418,9 +224,7 @@ export default function CarDetails() {
                     </motion.div>
                   )}
 
-                  {/* ═══════════════════════════════════════════════
-                       TAB: FEATURES (نفس الكود)
-                      ═══════════════════════════════════════════════ */}
+                  {/* FEATURES */}
                   {activeTab === "features" && (
                     <motion.div
                       key="features"
@@ -497,9 +301,8 @@ export default function CarDetails() {
                     </motion.div>
                   )}
 
-                  {/* ═══════════════════════════════════════════════════════
-                       TAB: INSPECTION & INSURANCE — NEW ENCAR DESIGN
-                                      {activeTab === "inspection" && (
+                  {/* INSPECTION — using the new component */}
+                  {activeTab === "inspection" && (
                     <motion.div
                       key="inspection"
                       initial={{ opacity: 0, y: 10 }}
@@ -518,7 +321,7 @@ export default function CarDetails() {
             </div>
           </div>
 
-          {/* ─── Sidebar (نفس الكود) ─── */}
+          {/* Sidebar */}
           <div className="lg:col-span-1">
             <div className="sticky top-28 space-y-6">
 
