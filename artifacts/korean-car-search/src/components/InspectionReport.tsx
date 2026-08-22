@@ -47,165 +47,95 @@ interface InspectionDetailed {
 
 interface Props {
   inspection: InspectionDetailed | null;
+  displayNumber?: string; // ← رقم العرض من الـ API
 }
 
 // ── Color map ─────────────────────────────────────────────────────────────
-const STATUS_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  X: { bg: "bg-red-500",      text: "text-red-400",      border: "border-red-500" },
-  W: { bg: "bg-blue-500",     text: "text-blue-400",     border: "border-blue-500" },
-  C: { bg: "bg-orange-500",   text: "text-orange-400",   border: "border-orange-500" },
-  A: { bg: "bg-sky-400",      text: "text-sky-400",      border: "border-sky-400" },
-  U: { bg: "bg-emerald-500",  text: "text-emerald-400",  border: "border-emerald-500" },
-  T: { bg: "bg-gray-500",     text: "text-gray-400",     border: "border-gray-500" },
+const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; fill: string }> = {
+  X: { bg: "bg-red-500",      text: "text-red-400",      border: "border-red-500",      fill: "#ef4444" },
+  W: { bg: "bg-blue-500",     text: "text-blue-400",     border: "border-blue-500",     fill: "#3b82f6" },
+  C: { bg: "bg-orange-500",   text: "text-orange-400",   border: "border-orange-500",   fill: "#f97316" },
+  A: { bg: "bg-sky-400",      text: "text-sky-400",      border: "border-sky-400",      fill: "#38bdf8" },
+  U: { bg: "bg-emerald-500",  text: "text-emerald-400",  border: "border-emerald-500",  fill: "#10b981" },
+  T: { bg: "bg-gray-500",     text: "text-gray-400",     border: "border-gray-500",     fill: "#6b7280" },
 };
 
 const LEGEND_ITEMS = [
-  { code: "X", labelAr: "تغيير", labelEn: "Exchange" },
-  { code: "W", labelAr: "رش", labelEn: "Sheet Metal" },
-  { code: "C", labelAr: "صدأ", labelEn: "Corrosion" },
-  { code: "A", labelAr: "خدش", labelEn: "Scratch" },
-  { code: "U", labelAr: "انبعاج", labelEn: "Dent" },
+  { code: "X", labelAr: "استبدال", labelEn: "Exchange" },
+  { code: "W", labelAr: "سمكرة / لحام", labelEn: "Sheet Metal" },
+  { code: "C", labelAr: "تآكل", labelEn: "Corrosion" },
+  { code: "A", labelAr: "خدوش", labelEn: "Scratch" },
+  { code: "U", labelAr: "تجاعيد", labelEn: "Dent" },
   { code: "T", labelAr: "تلف", labelEn: "Damage" },
 ];
 
-// ── Car SVG (Top View) ────────────────────────────────────────────────────
-function CarDiagramTop({
-  dots,
+// ── Encar inspect images ──────────────────────────────────────────────────
+// ⚠️ حمل هذه الصور على سيرفرك: public/images/inspect/
+const INSPECT_IMAGES = {
+  exterior: "/images/inspect/bg_inspect_front.png",  // الهيكل الخارجي
+  interior: "/images/inspect/bg_inspect_back.png",     // الهيكل الداخلي
+};
+
+// ── Car Diagram Component with REAL Encar Images ──────────────────────────
+function CarDiagram({
+  view,
+  dots = [],
 }: {
+  view: "exterior" | "interior";
   dots?: Array<{ x: number; y: number; code: string; label: string }>;
 }) {
-  return (
-    <svg viewBox="0 0 200 360" className="w-full h-auto max-h-80">
-      {/* Car body outline */}
-      <path
-        d="M60 20 Q100 5 140 20 L155 50 L160 100 L165 150 L165 210 L160 260 L155 310 L140 340 Q100 355 60 340 L45 310 L40 260 L35 210 L35 150 L40 100 L45 50 Z"
-        fill="#f8fafc"
-        stroke="#94a3b8"
-        strokeWidth="1.5"
-      />
-      {/* Windshield */}
-      <path d="M55 80 Q100 70 145 80 L142 110 Q100 105 58 110 Z" fill="#e2e8f0" />
-      {/* Rear window */}
-      <path d="M58 250 Q100 245 142 250 L140 280 Q100 285 60 280 Z" fill="#e2e8f0" />
-      {/* Roof */}
-      <rect x="58" y="110" width="84" height="140" rx="4" fill="#f1f5f9" />
-      {/* Side windows */}
-      <rect x="48" y="115" width="10" height="60" rx="2" fill="#e2e8f0" />
-      <rect x="142" y="115" width="10" height="60" rx="2" fill="#e2e8f0" />
-      <rect x="48" y="185" width="10" height="60" rx="2" fill="#e2e8f0" />
-      <rect x="142" y="185" width="10" height="60" rx="2" fill="#e2e8f0" />
-      {/* Wheels */}
-      <circle cx="35" cy="90" r="14" fill="#cbd5e1" stroke="#94a3b8" />
-      <circle cx="165" cy="90" r="14" fill="#cbd5e1" stroke="#94a3b8" />
-      <circle cx="35" cy="270" r="14" fill="#cbd5e1" stroke="#94a3b8" />
-      <circle cx="165" cy="270" r="14" fill="#cbd5e1" stroke="#94a3b8" />
-      {/* Headlights */}
-      <ellipse cx="55" cy="35" rx="8" ry="5" fill="#e2e8f0" />
-      <ellipse cx="145" cy="35" rx="8" ry="5" fill="#e2e8f0" />
-      {/* Taillights */}
-      <ellipse cx="55" cy="325" rx="8" ry="5" fill="#e2e8f0" />
-      <ellipse cx="145" cy="325" rx="8" ry="5" fill="#e2e8f0" />
+  const imageUrl = INSPECT_IMAGES[view];
 
-      {/* Damage dots */}
-      {dots?.map((dot, i) => {
-        const color = STATUS_COLORS[dot.code]?.bg || "bg-gray-400";
+  return (
+    <div className="relative w-full max-w-[540px] mx-auto">
+      {/* Real Encar car diagram image */}
+      <img
+        src={imageUrl}
+        alt={view === "exterior" ? "الهيكل الخارجي" : "الهيكل الداخلي"}
+        className="w-full h-auto select-none"
+        draggable={false}
+      />
+
+      {/* Damage dots overlay */}
+      {dots.map((dot, i) => {
+        const color = STATUS_COLORS[dot.code]?.fill || "#6b7280";
         return (
-          <g key={i}>
-            <circle
-              cx={dot.x}
-              cy={dot.y}
-              r="6"
-              className={color}
-              stroke="white"
-              strokeWidth="1.5"
-            />
-            <text
-              x={dot.x}
-              y={dot.y + 1}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontSize="8"
-              fontWeight="bold"
+          <div
+            key={i}
+            className="absolute group cursor-pointer"
+            style={{
+              left: `${dot.x}%`,
+              top: `${dot.y}%`,
+              transform: "translate(-50%, -50%)",
+            }}
+          >
+            {/* Dot */}
+            <div
+              className="w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[9px] font-bold text-white transition-transform duration-200 group-hover:scale-150"
+              style={{ backgroundColor: color }}
             >
               {dot.code}
-            </text>
-          </g>
+            </div>
+
+            {/* Tooltip */}
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none z-10">
+              <div className="bg-slate-900 text-white text-xs font-medium px-3 py-1.5 rounded-lg whitespace-nowrap shadow-xl">
+                {dot.label}
+                <div className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-slate-900" />
+              </div>
+            </div>
+          </div>
         );
       })}
-    </svg>
-  );
-}
-
-// ── Car SVG (Front View) ──────────────────────────────────────────────────
-function CarDiagramFront({
-  dots,
-}: {
-  dots?: Array<{ x: number; y: number; code: string; label: string }>;
-}) {
-  return (
-    <svg viewBox="0 0 200 360" className="w-full h-auto max-h-80">
-      {/* Car body outline */}
-      <path
-        d="M40 40 Q100 20 160 40 L170 80 L175 140 L175 220 L170 280 L160 320 Q100 340 40 320 L30 280 L25 220 L25 140 L30 80 Z"
-        fill="#f8fafc"
-        stroke="#94a3b8"
-        strokeWidth="1.5"
-      />
-      {/* Windshield */}
-      <path d="M45 60 Q100 45 155 60 L150 100 Q100 90 50 100 Z" fill="#e2e8f0" />
-      {/* Hood */}
-      <rect x="45" y="105" width="110" height="50" rx="4" fill="#f1f5f9" />
-      {/* Grille */}
-      <rect x="60" y="160" width="80" height="25" rx="3" fill="#e2e8f0" />
-      {/* Headlights */}
-      <ellipse cx="55" cy="170" rx="12" ry="8" fill="#e2e8f0" />
-      <ellipse cx="145" cy="170" rx="12" ry="8" fill="#e2e8f0" />
-      {/* Bumper */}
-      <rect x="40" y="190" width="120" height="30" rx="6" fill="#f1f5f9" />
-      {/* License plate area */}
-      <rect x="70" y="200" width="60" height="15" rx="2" fill="#e2e8f0" />
-      {/* Wheels */}
-      <circle cx="35" cy="240" r="18" fill="#cbd5e1" stroke="#94a3b8" />
-      <circle cx="165" cy="240" r="18" fill="#cbd5e1" stroke="#94a3b8" />
-      {/* Side mirrors */}
-      <rect x="15" y="85" width="15" height="8" rx="3" fill="#e2e8f0" />
-      <rect x="170" y="85" width="15" height="8" rx="3" fill="#e2e8f0" />
-
-      {/* Damage dots */}
-      {dots?.map((dot, i) => {
-        const color = STATUS_COLORS[dot.code]?.bg || "bg-gray-400";
-        return (
-          <g key={i}>
-            <circle
-              cx={dot.x}
-              cy={dot.y}
-              r="6"
-              className={color}
-              stroke="white"
-              strokeWidth="1.5"
-            />
-            <text
-              x={dot.x}
-              y={dot.y + 1}
-              textAnchor="middle"
-              dominantBaseline="middle"
-              fill="white"
-              fontSize="8"
-              fontWeight="bold"
-            >
-              {dot.code}
-            </text>
-          </g>
-        );
-      })}
-    </svg>
+    </div>
   );
 }
 
 // ── Main Component ────────────────────────────────────────────────────────
-export default function InspectionReport({ inspection }: Props) {
-  const [activeTab, setActiveTab] = useState<"exterior" | "interior">("exterior");
+export default function InspectionReport({ inspection, displayNumber }: Props) {
+  // ← 3 تبويبات مطابقة للكوري
+  const [inspectTab, setInspectTab] = useState<"diagnosis" | "performance" | "insurance">("performance");
+  const [inspectView, setInspectView] = useState<"exterior" | "interior">("exterior");
 
   if (!inspection || !inspection.hasReport) {
     return (
@@ -220,161 +150,319 @@ export default function InspectionReport({ inspection }: Props) {
   const accidents = inspection.accidentDetails || [];
   const totalCost = inspection.totalMyAccidentCost || 0;
 
-  // Demo dots for the diagram (if backend doesn't provide coordinates)
-  const demoExteriorDots = damages.length > 0
-    ? damages.map((d, i) => ({
-        x: 80 + (i % 3) * 40,
-        y: 60 + Math.floor(i / 3) * 80,
-        code: d.statusCode,
-        label: d.partAr,
-      }))
-    : [];
+  // Diagram dots — use backend coordinates if available
+  const exteriorDots = inspection.diagram?.exterior || (damages.length > 0
+    ? damages.map((d, i) => {
+        const partLower = d.part.toLowerCase();
+        let pos = { x: 50 + (i % 2 === 0 ? -15 : 15), y: 50 + (i * 10) % 40 };
+        if (partLower.includes("후드") || partLower.includes("보닛") || partLower.includes("hood")) {
+          pos = { x: 50, y: 22 };
+        } else if (partLower.includes("트렁크") || partLower.includes("trunk")) {
+          pos = { x: 50, y: 88 };
+        } else if (partLower.includes("앞도어") || partLower.includes("front door")) {
+          pos = { x: i % 2 === 0 ? 22 : 78, y: 38 };
+        } else if (partLower.includes("뒷도어") || partLower.includes("rear door")) {
+          pos = { x: i % 2 === 0 ? 22 : 78, y: 55 };
+        } else if (partLower.includes("휀더") || partLower.includes("fender")) {
+          pos = { x: i % 2 === 0 ? 18 : 82, y: 28 };
+        } else if (partLower.includes("쿼터") || partLower.includes("quarter")) {
+          pos = { x: i % 2 === 0 ? 18 : 82, y: 68 };
+        } else if (partLower.includes("범퍼") || partLower.includes("bumper")) {
+          pos = { x: 50, y: partLower.includes("front") || partLower.includes("앞") ? 12 : 94 };
+        } else if (partLower.includes("루프") || partLower.includes("roof")) {
+          pos = { x: 45 + (i * 8) % 15, y: 45 };
+        }
+        return { x: pos.x, y: pos.y, code: d.statusCode, label: d.partAr };
+      })
+    : []);
+  const interiorDots = inspection.diagram?.interior || [];
 
-  const demoInteriorDots: typeof demoExteriorDots = [];
+  // Sub-tabs config
+  const INSPECTION_TABS = [
+    { id: "diagnosis" as const, label: "تشخيص كورياكار" },
+    { id: "performance" as const, label: "فحص الأداء" },
+    { id: "insurance" as const, label: "سجل التأمين" },
+  ];
+
+  const inspectViews = [
+    { key: "exterior" as const, label: "الهيكل الخارجي" },
+    { key: "interior" as const, label: "الهيكل الداخلي" },
+  ];
 
   return (
     <div className="space-y-6 text-white">
-      {/* ── Title ─────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold">تقرير الفحص</h2>
-        <div className="flex items-center gap-2 text-emerald-400">
-          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-          <span className="text-sm">فحص معتمد</span>
-        </div>
-      </div>
-
-      {/* ── Diagram Section ─────────────────────────────────── */}
-      <div className="bg-slate-800 rounded-2xl p-4">
-        {/* Tabs */}
-        <div className="flex gap-4 mb-4 border-b border-slate-700 pb-3">
+      {/* ── Sub-tabs (Encar style) ────────────────────────────── */}
+      <div className="flex border-b border-slate-700">
+        {INSPECTION_TABS.map((tab) => (
           <button
-            onClick={() => setActiveTab("exterior")}
-            className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
-              activeTab === "exterior"
-                ? "border-red-500 text-white"
-                : "border-transparent text-slate-400 hover:text-slate-200"
+            key={tab.id}
+            onClick={() => setInspectTab(tab.id)}
+            className={`flex-1 py-3 text-sm font-bold transition relative ${
+              inspectTab === tab.id
+                ? "text-white"
+                : "text-slate-400 hover:text-slate-200"
             }`}
           >
-            الهيكل الخارجي — ضرر واحد
+            {tab.label}
+            {inspectTab === tab.id && (
+              <div className="absolute bottom-0 left-[15%] right-[15%] h-0.5 bg-white" />
+            )}
           </button>
-          <button
-            onClick={() => setActiveTab("interior")}
-            className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
-              activeTab === "interior"
-                ? "border-red-500 text-white"
-                : "border-transparent text-slate-400 hover:text-slate-200"
-            }`}
-          >
-            الهيكل الأساسي
-          </button>
-        </div>
-
-        {/* Diagrams */}
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-white rounded-xl p-3">
-            <CarDiagramTop
-              dots={activeTab === "exterior" ? demoExteriorDots : demoInteriorDots}
-            />
-          </div>
-          <div className="bg-white rounded-xl p-3">
-            <CarDiagramFront
-              dots={activeTab === "exterior" ? demoExteriorDots : demoInteriorDots}
-            />
-          </div>
-        </div>
-
-        {/* Legend */}
-        <div className="flex flex-wrap gap-3 mt-4 justify-center">
-          {LEGEND_ITEMS.map((item) => (
-            <div key={item.code} className="flex items-center gap-1.5">
-              <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
-                  STATUS_COLORS[item.code]?.bg || "bg-gray-500"
-                }`}
-              >
-                {item.code}
-              </span>
-              <span className="text-xs text-slate-300">{item.labelAr}</span>
-            </div>
-          ))}
-        </div>
+        ))}
       </div>
 
-      {/* ── Damages Table ─────────────────────────────────────── */}
-      {damages.length > 0 && (
-        <div className="bg-slate-800 rounded-2xl p-4">
-          <div className="grid grid-cols-3 text-xs text-slate-400 mb-3 px-2">
-            <span>القطعة</span>
-            <span className="text-center">الحالة</span>
-            <span className="text-left">الدرجة</span>
-          </div>
-          {damages.map((d, i) => (
-            <div
-              key={i}
-              className="grid grid-cols-3 items-center py-3 border-t border-slate-700 px-2"
-            >
-              <div className="flex items-center gap-2">
-                <span
-                  className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
-                    STATUS_COLORS[d.statusCode]?.bg || "bg-gray-500"
-                  }`}
-                >
-                  {d.statusCode}
-                </span>
-                <span className="text-sm">{d.partAr}</span>
-                <span className="text-xs text-slate-500">/ {d.part}</span>
-              </div>
-              <div className="text-center text-sm text-slate-300">
-                {d.statusAr}
-                <span className="text-slate-500 text-xs mr-1">/ {d.status}</span>
-              </div>
-              <div className="text-left">
-                <span className="inline-block px-2 py-0.5 rounded-full text-xs bg-red-500/20 text-red-400 border border-red-500/30">
-                  {d.rank}
-                </span>
-              </div>
+      {/* ═══ TAB: DIAGNOSIS (تشخيص كورياكار) ═══ */}
+      {inspectTab === "diagnosis" && (
+        <div className="space-y-6">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-bold">تشخيص كورياكار</h2>
+            <div className="flex items-center gap-2 text-emerald-400">
+              <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+              </svg>
+              <span className="text-sm">معتمد</span>
             </div>
-          ))}
+          </div>
+
+          <div className="bg-emerald-500/5 border border-emerald-500/20 rounded-2xl p-5 flex items-center gap-4">
+            <div className="p-3 rounded-full bg-emerald-500/10 text-emerald-400">
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+            <div>
+              <p className="font-bold text-lg text-emerald-300">
+                تم الفحص بواسطة فريق كورياكار المتخصص
+              </p>
+              <p className="text-sm text-emerald-400/70 mt-1">
+                السيارة خاضعة لمعايير جودة صارمة قبل الشحن
+              </p>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
+            {[
+              { label: "فحص الهيكل", status: "تم" },
+              { label: "فحص المحرك", status: "تم" },
+              { label: "فحص ناقل الحركة", status: "تم" },
+              { label: "فحص الكهرباء", status: "تم" },
+              { label: "فحص التعليق", status: "تم" },
+              { label: "فحص الفرامل", status: "تم" },
+            ].map((item, i) => (
+              <div key={i} className="bg-slate-800 rounded-xl p-4 border border-slate-700 flex items-center justify-between">
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-1 rounded-full">
+                  {item.status}
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
-      {/* ── Insurance Summary ─────────────────────────────────── */}
-      {summary && (
-        <div className="bg-slate-800 rounded-2xl p-4">
-          <h3 className="text-lg font-bold mb-4 text-right">سجل التأمين</h3>
-          <div className="grid grid-cols-4 gap-3 mb-6">
-            <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-400 mb-1">تغييرات الملكية</p>
-              <p className="text-2xl font-bold text-white">{summary.ownerChanges}</p>
+      {/* ═══ TAB: PERFORMANCE (فحص الأداء) ═══ */}
+      {inspectTab === "performance" && (
+        <div className="space-y-6">
+          {/* Header + Display Number */}
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <h2 className="text-xl font-bold">تقرير الفحص</h2>
+            {displayNumber && (
+              <span className="text-sm text-slate-400 font-medium">
+                رقم العرض: <span className="text-white font-bold">{displayNumber}</span>
+              </span>
+            )}
+          </div>
+
+          {/* Status Banner */}
+          <div className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${
+            damages.length > 0
+              ? "bg-red-500/5 border-red-500/20"
+              : "bg-green-500/5 border-green-500/20"
+          }`}>
+            <div className={`p-3 rounded-full ${
+              damages.length > 0 ? "bg-red-500/10 text-red-400" : "bg-green-500/10 text-green-400"
+            }`}>
+              {damages.length > 0 ? (
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              ) : (
+                <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+              )}
             </div>
-            <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-400 mb-1">حوادث الطرف الآخر</p>
-              <p className="text-2xl font-bold text-white">{summary.otherAccidents}</p>
-            </div>
-            <div className="bg-slate-700/50 rounded-xl p-3 text-center">
-              <p className="text-xs text-slate-400 mb-1">حوادث من جانبي</p>
-              <p className="text-2xl font-bold text-white">{summary.myAccidents}</p>
-            </div>
-            <div className="bg-red-500/10 rounded-xl p-3 text-center border border-red-500/20">
-              <p className="text-xs text-red-300 mb-1">إجمالي الحوادث</p>
-              <p className="text-2xl font-bold text-red-400">{summary.totalAccidents}</p>
+            <div>
+              <p className={`font-bold text-lg ${damages.length > 0 ? "text-red-300" : "text-green-300"}`}>
+                {damages.length > 0
+                  ? `يوجد ${damages.length} ضرر مسجل على هيكل السيارة`
+                  : "لا توجد أضرار مُسجّلة على هيكل هذه السيارة"}
+              </p>
+              {damages.length === 0 && (
+                <p className="text-sm text-green-400/70 mt-1">
+                  الهيكل الخارجي والأساسي بحالة ممتازة
+                </p>
+              )}
             </div>
           </div>
 
-          {/* Accident Details Table */}
+          {/* Car Diagram with REAL Encar Images */}
+          <div className="bg-slate-800 rounded-2xl border border-slate-700 p-4">
+            {/* View tabs */}
+            <div className="flex gap-4 mb-4 border-b border-slate-700 pb-3">
+              <button
+                onClick={() => setInspectView("exterior")}
+                className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
+                  inspectView === "exterior"
+                    ? "border-red-500 text-white"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                الهيكل الخارجي {damages.length > 0 ? `— ضرر ${damages.length}` : "— لا يوجد"}
+              </button>
+              <button
+                onClick={() => setInspectView("interior")}
+                className={`text-sm font-medium pb-1 border-b-2 transition-colors ${
+                  inspectView === "interior"
+                    ? "border-red-500 text-white"
+                    : "border-transparent text-slate-400 hover:text-slate-200"
+                }`}
+              >
+                الهيكل الداخلي
+              </button>
+            </div>
+
+            {/* Real Encar Diagram */}
+            <div className="flex justify-center py-4">
+              <CarDiagram
+                view={inspectView}
+                dots={inspectView === "exterior" ? exteriorDots : interiorDots}
+              />
+            </div>
+
+            {/* Pagination dots */}
+            <div className="flex justify-center gap-2 mt-2">
+              {inspectViews.map((v) => (
+                <button
+                  key={v.key}
+                  onClick={() => setInspectView(v.key)}
+                  className={`h-2.5 rounded-full transition-all ${
+                    inspectView === v.key ? "bg-white w-6" : "bg-slate-600 w-2.5"
+                  }`}
+                  title={v.label}
+                />
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div className="flex flex-wrap gap-3 mt-6 justify-center bg-slate-700/30 rounded-xl p-4">
+              {LEGEND_ITEMS.map((item) => (
+                <div key={item.code} className="flex items-center gap-1.5">
+                  <span
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                      STATUS_COLORS[item.code]?.bg || "bg-gray-500"
+                    }`}
+                  >
+                    {item.code}
+                  </span>
+                  <span className="text-xs text-slate-300">{item.labelAr}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center text-xs text-slate-500 mt-3">
+              * للمركبات غير السيارات يتم العرض وفقاً للسيارات
+            </p>
+          </div>
+
+          {/* Damages Table */}
+          {damages.length > 0 && (
+            <div className="bg-slate-800 rounded-2xl border border-slate-700 overflow-hidden">
+              <div className="grid grid-cols-3 text-xs text-slate-400 px-4 py-3 bg-slate-700/30">
+                <span>القطعة</span>
+                <span className="text-center">الحالة</span>
+                <span className="text-left">الدرجة</span>
+              </div>
+              {damages.map((d, i) => (
+                <div
+                  key={i}
+                  className="grid grid-cols-3 items-center px-4 py-3 border-t border-slate-700"
+                >
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`w-6 h-6 rounded-full flex items-center justify-center text-[10px] font-bold text-white ${
+                        STATUS_COLORS[d.statusCode]?.bg || "bg-gray-500"
+                      }`}
+                    >
+                      {d.statusCode}
+                    </span>
+                    <div className="flex flex-col">
+                      <span className="text-sm font-medium">{d.partAr}</span>
+                      <span className="text-[10px] text-slate-500">{d.part}</span>
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <span className="text-sm">{d.statusAr}</span>
+                    <span className="text-xs text-slate-500 mr-1">/ {d.status}</span>
+                  </div>
+                  <div className="text-left">
+                    <span className="inline-block px-2.5 py-0.5 rounded-full text-xs font-bold bg-red-500/10 text-red-400 border border-red-500/20">
+                      {d.rank}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ═══ TAB: INSURANCE (سجل التأمين) ═══ */}
+      {inspectTab === "insurance" && summary && (
+        <div className="space-y-6">
+          <h3 className="text-lg font-black mb-4 flex items-center gap-2">
+            <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            سجل التأمين
+          </h3>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+              <span className="text-xs text-slate-400 block mb-1">تغييرات الملكية</span>
+              <span className="text-2xl font-black text-white">{summary.ownerChanges}</span>
+            </div>
+            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+              <span className="text-xs text-slate-400 block mb-1">حوادث الطرف الآخر</span>
+              <span className={`text-2xl font-black ${summary.otherAccidents > 0 ? "text-orange-400" : "text-green-400"}`}>
+                {summary.otherAccidents}
+              </span>
+            </div>
+            <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
+              <span className="text-xs text-slate-400 block mb-1">حوادث من جانبي</span>
+              <span className={`text-2xl font-black ${summary.myAccidents > 0 ? "text-red-400" : "text-green-400"}`}>
+                {summary.myAccidents}
+              </span>
+            </div>
+            <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/20 text-center">
+              <span className="text-xs text-red-300 block mb-1">إجمالي الحوادث</span>
+              <span className="text-2xl font-black text-red-400">{summary.totalAccidents}</span>
+            </div>
+          </div>
+
           {accidents.length > 0 && (
             <div className="mb-6">
-              <h4 className="text-sm font-bold text-slate-300 mb-3 text-right">سجل الحوادث</h4>
+              <h4 className="text-sm font-bold text-slate-300 mb-3">سجل الحوادث</h4>
               <div className="space-y-2">
                 {accidents.map((a, i) => (
                   <div
                     key={i}
-                    className="flex items-center justify-between bg-slate-700/30 rounded-xl px-4 py-3"
+                    className="flex items-center justify-between bg-slate-800 rounded-xl px-4 py-3 border border-slate-700"
                   >
-                    <div className="flex items-center gap-3">
-                      <span className="text-red-400 font-bold text-sm">﷼ {a.amount.toLocaleString()}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-red-400 font-bold text-sm">
+                        ₩ {a.amount.toLocaleString()}
+                      </span>
                     </div>
                     <div className="text-right">
                       <p className="text-sm text-slate-200">{a.typeAr}</p>
@@ -389,10 +477,9 @@ export default function InspectionReport({ inspection }: Props) {
             </div>
           )}
 
-          {/* Owner Change Dates */}
           {summary.ownerChangeDates.length > 0 && (
-            <div>
-              <h4 className="text-sm font-bold text-slate-300 mb-3 text-right">
+            <div className="mb-4">
+              <h4 className="text-sm font-bold text-slate-300 mb-3">
                 تاريخ تغيير الملكية
               </h4>
               <div className="flex flex-wrap gap-2">
@@ -408,11 +495,12 @@ export default function InspectionReport({ inspection }: Props) {
             </div>
           )}
 
-          {/* Total Cost */}
           {totalCost > 0 && (
-            <div className="mt-4 bg-red-500/10 rounded-xl p-4 text-right border border-red-500/20">
+            <div className="bg-red-500/5 rounded-xl p-4 text-right border border-red-500/20">
               <p className="text-sm text-red-300 mb-1">إجمالي تكلفة حوادثي</p>
-              <p className="text-2xl font-bold text-red-400">﷼ {totalCost.toLocaleString()}</p>
+              <p className="text-2xl font-black text-red-400">
+                ₩ {totalCost.toLocaleString()}
+              </p>
             </div>
           )}
         </div>
@@ -420,7 +508,7 @@ export default function InspectionReport({ inspection }: Props) {
 
       {/* ── Performance Check ─────────────────────────────────── */}
       {inspection.performanceCheck?.checked && (
-        <div className="bg-slate-800 rounded-2xl p-4">
+        <div className="bg-slate-800 rounded-2xl p-4 border border-slate-700">
           <h3 className="text-lg font-bold mb-2">سجل الصيانة</h3>
           <p className="text-sm text-slate-400">
             يمكنك تقرير فحص شامل تشمل فحص الهيكل، المحرك، ناقل الحركة، والحالة العامة للسيارة.
