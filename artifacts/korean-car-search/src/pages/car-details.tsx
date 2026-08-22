@@ -12,7 +12,7 @@ import {
   History, UserCheck, ShieldCheck, AlertCircle, XCircle
 } from "lucide-react";
 import QuoteRequestForm from "@/components/QuoteRequestForm";
-import InspectionReport from "@/components/inspect";
+import InspectionReport from "@/components/InspectionReport";
 import { motion, AnimatePresence } from "framer-motion";
 
 const FUEL_MAP: Record<string, string> = {
