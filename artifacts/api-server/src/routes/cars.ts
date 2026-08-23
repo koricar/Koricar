@@ -3,7 +3,18 @@ import { SearchCarsQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-const carCache = new Map<string, ReturnType<typeof mapEncarCar>>();
+// [1] إصلاح مشكلة تسرب الذاكرة بإضافة وقت انتهاء للكاش (TTL)
+const carCache = new Map<string, { data: ReturnType<typeof mapEncarCar>; timestamp: number }>();
+const CACHE_TTL_MS = 1000 * 60 * 60; // الاحتفاظ بالبيانات لمدة ساعة
+
+setInterval(() => {
+  const now = Date.now();
+  for (const [key, value] of carCache.entries()) {
+    if (now - value.timestamp > CACHE_TTL_MS) {
+      carCache.delete(key);
+    }
+  }
+}, 1000 * 60 * 10); // تنظيف الذاكرة كل 10 دقائق
 
 const ENCAR_API = "https://api.encar.com";
 const ENCAR_PHOTO = "https://ci.encar.com";
@@ -624,6 +635,7 @@ function formatPrice(price: number): string {
   return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
 
+// [2] إضافة دعم فلاتر السعر والسنة والممشى في الاستعلام الخاص بـ Encar
 function buildEncarQuery(params: {
   brand?: string;
   model?: string;
@@ -635,6 +647,9 @@ function buildEncarQuery(params: {
   color?: string;
   yearFrom?: number;
   yearTo?: number;
+  priceMin?: number;
+  priceMax?: number;
+  mileageMax?: number;
 }): { q: string; modelKr: string | null; modelRaw: string | null } {
   let modelKr: string | null = null;
   let modelRaw: string | null = null;
@@ -682,7 +697,7 @@ function buildEncarQuery(params: {
     if (forceModel) {
       q += `_.Model.${cleanInput}.`;
       modelKr = cleanInput;
-          } else if (forceGroup) {
+    } else if (forceGroup) {
       q += `_.ModelGroup.${cleanInput}.`;
       modelKr = cleanInput;
     } else if (params.modelType === "group") {
@@ -741,6 +756,25 @@ function buildEncarQuery(params: {
   if (params.color && params.color !== "any") {
     const kr = EN_COLOR_TO_KR[params.color.toLowerCase()];
     if (kr) q += `_.Color.${kr}.`;
+  }
+
+  // فلترة السنة من المصدر 
+  if (params.yearFrom || params.yearTo) {
+    const from = params.yearFrom ? `${params.yearFrom}00` : ""; // صيغة YYYYMM
+    const to = params.yearTo ? `${params.yearTo}99` : "";
+    q += `_.Year.${from}..${to}.`;
+  }
+
+  // فلترة السعر من المصدر (بوحدة الـ 10 آلاف وون كوري)
+  if (params.priceMin !== undefined || params.priceMax !== undefined) {
+    const min = params.priceMin !== undefined ? params.priceMin : "";
+    const max = params.priceMax !== undefined ? params.priceMax : "";
+    q += `_.Price.${min}..${max}.`;
+  }
+
+  // فلترة الممشى من المصدر
+  if (params.mileageMax !== undefined) {
+    q += `_.Mileage...${params.mileageMax}.`;
   }
 
   q += ")";
@@ -899,6 +933,7 @@ interface ChoiceOption {
   price?: number;
 }
 
+// [3] إصلاح معالجة أخطاء جلب الخيارات (Options Error Handling)
 async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
   try {
     const url = `https://api.encar.com/v1/readside/vehicles/car/${carId}/options/choice`;
@@ -913,7 +948,8 @@ async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
     if (!resp.ok) return [];
     const data = (await resp.json()) as any;
     return Array.isArray(data) ? data : [];
-  } catch {
+  } catch (err: any) {
+    console.error(`[Error] Failed to fetch choice options for car ${carId}: ${err.message}`);
     return [];
   }
 }
@@ -948,7 +984,6 @@ const KOREAN_DOMESTIC_BRANDS = new Set([
   "hyundai", "kia", "genesis", "ssangyong",
 ]);
 
-// ✅ FIX: استخدم FormYear لأن Year غير موجود في نتائج البحث العام
 function getModelYear(car: EncarCar): number {
   const yearStr = car.FormYear ?? String(car.Year ?? 0);
   const year = parseInt(yearStr, 10);
@@ -1190,7 +1225,6 @@ function mapEncarCarExtended(car: EncarCarExtended) {
   };
 }
 
-// ✅ مساعد لتفادي crash إذا req.log غير موجود
 function safeLog(req: any) {
   return req.log ?? console;
 }
@@ -1332,13 +1366,14 @@ router.get("/search", async (req, res) => {
   try {
     const { q: encarQ, modelRaw } = buildEncarQuery({
       brand, model, sunroof, fuelType, transmission, bodyType, color,
-      yearFrom, yearTo, modelType,
+      yearFrom, yearTo, modelType, priceMin, priceMax, mileageMax
     });
     const offset = (page - 1) * limit;
     const url = new URL(`${ENCAR_API}/search/car/list/general`);
     url.searchParams.set("count", "true");
     url.searchParams.set("q", encarQ);
     url.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
+    
     const resp = await fetch(url.toString(), {
       headers: {
         Referer: "https://www.encar.com",
@@ -1347,9 +1382,11 @@ router.get("/search", async (req, res) => {
       },
       signal: AbortSignal.timeout(10000),
     });
+    
     if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
     const data = (await resp.json()) as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
+    
     const seenIds = new Set<string>();
     const seenFp = new Set<string>();
     cars = cars.filter(c => {
@@ -1360,16 +1397,18 @@ router.get("/search", async (req, res) => {
       seenFp.add(fp);
       return true;
     });
-    cars.forEach((c) => carCache.set(c.id, c));
+    
+    // حفظ في الكاش باستخدام الصيغة الجديدة المحمية
+    cars.forEach((c) => carCache.set(c.id, { data: c, timestamp: Date.now() }));
+    
+    // نترك فلتر rawModel فقط لأنه لا يترجم جيداً في طلب Encar API
     if (modelRaw) {
       const needle = modelRaw.toLowerCase();
       cars = cars.filter((c) => c.model.toLowerCase().includes(needle));
     }
-    if (yearFrom !== undefined) cars = cars.filter((c) => c.year >= yearFrom);
-    if (yearTo !== undefined) cars = cars.filter((c) => c.year <= yearTo);
-    if (priceMin !== undefined) cars = cars.filter((c) => c.price >= priceMin);
-    if (priceMax !== undefined) cars = cars.filter((c) => c.price <= priceMax);
-    if (mileageMax !== undefined) cars = cars.filter((c) => c.mileage <= mileageMax);
+    
+    // تمت إزالة الفلاتر المحلية (year, price, mileage) لأن API الخاص بـ Encar يتكفل بها الآن
+    
     const total = data.Count;
     const totalPages = Math.ceil(total / limit);
     const paginated = cars.slice(0, limit);
@@ -1384,6 +1423,7 @@ router.get("/search", async (req, res) => {
     return;
   }
 });
+
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   const log = safeLog(req);
@@ -1478,7 +1518,6 @@ router.get("/:id", async (req, res): Promise<void> => {
       log.warn?.({ carId: id, err: htmlErr }, "HTML scrape failed") ?? console.log("HTML scrape failed", htmlErr);
     }
 
-    // لو ما طلع شي من HTML لكن السيارة مفحوصة، نرجع report بسيط
     if (!inspectionReport && (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis")))) {
       inspectionReport = {
         hasReport: true,
@@ -1539,7 +1578,6 @@ router.get("/:id", async (req, res): Promise<void> => {
 
     const car = mapEncarCarExtended(encarCarLike);
 
-    // ✅ Map inspectionReport to frontend-compatible fields (legacy)
     const inspection = inspectionReport?.accident
       ? {
           hasDamage: inspectionReport.accident.hasAccident,
@@ -1574,20 +1612,16 @@ router.get("/:id", async (req, res): Promise<void> => {
           }
         : null;
 
-    // ✅ Detailed inspection data for the new frontend UI
     const inspectionDetailed = inspectionReport
       ? {
           hasReport: inspectionReport.hasReport,
           source: inspectionReport.source,
           message: inspectionReport.message || null,
-          // الرسم التوضيحي
           diagram: {
             exterior: inspectionReport.diagramExterior || [],
             interior: inspectionReport.diagramInterior || [],
           },
-          // جدول الأعطال
           damages: inspectionReport.damages || [],
-          // ملخص التأمين
           insuranceSummary: {
             totalAccidents: (inspectionReport.accidentDetails || []).length,
             myAccidents: inspectionReport.myAccidents || 0,
@@ -1595,11 +1629,8 @@ router.get("/:id", async (req, res): Promise<void> => {
             ownerChanges: inspectionReport.insurance?.ownerChanges || inspectionReport.history?.previousOwners || 0,
             ownerChangeDates: inspectionReport.ownerChangeDates || [],
           },
-          // تفاصيل الحوادث
           accidentDetails: inspectionReport.accidentDetails || [],
-          // إجمالي تكلفة حوادثي
           totalMyAccidentCost: inspectionReport.totalMyAccidentCost || 0,
-          // الفحص الأساسي
           performanceCheck: inspectionReport.performanceCheck || null,
         }
       : null;
@@ -1627,7 +1658,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
   let diagramExterior: any[] = [];
   let diagramInterior: any[] = [];
 
-  // ── 1. JSON مضمن في الـ HTML (Next.js / React hydration data) ──
   const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
   if (nextDataMatch) {
     try {
@@ -1635,7 +1665,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
       const pageProps = nextData.props?.pageProps ?? {};
       const carData = pageProps.car ?? pageProps.vehicle ?? pageProps;
 
-      // ── استخراج الأضرار ──────────────────────────────────────
       const inspection = carData.inspection ?? carData.performanceCheck ?? null;
       if (inspection) {
         const rawDamages = inspection.damages || inspection.parts || inspection.bodyDamages || [];
@@ -1661,7 +1690,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
         }
       }
 
-      // ── استخراج بيانات التأمين ──────────────────────────────
       const insuranceData = carData.insurance ?? carData.insuranceHistory ?? null;
       if (insuranceData) {
         const accidents = insuranceData.accidents || insuranceData.claims || [];
@@ -1692,13 +1720,13 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
             .map((o: any) => o.date || o.changeDate || o.regDate)
             .filter((d: any) => {
               if (!d) return false;
-              const year = parseInt(String(d).slice(0, 4));
+              // [4] حماية عملية قراءة التاريخ (Safeguard) لتفادي انهيار الكود
+              const year = (d && typeof d === 'string' && d.length >= 4) ? parseInt(d.slice(0, 4), 10) : 0;
               return year >= 1990 && year <= currentYear;
             });
         }
       }
 
-      // ── استخراج من history ───────────────────────────────────
       const historyData = carData.history ?? carData.carHistory ?? null;
       if (historyData) {
         const currentYear = new Date().getFullYear();
@@ -1709,7 +1737,8 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
               .map((o: any) => o.date || o.changeDate || o.regDate)
               .filter((d: any) => {
                 if (!d) return false;
-                const year = parseInt(String(d).slice(0, 4));
+                // [4] حماية عملية قراءة التاريخ هنا أيضاً
+                const year = (d && typeof d === 'string' && d.length >= 4) ? parseInt(d.slice(0, 4), 10) : 0;
                 return year >= 1990 && year <= currentYear;
               });
           }
@@ -1740,7 +1769,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
     } catch { /* ignore */ }
   }
 
-  // ── 2. window.__INITIAL_STATE__ أو window.__DATA__ ───────────
   const initialStateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s) ||
                               html.match(/window\.__DATA__\s*=\s*({.*?});/s);
   if (initialStateMatch) {
@@ -1765,7 +1793,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
     } catch { /* ignore */ }
   }
 
-  // ── 3. استخراج من HTML مباشرة (rendered server-side) ─────────
   const hasInspection = html.includes("성능점검") || html.includes("performance check") || html.includes("inspection");
   const hasInsurance = html.includes("보험처리이력") || html.includes("insurance history");
   const hasAccident = html.includes("사고이력") || html.includes("accident history");
@@ -1775,7 +1802,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
     const repairAmountMatch = html.match(/보험\s*([\d,]+)\s*만원/) || html.match(/repair\s*[:\\s]*([\d,]+)/i);
     const ownerChangeMatch = html.match(/소유자\s*변경\s*(\d+)\s*회/) || html.match(/owner\s*change[s]?\s*[:\\s]*(\d+)/i);
 
-    // محاولة استخراج تواريخ تغيير الملكية
     const dateMatches = html.match(/(\d{4}[-./]\d{2}[-./]\d{2})/g);
     if (dateMatches) {
       ownerChangeDates = [...new Set(dateMatches)].slice(0, 10);
@@ -1858,7 +1884,6 @@ function buildInspectionReport(
       firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null,
       accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
     } : null,
-    // الحقول الجديدة للعرض التفصيلي
     damages: ext.damages ?? [],
     accidentDetails: ext.accidentDetails ?? [],
     ownerChangeDates: ext.ownerChangeDates ?? [],
@@ -1869,4 +1894,5 @@ function buildInspectionReport(
     diagramInterior: ext.diagramInterior ?? [],
   };
 }
+
 export default router;
