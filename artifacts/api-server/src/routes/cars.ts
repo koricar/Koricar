@@ -3,7 +3,7 @@ import { SearchCarsQueryParams } from "@workspace/api-zod";
 
 const router: IRouter = Router();
 
-// [1] إصلاح مشكلة تسرب الذاكرة بإضافة وقت انتهاء للكاش (TTL)
+// نظام حماية الذاكرة (Cache TTL)
 const carCache = new Map<string, { data: ReturnType<typeof mapEncarCar>; timestamp: number }>();
 const CACHE_TTL_MS = 1000 * 60 * 60; // الاحتفاظ بالبيانات لمدة ساعة
 
@@ -14,7 +14,7 @@ setInterval(() => {
       carCache.delete(key);
     }
   }
-}, 1000 * 60 * 10); // تنظيف الذاكرة كل 10 دقائق
+}, 1000 * 60 * 10); 
 
 const ENCAR_API = "https://api.encar.com";
 const ENCAR_PHOTO = "https://ci.encar.com";
@@ -82,63 +82,25 @@ const MANUFACTURER_TO_EN: Record<string, string> = {
 };
 
 const EN_TO_MANUFACTURER: Record<string, string> = {
-  "hyundai": "현대",
-  "kia": "기아",
-  "genesis": "제네시스",
-  "ssangyong": "쌍용",
-  "kg mobility": "KG모빌리티",
-  "renault samsung": "르노삼성",
-  "renault korea": "르노코리아",
-  "chevrolet": "쉐보레(GM대우)",
-  "daewoo": "쉐보레(GM대우)",
-  "gm daewoo": "쉐보레(GM대우)",
-  "damas": "쉐보레(GM대우)",
-  "labo": "쉐보레(GM대우)",
-  "bmw": "BMW",
-  "mercedes": "벤츠",
-  "mercedes-benz": "벤츠",
-  "audi": "아우디",
-  "volkswagen": "폭스바겐",
-  "volvo": "볼보",
-  "toyota": "도요타",
-  "honda": "혼다",
-  "lexus": "렉서스",
-  "nissan": "닛산",
-  "infiniti": "인피니티",
-  "porsche": "포르쉐",
-  "land rover": "랜드로버",
-  "jaguar": "재규어",
-  "mini": "미니",
-  "ford": "포드",
-  "jeep": "지프",
-  "lincoln": "링컨",
-  "cadillac": "캐딜락",
-  "ferrari": "페라리",
-  "lamborghini": "람보르기니",
-  "maserati": "마세라티",
-  "rolls-royce": "롤스로이스",
-  "mclaren": "맥라렌",
-  "tesla": "테슬라",
-  "mazda": "마쯔다",
-  "subaru": "스바루",
-  "alfa romeo": "알파로메오",
-  "mitsubishi": "미쯔비시",
-  "chrysler": "크라이슬러",
-  "peugeot": "푸조",
-  "citroen": "시트로엥",
-  "bentley": "벤틀리",
-  "aston martin": "애스턴마틴",
-  "gmc": "GMC",
-  "dodge": "닷지",
-  "daihatsu": "다이하쯔",
-  "polestar": "폴스타",
-  "fiat": "피아트",
-  "hummer": "험머",
-  "saab": "사브",
-  "ineos": "이네오스",
-  "lotus": "로터스",
-  "byd": "BYD",
-  "maybach": "마이바흐",
+  "hyundai": "현대", "kia": "기아", "genesis": "제네시스", "ssangyong": "쌍용",
+  "kg mobility": "KG모빌리티", "renault samsung": "르노삼성", "renault korea": "르노코리아",
+  "chevrolet": "쉐보레(GM대우)", "daewoo": "쉐보레(GM대우)", "gm daewoo": "쉐보레(GM대우)",
+  "damas": "쉐보레(GM대우)", "labo": "쉐보레(GM대우)", "bmw": "BMW",
+  "mercedes": "벤츠", "mercedes-benz": "벤츠", "audi": "아우디",
+  "volkswagen": "폭스바겐", "volvo": "볼보", "toyota": "도요타",
+  "honda": "혼다", "lexus": "렉서스", "nissan": "닛산",
+  "infiniti": "인피니티", "porsche": "포르쉐", "land rover": "랜드로버",
+  "jaguar": "재규어", "mini": "미니", "ford": "포드",
+  "jeep": "지프", "lincoln": "링컨", "cadillac": "캐딜락",
+  "ferrari": "페라리", "lamborghini": "람보르기니", "maserati": "마세라티",
+  "rolls-royce": "롤스로이스", "mclaren": "맥라렌", "tesla": "테슬라",
+  "mazda": "마쯔다", "subaru": "스바루", "alfa romeo": "알파로메오",
+  "mitsubishi": "미쯔비시", "chrysler": "크라이슬러", "peugeot": "푸조",
+  "citroen": "시트로엥", "bentley": "벤틀리", "aston martin": "애스턴마틴",
+  "gmc": "GMC", "dodge": "닷지", "daihatsu": "다이하쯔",
+  "polestar": "폴스타", "fiat": "피아트", "hummer": "험머",
+  "saab": "사브", "ineos": "이네오스", "lotus": "로터스",
+  "byd": "BYD", "maybach": "마이바흐",
 };
 
 const DOMESTIC_BRANDS = new Set([
@@ -148,32 +110,21 @@ const DOMESTIC_BRANDS = new Set([
 ]);
 
 const FUEL_TO_EN: Record<string, string> = {
-  "가솔린": "gasoline",
-  "디젤": "diesel",
-  "LPG": "lpg",
-  "전기": "electric",
-  "수소": "hydrogen",
-  "가솔린+전기": "hybrid",
-  "디젤+전기": "hybrid",
-  "플러그인하이브리드": "hybrid",
-  "가솔린+LPG": "lpg",
+  "가솔린": "gasoline", "디젤": "diesel", "LPG": "lpg", "전기": "electric",
+  "수소": "hydrogen", "가솔린+전기": "hybrid", "디젤+전기": "hybrid",
+  "플러그인하이브리드": "hybrid", "가솔린+LPG": "lpg",
 };
 
 const EN_TO_FUEL_KR: Record<string, string> = {
-  "gasoline": "가솔린",
-  "diesel": "디젤",
-  "lpg": "LPG(일반인 구입_)",
-  "electric": "전기",
-  "hybrid": "가솔린+전기",
+  "gasoline": "가솔린", "diesel": "디젤", "lpg": "LPG(일반인 구입_)",
+  "electric": "전기", "hybrid": "가솔린+전기",
 };
 
 const EN_TO_TRANSMISSION_KR: Record<string, string> = {
-  "auto": "오토",
-  "manual": "수동",
+  "auto": "오토", "manual": "수동",
 };
 
 const MODEL_GROUP_MAP: Record<string, string> = {
-  // ── HYUNDAI ──────────────────────────────
   "아반떼": "아반떼", "아반떼 (CN7)": "아반떼", "아반떼 하이브리드 (CN7)": "아반떼", "아반떼 MD": "아반떼",
   "쏘나타": "쏘나타", "쏘나타 (DN8)": "쏘나타", "쏘나타 하이브리드 (DN8)": "쏘나타", "LF 쏘나타": "쏘나타",
   "그랜저": "그랜저", "그랜저 (GN7)": "그랜저", "그랜저 하이브리드 (GN7)": "그랜저",
@@ -182,102 +133,62 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "싼타페": "싼타페", "싼타페 (MX5)": "싼타페", "더 뉴 싼타페": "싼타페", "싼타페 TM": "싼타페",
   "팰리세이드": "팰리세이드", "더 뉴 팰리세이드": "팰리세이드",
   "코나": "코나", "코나 (OS)": "코나", "코나 (SX2)": "코나",
-  "아이오닉 5": "아이오닉5", "아이오닉 5 N": "아이오닉5",
-  "아이오닉5": "아이오닉5", "아이오닉5 N": "아이오닉5",
+  "아이오닉 5": "아이오닉5", "아이오닉 5 N": "아이오닉5", "아이오닉5": "아이오닉5", "아이오닉5 N": "아이오닉5",
   "더 뉴 아이오닉5": "아이오닉5",
   "아이오닉 6": "아이오닉6", "아이오닉6": "아이오닉6",
   "아이오닉 9": "아이오닉9", "아이오닉9": "아이오닉9",
-  "아이오닉": "아이오닉",
-  "더 뉴 아이오닉 하이브리드": "아이오닉",
-  "아이오닉 하이브리드": "아이오닉",
-  "아이오닉 플러그인 하이브리드": "아이오닉",
-  "아이오닉 일렉트릭": "아이오닉",
-  "스타리아": "스타리아", "스타리아 라운지": "스타리아",
-  "스타렉스": "스타렉스", "더 뉴 그랜드 스타렉스": "스타렉스",
-  "넥쏘": "넥쏘", "베뉴": "베뉴",
-  "캐스퍼": "캐스퍼", "캐스퍼 일렉트릭": "캐스퍼",
-  "엑센트": "엑센트", "벨로스터": "벨로스터",
-  "포터": "포터", "포터 2": "포터",
-  // ── KIA ──────────────────────────────────
+  "아이오닉": "아이오닉", "더 뉴 아이오닉 하이브리드": "아이오닉", "아이오닉 하이브리드": "아이오닉",
+  "아이오닉 플러그인 하이브리드": "아이오닉", "아이오닉 일렉트릭": "아이오닉",
+  "스타리아": "스타리아", "스타리아 라운지": "스타리아", "스타렉스": "스타렉스", "더 뉴 그랜드 스타렉스": "스타렉스",
+  "넥쏘": "넥쏘", "베뉴": "베뉴", "캐스퍼": "캐스퍼", "캐스퍼 일렉트릭": "캐스퍼",
+  "엑센트": "엑센트", "벨로스터": "벨로스터", "포터": "포터", "포터 2": "포터",
   "K3": "K3", "더 뉴 K3 2세대": "K3",
   "K5": "K5", "K5 3세대": "K5", "K5 하이브리드 3세대": "K5", "더 뉴 K5 2세대": "K5",
-  "K8": "K8", "K8 하이브리드": "K8", "K9": "K9",
-  "스팅어": "스팅어",
-  "스포티지": "스포티지", "스포티지 5세대": "스포티지",
-  "스포티지 5세대 하이브리드": "스포티지", "스포티지 5세대 플러그인 하이브리드": "스포티지",
+  "K8": "K8", "K8 하이브리드": "K8", "K9": "K9", "스팅어": "스팅어",
+  "스포티지": "스포티지", "스포티지 5세대": "스포티지", "스포티지 5세대 하이브리드": "스포티지", "스포티지 5세대 플러그인 하이브리드": "스포티지",
   "쏘렌토": "쏘렌토", "쏘렌토 4세대": "쏘렌토", "쏘렌토 하이브리드 4세대": "쏘렌토",
   "쏘렌토 플러그인 하이브리드 4세대": "쏘렌토", "더 뉴 쏘렌토 4세대": "쏘렌토",
-  "텔루라이드": "텔루라이드",
-  "모하비": "모하비", "더 뉴 모하비": "모하비", "모하비 더 마스터": "모하비",
+  "텔루라이드": "텔루라이드", "모하비": "모하비", "더 뉴 모하비": "모하비", "모하비 더 마스터": "모하비",
   "셀토스": "셀토스", "더 뉴 셀토스": "셀토스",
   "니로": "니로", "디 올 뉴 니로": "니로", "니로 하이브리드": "니로", "니로 EV": "니로",
-  "쏘울": "쏘울",
-  "카니발": "카니발", "카니발 4세대": "카니발", "올 뉴 카니발": "카니발",
+  "쏘울": "쏘울", "카니발": "카니발", "카니발 4세대": "카니발", "올 뉴 카니발": "카니발",
   "더 뉴 카니발": "카니발", "카니발 리무진": "카니발",
-  "모닝": "모닝", "레이": "레이",
-  "EV3": "EV3", "EV6": "EV6", "EV6 GT": "EV6", "EV9": "EV9",
-  // ── GENESIS ──────────────────────────────
+  "모닝": "모닝", "레이": "레이", "EV3": "EV3", "EV6": "EV6", "EV6 GT": "EV6", "EV9": "EV9",
   "G70": "G70", "더 뉴 G70": "G70", "G70 2세대": "G70",
   "G80": "G80", "G80 (RG3)": "G80", "G80 전동화": "G80",
   "G90": "G90", "G90 (RS4)": "G90", "EQ900": "G90",
   "GV60": "GV60", "GV60 스포츠 플러스": "GV60",
-  "GV70": "GV70", "GV70 전동화": "GV70",
-  "GV80": "GV80", "GV80 쿠페": "GV80",
-  "GV90": "GV90",
-  // ── CHEVROLET ─────────────────────────────
+  "GV70": "GV70", "GV70 전동화": "GV70", "GV80": "GV80", "GV80 쿠페": "GV80", "GV90": "GV90",
   "트레일블레이저": "트레일블레이저", "더 뉴 트레일블레이저": "트레일블레이저",
   "트랙스": "트랙스", "트랙스 크로스오버": "트랙스",
-  "말리부": "말리부", "스파크": "스파크",
-  "이쿼녹스": "이쿼녹스", "이쿼녹스 EV": "이쿼녹스",
-  "콜로라도": "콜로라도", "트래버스": "트래버스",
-  "타호": "타호", "올란도": "올란도", "캡티바": "캡티바",
-  "블레이저 EV": "블레이저 EV",
-  "다마스": "다마스", "뉴 다마스": "다마스",
-  "라보": "라보", "뉴 라보": "라보",
-  "마티즈": "마티즈", "마티즈 크리에이티브": "마티즈",
-  "젠트라": "젠트라", "젠트라 X": "젠트라",
-  "라세티": "라세티", "라세티 프리미어": "라세티",
-  "크루즈": "크루즈", "레조": "레조",
-  "윈스톰": "윈스톰", "윈스톰 맥스": "윈스톰",
+  "말리부": "말리부", "스파크": "스파크", "이쿼녹스": "이쿼녹스", "이쿼녹스 EV": "이쿼녹스",
+  "콜로라도": "콜로라도", "트래버스": "트래버스", "타호": "타호", "올란도": "올란도", "캡티바": "캡티바",
+  "블레이저 EV": "블레이저 EV", "다마스": "다마스", "뉴 다마스": "다마스",
+  "라보": "라보", "뉴 라보": "라보", "마티즈": "마티즈", "마티즈 크리에이티브": "마티즈",
+  "젠트라": "젠트라", "젠트라 X": "젠트라", "라세티": "라세티", "라세티 프리미어": "라세티",
+  "크루즈": "크루즈", "레조": "레조", "윈스톰": "윈스톰", "윈스톰 맥스": "윈스톰",
   "알페온": "알페온", "매그너스": "매그너스", "베리타스": "베리타스",
-  // ── GMC ───────────────────────────────────
-  "시에라": "시에라", "GMC 시에라": "시에라",
-  "아카디아": "아카디아", "GMC 아카디아": "아카디아",
+  "시에라": "시에라", "GMC 시에라": "시에라", "아카디아": "아카디아", "GMC 아카디아": "아카디아",
   "유콘": "유콘", "캐니언": "캐니언",
-  // ── DODGE ─────────────────────────────────
   "챌린저": "챌린저", "차저": "차저", "듀랑고": "듀랑고", "램": "램",
-  // ── POLESTAR ──────────────────────────────
   "폴스타 2": "폴스타 2", "폴스타 3": "폴스타 3", "폴스타 4": "폴스타 4",
-  // ── FIAT ──────────────────────────────────
   "500": "500", "500X": "500X",
-  // ── HUMMER ────────────────────────────────
   "허머 H2": "허머 H2", "허머 H3": "허머 H3", "GMC 허머 EV": "GMC 허머 EV",
-  // ── SAAB ──────────────────────────────────
   "사브 9-3": "사브 9-3", "사브 9-5": "사브 9-5",
-  // ── LOTUS ─────────────────────────────────
   "엘리스": "엘리스", "에보라": "에보라", "에미라": "에미라", "일레트르": "일레트르",
-  // ── BYD ───────────────────────────────────
   "아토 3": "아토 3", "씰": "씰", "돌핀": "돌핀", "탕": "탕",
-  // ── MAYBACH ───────────────────────────────
   "마이바흐 S클래스": "마이바흐 S클래스", "마이바흐 GLS": "마이바흐 GLS",
-  // ── RENAULT ───────────────────────────────
   "QM6": "QM6", "QM6 LPe": "QM6", "SM6": "SM6", "XM3": "XM3",
   "아르카나": "XM3", "SM3": "SM3", "SM5": "SM5", "SM7": "SM7",
   "QM3": "QM3", "QM5": "QM5", "필랑트": "필랑트",
-  // ── SSANGYONG / KGM ───────────────────────
-  "렉스턴": "렉스턴", "렉스턴 G4": "렉스턴",
-  "렉스턴 스포츠": "렉스턴", "렉스턴 스포츠 칸": "렉스턴",
-  "코란도": "코란도", "코란도 이모션": "코란도",
-  "티볼리": "티볼리", "티볼리 에어": "티볼리",
+  "렉스턴": "렉스턴", "렉스턴 G4": "렉스턴", "렉스턴 스포츠": "렉스턴", "렉스턴 스포츠 칸": "렉스턴",
+  "코란도": "코란도", "코란도 이모션": "코란도", "티볼리": "티볼리", "티볼리 에어": "티볼리",
   "무쏘": "무쏘", "토레스": "토레스", "토레스 EVX": "토레스",
   "액티언": "액티언", "액티언 스포츠": "액티언",
-  // ── BMW ───────────────────────────────────
   "1시리즈": "1시리즈", "1시리즈 (E87)": "1시리즈", "1시리즈 (F20)": "1시리즈", "1시리즈 (F40)": "1시리즈",
-  "2시리즈": "2시리즈", "2시리즈 쿠페 (F22)": "2시리즈", "2시리즈 그란쿠페 (F44)": "2시리즈",
-  "2시리즈 액티브투어러 (F45)": "2시리즈", "2시리즈 (G42)": "2시리즈",
+  "2시리즈": "2시리즈", "2시리즈 쿠페 (F22)": "2시리즈", "2시리즈 그란쿠페 (F44)": "2시리즈", "2시리즈 액티브투어러 (F45)": "2시리즈", "2시리즈 (G42)": "2시리즈",
   "3시리즈": "3시리즈", "3시리즈 (E90)": "3시리즈", "3시리즈 (F30)": "3시리즈", "3시리즈 (G20)": "3시리즈",
-  "4시리즈": "4시리즈", "4시리즈 (F32)": "4시리즈", "4시리즈 (F36)": "4시리즈", "4시리즈 (G22)": "4시리즈",
-  "4시리즈 그란쿠페 (F36)": "4시리즈", "4시리즈 그란쿠페 (G26)": "4시리즈",
+  "4시리즈": "4시리즈", "4시리즈 (F32)": "4시리즈", "4시리즈 (F36)": "4시리즈", "4시리즈 (G22)": "4시리즈", "4시리즈 그란쿠페 (F36)": "4시리즈", "4시리즈 그란쿠페 (G26)": "4시리즈",
   "5시리즈": "5시리즈", "5시리즈 (F10)": "5시리즈", "5시리즈 (G30)": "5시리즈", "5시리즈 (G60)": "5시리즈",
   "6시리즈": "6시리즈", "6시리즈 (F12)": "6시리즈", "6시리즈 (F06)": "6시리즈", "6시리즈 그란투리스모 (G32)": "6시리즈",
   "7시리즈": "7시리즈", "7시리즈 (F01)": "7시리즈", "7시리즈 (G11)": "7시리즈", "7시리즈 (G70)": "7시리즈",
@@ -294,132 +205,79 @@ const MODEL_GROUP_MAP: Record<string, string> = {
   "M4": "M4", "M4 (F82)": "M4", "M4 (G82)": "M4",
   "M5": "M5", "M5 (F90)": "M5", "M5 (G90)": "M5",
   "M8": "M8", "M8 (F92)": "M8",
-  "i3": "i3", "i4": "i4", "i4 (G26)": "i4",
-  "i5": "i5", "i5 (G60)": "i5",
-  "i7": "i7", "i7 (G70)": "i7",
-  "i8": "i8",
-  "iX": "iX", "iX3": "iX3", "iX3 (G08)": "iX3",
-  "XM": "XM", "Z4": "Z4", "Z4 (G29)": "Z4",
-  // ── MERCEDES-BENZ ─────────────────────────
-  "A클래스": "A클래스", "A클래스 (W176)": "A클래스", "A클래스 (W177)": "A클래스",
-  "B클래스": "B클래스",
+  "i3": "i3", "i4": "i4", "i4 (G26)": "i4", "i5": "i5", "i5 (G60)": "i5",
+  "i7": "i7", "i7 (G70)": "i7", "i8": "i8",
+  "iX": "iX", "iX3": "iX3", "iX3 (G08)": "iX3", "XM": "XM", "Z4": "Z4", "Z4 (G29)": "Z4",
+  "A클래스": "A클래스", "A클래스 (W176)": "A클래스", "A클래스 (W177)": "A클래스", "B클래스": "B클래스",
   "C클래스": "C클래스", "C클래스 (W204)": "C클래스", "C클래스 (W205)": "C클래스", "C클래스 (W206)": "C클래스",
   "E클래스": "E클래스", "E클래스 (W212)": "E클래스", "E클래스 (W213)": "E클래스", "E클래스 (W214)": "E클래스",
   "S클래스": "S클래스", "S클래스 (W221)": "S클래스", "S클래스 (W222)": "S클래스", "S클래스 (W223)": "S클래스",
   "G클래스": "G클래스", "G클래스 (W463)": "G클래스",
   "CLA클래스": "CLA클래스", "CLA (C117)": "CLA클래스", "CLA (C118)": "CLA클래스",
-  "CLS클래스": "CLS클래스", "CLS (C257)": "CLS클래스",
-  "CLE클래스": "CLE클래스",
-  "GLA클래스": "GLA클래스", "GLA (X156)": "GLA클래스", "GLA (H247)": "GLA클래스",
-  "GLB클래스": "GLB클래스",
+  "CLS클래스": "CLS클래스", "CLS (C257)": "CLS클래스", "CLE클래스": "CLE클래스",
+  "GLA클래스": "GLA클래스", "GLA (X156)": "GLA클래스", "GLA (H247)": "GLA클래스", "GLB클래스": "GLB클래스",
   "GLC클래스": "GLC클래스", "GLC (X253)": "GLC클래스", "GLC (X254)": "GLC클래스",
   "GLC쿠페": "GLC쿠페", "GLC쿠페 (C253)": "GLC쿠페",
-  "GLE클래스": "GLE클래스", "GLE (W166)": "GLE클래스", "GLE (V167)": "GLE클래스",
-  "GLE쿠페": "GLE쿠페",
+  "GLE클래스": "GLE클래스", "GLE (W166)": "GLE클래스", "GLE (V167)": "GLE클래스", "GLE쿠페": "GLE쿠페",
   "GLS클래스": "GLS클래스", "GLS (X166)": "GLS클래스", "GLS (X167)": "GLS클래스",
-  "EQA": "EQA", "EQB": "EQB", "EQC": "EQC",
-  "EQE": "EQE", "EQE SUV": "EQE",
+  "EQA": "EQA", "EQB": "EQB", "EQC": "EQC", "EQE": "EQE", "EQE SUV": "EQE",
   "EQS": "EQS", "EQS SUV": "EQS",
-  "AMG GT": "AMG GT", "AMG GT (R190)": "AMG GT",
-  "SL클래스": "SL클래스",
-  // ── AUDI ──────────────────────────────────
+  "AMG GT": "AMG GT", "AMG GT (R190)": "AMG GT", "SL클래스": "SL클래스",
   "A1": "A1", "A3": "A3", "A4": "A4", "A5": "A5", "A6": "A6", "A7": "A7", "A8": "A8",
-  "Q2": "Q2", "Q3": "Q3", "Q4 e-tron": "Q4 e-tron",
-  "Q5": "Q5", "Q7": "Q7", "Q8": "Q8", "Q8 e-tron": "Q8 e-tron",
-  "e-tron": "e-tron", "e-tron GT": "e-tron GT",
-  "TT": "TT", "R8": "R8",
+  "Q2": "Q2", "Q3": "Q3", "Q4 e-tron": "Q4 e-tron", "Q5": "Q5", "Q7": "Q7", "Q8": "Q8", "Q8 e-tron": "Q8 e-tron",
+  "e-tron": "e-tron", "e-tron GT": "e-tron GT", "TT": "TT", "R8": "R8",
   "RS3": "RS3", "RS4": "RS4", "RS5": "RS5", "RS6": "RS6", "RS7": "RS7",
   "SQ5": "SQ5", "SQ7": "SQ7", "SQ8": "SQ8",
   "S3": "S3", "S4": "S4", "S5": "S5", "S6": "S6", "S7": "S7", "S8": "S8",
-  // ── VOLKSWAGEN ───────────────────────────
-  "골프": "골프", "골프 GTI": "골프", "골프 R": "골프",
-  "티구안": "티구안", "티구안 올스페이스": "티구안",
-  "파사트": "파사트", "파사트 CC": "파사트",
-  "투아렉": "투아렉", "폴로": "폴로", "아테온": "아테온",
+  "골프": "골프", "골프 GTI": "골프", "골프 R": "골프", "티구안": "티구안", "티구안 올스페이스": "티구안",
+  "파사트": "파사트", "파사트 CC": "파사트", "투아렉": "투아렉", "폴로": "폴로", "아테온": "아테온",
   "ID.4": "ID.4", "ID.6": "ID.6",
-  // ── VOLVO ────────────────────────────────
-  "XC40": "XC40", "XC40 리차지": "XC40",
-  "XC60": "XC60", "XC90": "XC90", "XC90 리차지": "XC90",
-  "S60": "S60", "S90": "S90",
-  "V60": "V60", "V60 크로스컨트리": "V60",
+  "XC40": "XC40", "XC40 리차지": "XC40", "XC60": "XC60", "XC90": "XC90", "XC90 리차지": "XC90",
+  "S60": "S60", "S90": "S90", "V60": "V60", "V60 크로스컨트리": "V60",
   "V90": "V90", "V90 크로스컨트리": "V90",
-  "EX30": "EX30", "EX40": "EX40", "EX90": "EX90",
-  "C40 리차지": "C40",
-  // ── TOYOTA ───────────────────────────────
+  "EX30": "EX30", "EX40": "EX40", "EX90": "EX90", "C40 리차지": "C40",
   "캠리": "캠리", "RAV4": "RAV4", "RAV4 하이브리드": "RAV4",
   "프리우스": "프리우스", "시에나": "시에나", "아발론": "아발론",
-  "알파드": "알파드", "벨파이어": "벨파이어",
-  "크라운 크로스오버": "크라운 크로스오버",
+  "알파드": "알파드", "벨파이어": "벨파이어", "크라운 크로스오버": "크라운 크로스오버",
   "랜드크루저": "랜드크루저", "랜드크루저 프라도": "랜드크루저",
   "하이랜더": "하이랜더", "GR86": "GR86", "GR 수프라": "GR 수프라",
-  // ── LEXUS ────────────────────────────────
   "IS250": "IS250", "IS300h": "IS300h",
   "ES300h 7세대": "ES300h", "뉴 ES350": "ES300h",
   "RX350": "RX350", "RX450h 4세대": "RX350",
   "NX300h": "NX300h", "NX350h 2세대": "NX350h", "NX450h+ 2세대": "NX450h+",
   "LS500h 5세대": "LS500h", "LS460": "LS460",
-  "UX250h": "UX250h", "CT200h": "CT200h",
-  "LX600": "LX600", "LX570": "LX570",
+  "UX250h": "UX250h", "CT200h": "CT200h", "LX600": "LX600", "LX570": "LX570",
   "LC500": "LC500", "LC500h": "LC500h",
-  // ── PORSCHE ──────────────────────────────
-  "카이엔": "카이엔", "카이엔 쿠페": "카이엔",
-  "마칸": "마칸", "마칸 EV": "마칸",
-  "파나메라": "파나메라",
-  "타이칸": "타이칸", "타이칸 크로스 투리스모": "타이칸",
+  "카이엔": "카이엔", "카이엔 쿠페": "카이엔", "마칸": "마칸", "마칸 EV": "마칸",
+  "파나메라": "파나메라", "타이칸": "타이칸", "타이칸 크로스 투리스모": "타이칸",
   "911": "911", "박스터": "박스터", "케이맨": "케이맨",
-  // ── LAND ROVER ───────────────────────────
   "레인지로버": "레인지로버", "레인지로버 스포츠": "레인지로버 스포츠",
   "레인지로버 이보크": "레인지로버 이보크", "레인지로버 벨라": "레인지로버 벨라",
   "디스커버리": "디스커버리", "디스커버리 스포츠": "디스커버리", "디펜더": "디펜더",
-  // ── HONDA ────────────────────────────────
-  "어코드": "어코드", "시빅": "시빅",
-  "CR-V": "CR-V", "파일럿": "파일럿", "오딧세이": "오딧세이", "HR-V": "HR-V",
-  // ── NISSAN ───────────────────────────────
-  "캐시카이": "캐시카이", "무라노": "무라노",
-  "패트롤": "패트롤", "엑스트레일": "엑스트레일",
+  "어코드": "어코드", "시빅": "시빅", "CR-V": "CR-V", "파일럿": "파일럿", "오딧세이": "오딧세이", "HR-V": "HR-V",
+  "캐시카이": "캐시카이", "무라노": "무라노", "패트롤": "패트롤", "엑스트레일": "엑스트레일",
   "쥬크": "쥬크", "370Z": "370Z", "GT-R": "GT-R",
-  // ── INFINITI ─────────────────────────────
-  "Q50": "Q50", "Q60": "Q60", "Q70": "Q70",
-  "QX50": "QX50", "QX60": "QX60", "QX70": "QX70", "QX80": "QX80",
-  // ── MINI ─────────────────────────────────
-  "미니쿠퍼": "미니쿠퍼", "컨트리맨": "컨트리맨",
-  "클럽맨": "클럽맨", "페이스맨": "페이스맨", "에이스맨": "에이스맨",
-  // ── FORD ─────────────────────────────────
+  "Q50": "Q50", "Q60": "Q60", "Q70": "Q70", "QX50": "QX50", "QX60": "QX60", "QX70": "QX70", "QX80": "QX80",
+  "미니쿠퍼": "미니쿠퍼", "컨트리맨": "컨트리맨", "클럽맨": "클럽맨", "페이스맨": "페이스맨", "에이스맨": "에이스맨",
   "머스탱": "머스탱", "익스플로러": "익스플로러",
   "F-150": "F-150", "브롱코": "브롱코", "엣지": "엣지", "머스탱 마하-E": "머스탱 마하-E",
-  // ── JEEP ─────────────────────────────────
-  "랭글러": "랭글러", "그랜드체로키": "그랜드체로키",
-  "컴패스": "컴패스", "레니게이드": "레니게이드",
-  // ── LINCOLN ──────────────────────────────
+  "랭글러": "랭글러", "그랜드체로키": "그랜드체로키", "컴패스": "컴패스", "레니게이드": "레니게이드",
   "네비게이터": "네비게이터", "네비게이터 4세대": "네비게이터", "네비게이터 L": "네비게이터",
   "에비에이터": "에비에이터", "에비에이터 2세대": "에비에이터",
   "노틸러스": "노틸러스", "노틸러스 2세대": "노틸러스",
   "코르세어": "코르세어", "컨티넨탈": "컨티넨탈", "컨티넨탈 10세대": "컨티넨탈",
   "MKZ": "MKZ", "MKX": "MKX", "MKC": "MKC",
-  // ── CADILLAC ─────────────────────────────
   "에스컬레이드": "에스컬레이드", "CT5": "CT5", "CT6": "CT6",
   "XT4": "XT4", "XT5": "XT5", "XT6": "XT6", "리릭": "리릭",
-  // ── TESLA ────────────────────────────────
-  "모델 S": "모델 S", "모델 3": "모델 3", "모델 X": "모델 X", "모델 Y": "모델 Y",
-  "사이버트럭": "사이버트럭",
-  // ── MASERATI ─────────────────────────────
-  "기블리": "기블리", "레반떼": "레반떼",
-  "콰트로포르테": "콰트로포르테", "그레칼레": "그레칼레", "MC20": "MC20",
-  // ── FERRARI ──────────────────────────────
+  "모델 S": "모델 S", "모델 3": "모델 3", "모델 X": "모델 X", "모델 Y": "모델 Y", "사이버트럭": "사이버트럭",
+  "기블리": "기블리", "레반떼": "레반떼", "콰트로포르테": "콰트로포르테", "그레칼레": "그레칼레", "MC20": "MC20",
   "로마": "로마", "SF90": "SF90", "488": "488", "296 GTB": "296 GTB", "포르토피노": "포르토피노",
-  // ── LAMBORGHINI ──────────────────────────
   "우루스": "우루스", "우라칸": "우라칸", "아벤타도르": "아벤타도르",
-  // ── MAZDA ────────────────────────────────
   "CX-5": "CX-5", "CX-8": "CX-8", "CX-60": "CX-60", "MX-5": "MX-5", "마쯔다 3": "마쯔다 3",
-  // ── SUBARU ───────────────────────────────
   "아웃백": "아웃백", "포레스터": "포레스터", "임프레자": "임프레자", "레거시": "레거시", "크로스트렉": "크로스트렉",
-  // ── ALFA ROMEO ───────────────────────────
   "줄리아": "줄리아", "스텔비오": "스텔비오", "토날레": "토날레",
-  // ── MITSUBISHI ───────────────────────────
   "아웃랜더": "아웃랜더", "이클립스 크로스": "이클립스 크로스", "파제로": "파제로",
-  // ── BENTLEY ──────────────────────────────
   "컨티넨탈 GT": "컨티넨탈 GT", "벤테이가": "벤테이가", "플라잉 스퍼": "플라잉 스퍼",
-  // ── ROLLS-ROYCE ───────────────────────────
   "팬텀": "팬텀", "고스트": "고스트", "컬리넌": "컬리넌", "레이스": "레이스",
 };
 
@@ -432,19 +290,16 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "santa fe": "싼타페", "santafe": "싼타페", "싼타페": "싼타페", "سانتافي": "싼타페",
   "palisade": "팰리세이드", "팰리세이드": "팰리세이드", "باليسيد": "팰리세이드",
   "kona": "코나", "코나": "코나", "كونا": "코나",
-  "nexo": "넥쏘", "넥쏘": "넥쏘",
-  "venue": "베뉴", "베뉴": "베뉴",
+  "nexo": "넥쏘", "넥쏘": "넥쏘", "venue": "베뉴", "베뉴": "베뉴",
   "staria": "스타리아", "스타리아": "스타리아", "ستاريا": "스타리아",
   "starex": "스타렉스", "스타렉스": "스타렉스", "ستاريكس": "스타렉스",
   "ioniq": "아이오닉", "아이오닉": "아이오닉", "ايونيك": "아이오닉",
   "ioniq 5": "아이오닉5", "ioniq5": "아이오닉5", "아이오닉 5": "아이오닉5", "ايونيك 5": "아이오닉5",
   "ioniq 6": "아이오닉6", "ioniq6": "아이오닉6", "아이오닉 6": "아이오닉6", "ايونيك 6": "아이오닉6",
   "ioniq 9": "아이오닉9", "ioniq9": "아이오닉9", "아이오닉 9": "아이오닉9",
-  "porter": "포터", "포터": "포터",
-  "casper": "캐스퍼", "캐스퍼": "캐스퍼", "كاسبر": "캐스퍼",
+  "porter": "포터", "포터": "포터", "casper": "캐스퍼", "캐스퍼": "캐스퍼", "كاسبر": "캐스퍼",
   "veloster": "벨로스터", "벨로스터": "벨로스터",
-  "k3": "K3", "k5": "K5", "k8": "K8", "k9": "K9",
-  "K3": "K3", "K5": "K5", "K8": "K8", "K9": "K9",
+  "k3": "K3", "k5": "K5", "k8": "K8", "k9": "K9", "K3": "K3", "K5": "K5", "K8": "K8", "K9": "K9",
   "كي3": "K3", "كي5": "K5", "كي8": "K8", "كي9": "K9",
   "stinger": "스팅어", "스팅어": "스팅어", "ستينجر": "스팅어",
   "sportage": "스포티지", "스포티지": "스포티지", "سبورتاج": "스포티지",
@@ -455,15 +310,10 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "niro": "니로", "니로": "니로", "نيرو": "니로",
   "soul": "쏘울", "쏘울": "쏘울", "سول": "쏘울",
   "carnival": "카니발", "sedona": "카니발", "카니발": "카니발", "كارنيفال": "카니발",
-  "morning": "모닝", "모닝": "모닝",
-  "ray": "레이", "레이": "레이",
-  "ev3": "EV3", "EV3": "EV3",
-  "ev6": "EV6", "EV6": "EV6",
-  "ev9": "EV9", "EV9": "EV9",
-  "g70": "G70", "g80": "G80", "g90": "G90",
-  "gv60": "GV60", "gv70": "GV70", "gv80": "GV80", "gv90": "GV90",
-  "G70": "G70", "G80": "G80", "G90": "G90",
-  "GV60": "GV60", "GV70": "GV70", "GV80": "GV80", "GV90": "GV90",
+  "morning": "모닝", "모닝": "모닝", "ray": "레이", "레이": "레이",
+  "ev3": "EV3", "EV3": "EV3", "ev6": "EV6", "EV6": "EV6", "ev9": "EV9", "EV9": "EV9",
+  "g70": "G70", "g80": "G80", "g90": "G90", "gv60": "GV60", "gv70": "GV70", "gv80": "GV80", "gv90": "GV90",
+  "G70": "G70", "G80": "G80", "G90": "G90", "GV60": "GV60", "GV70": "GV70", "GV80": "GV80", "GV90": "GV90",
   "جي70": "G70", "جي80": "G80", "جي90": "G90",
   "eq900": "G90", "EQ900": "G90",
   "rexton": "렉스턴", "렉스턴": "렉스턴", "ركستون": "렉스턴",
@@ -474,8 +324,7 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "torres": "토레스", "토레스": "토레스", "تورس": "토레스",
   "sm3": "SM3", "sm5": "SM5", "sm6": "SM6", "sm7": "SM7",
   "SM3": "SM3", "SM5": "SM5", "SM6": "SM6", "SM7": "SM7",
-  "qm3": "QM3", "qm5": "QM5", "qm6": "QM6",
-  "QM3": "QM3", "QM5": "QM5", "QM6": "QM6",
+  "qm3": "QM3", "qm5": "QM5", "qm6": "QM6", "QM3": "QM3", "QM5": "QM5", "QM6": "QM6",
   "xm3": "XM3", "XM3": "XM3", "arkana": "XM3",
   "malibu": "말리부", "말리부": "말리부", "ماليبو": "말리부",
   "trax": "트랙스", "트랙스": "트랙스", "تراكس": "트랙스",
@@ -502,108 +351,72 @@ const EN_MODEL_TO_KR: Record<string, string> = {
   "8 series": "8시리즈", "8시리즈": "8시리즈",
   "x1": "X1", "X1": "X1", "x2": "X2", "X2": "X2",
   "x3": "X3", "X3": "X3", "x4": "X4", "X4": "X4",
-  "x5": "X5", "X5": "X5", "x6": "X6", "X6": "X6",
-  "x7": "X7", "X7": "X7",
-  "m2": "M2", "M2": "M2", "m3": "M3", "M3": "M3",
-  "m4": "M4", "M4": "M4", "m5": "M5", "M5": "M5", "m8": "M8", "M8": "M8",
+  "x5": "X5", "X5": "X5", "x6": "X6", "X6": "X6", "x7": "X7", "X7": "X7",
+  "m2": "M2", "M2": "M2", "m3": "M3", "M3": "M3", "m4": "M4", "M4": "M4", "m5": "M5", "M5": "M5", "m8": "M8", "M8": "M8",
   "i3": "i3", "i4": "i4", "i5": "i5", "i7": "i7", "i8": "i8",
-  "ix": "iX", "iX": "iX", "ix3": "iX3", "iX3": "iX3",
-  "xm": "XM", "XM": "XM", "z4": "Z4", "Z4": "Z4",
+  "ix": "iX", "iX": "iX", "ix3": "iX3", "iX3": "iX3", "xm": "XM", "XM": "XM", "z4": "Z4", "Z4": "Z4",
   "a class": "A클래스", "a-class": "A클래스", "A클래스": "A클래스",
-  "c class": "C클래스", "c-class": "C클래스", "C클래스": "C클래스",
-  "c200": "C클래스", "c300": "C클래스", "c220": "C클래스",
-  "e class": "E클래스", "e-class": "E클래스", "E클래스": "E클래스",
-  "e200": "E클래스", "e220": "E클래스", "e300": "E클래스", "e350": "E클래스",
-  "s class": "S클래스", "s-class": "S클래스", "S클래스": "S클래스",
-  "s400": "S클래스", "s500": "S클래스", "s580": "S클래스",
-  "g class": "G클래스", "g-class": "G클래스", "g wagon": "G클래스", "G클래스": "G클래스",
-  "g500": "G클래스", "g550": "G클래스", "g63": "G클래스",
-  "cla": "CLA클래스", "CLA": "CLA클래스", "CLA클래스": "CLA클래스",
-  "cls": "CLS클래스", "CLS": "CLS클래스",
-  "gla": "GLA클래스", "GLA": "GLA클래스",
-  "glb": "GLB클래스", "GLB": "GLB클래스",
-  "glc": "GLC클래스", "GLC": "GLC클래스",
-  "gle": "GLE클래스", "GLE": "GLE클래스",
-  "gls": "GLS클래스", "GLS": "GLS클래스",
-  "eqa": "EQA", "EQA": "EQA", "eqb": "EQB", "EQB": "EQB",
-  "eqc": "EQC", "EQC": "EQC", "eqe": "EQE", "EQE": "EQE",
-  "eqs": "EQS", "EQS": "EQS",
-  "amg gt": "AMG GT", "AMG GT": "AMG GT",
-  "sl": "SL클래스", "SL클래스": "SL클래스",
-  "a1": "A1", "A1": "A1",
-  "a3": "A3", "a4": "A4", "a5": "A5", "a6": "A6", "a7": "A7", "a8": "A8",
+  "c class": "C클래스", "c-class": "C클래스", "C클래스": "C클래스", "c200": "C클래스", "c300": "C클래스", "c220": "C클래스",
+  "e class": "E클래스", "e-class": "E클래스", "E클래스": "E클래스", "e200": "E클래스", "e220": "E클래스", "e300": "E클래스", "e350": "E클래스",
+  "s class": "S클래스", "s-class": "S클래스", "S클래스": "S클래스", "s400": "S클래스", "s500": "S클래스", "s580": "S클래스",
+  "g class": "G클래스", "g-class": "G클래스", "g wagon": "G클래스", "G클래스": "G클래스", "g500": "G클래스", "g550": "G클래스", "g63": "G클래스",
+  "cla": "CLA클래스", "CLA": "CLA클래스", "CLA클래스": "CLA클래스", "cls": "CLS클래스", "CLS": "CLS클래스",
+  "gla": "GLA클래스", "GLA": "GLA클래스", "glb": "GLB클래스", "GLB": "GLB클래스",
+  "glc": "GLC클래스", "GLC": "GLC클래스", "gle": "GLE클래스", "GLE": "GLE클래스", "gls": "GLS클래스", "GLS": "GLS클래스",
+  "eqa": "EQA", "EQA": "EQA", "eqb": "EQB", "EQB": "EQB", "eqc": "EQC", "EQC": "EQC",
+  "eqe": "EQE", "EQE": "EQE", "eqs": "EQS", "EQS": "EQS",
+  "amg gt": "AMG GT", "AMG GT": "AMG GT", "sl": "SL클래스", "SL클래스": "SL클래스",
+  "a1": "A1", "A1": "A1", "a3": "A3", "a4": "A4", "a5": "A5", "a6": "A6", "a7": "A7", "a8": "A8",
   "A3": "A3", "A4": "A4", "A5": "A5", "A6": "A6", "A7": "A7", "A8": "A8",
   "q2": "Q2", "q3": "Q3", "q5": "Q5", "q7": "Q7", "q8": "Q8",
   "Q2": "Q2", "Q3": "Q3", "Q5": "Q5", "Q7": "Q7", "Q8": "Q8",
-  "e-tron": "e-tron", "etron": "e-tron",
-  "tt": "TT", "TT": "TT", "r8": "R8", "R8": "R8",
+  "e-tron": "e-tron", "etron": "e-tron", "tt": "TT", "TT": "TT", "r8": "R8", "R8": "R8",
   "rs3": "RS3", "rs4": "RS4", "rs5": "RS5", "rs6": "RS6", "rs7": "RS7",
   "RS3": "RS3", "RS4": "RS4", "RS5": "RS5", "RS6": "RS6", "RS7": "RS7",
-  "golf": "골프", "골프": "골프", "جولف": "골프",
-  "tiguan": "티구안", "티구안": "티구안", "티게완": "티구안",
-  "passat": "파사트", "파사트": "파사트",
-  "touareg": "투아렉", "투아렉": "투아렉", "توارك": "투아렉",
-  "polo": "폴로", "arteon": "아테온",
-  "id.4": "ID.4", "id4": "ID.4", "id.6": "ID.6",
-  "xc40": "XC40", "xc60": "XC60", "xc90": "XC90",
-  "XC40": "XC40", "XC60": "XC60", "XC90": "XC90",
-  "s60": "S60", "S60": "S60", "s90": "S90", "S90": "S90",
-  "ex30": "EX30", "ex40": "EX40", "ex90": "EX90",
-  "camry": "캠리", "캠리": "캠리", "كامري": "캠리",
-  "rav4": "RAV4", "RAV4": "RAV4", "راف4": "RAV4",
-  "prius": "프리우스", "프리우스": "프리우스",
-  "alphard": "알파드", "알파드": "알파드", "الفارد": "알파드",
-  "land cruiser": "랜드크루저", "랜드크루저": "랜드크루저", "لاندكروزر": "랜드크루저",
-  "highlander": "하이랜더",
+  "golf": "골프", "골프": "골프", "جولف": "골프", "tiguan": "티구안", "티구안": "티구안", "티게완": "티구안",
+  "passat": "파사트", "파사트": "파사트", "touareg": "투아렉", "투아렉": "투아렉", "توارك": "투아렉",
+  "polo": "폴로", "arteon": "아테온", "id.4": "ID.4", "id4": "ID.4", "id.6": "ID.6",
+  "xc40": "XC40", "xc60": "XC60", "xc90": "XC90", "XC40": "XC40", "XC60": "XC60", "XC90": "XC90",
+  "s60": "S60", "S60": "S60", "s90": "S90", "S90": "S90", "ex30": "EX30", "ex40": "EX40", "ex90": "EX90",
+  "camry": "캠리", "캠리": "캠리", "كامري": "캠리", "rav4": "RAV4", "RAV4": "RAV4", "راف4": "RAV4",
+  "prius": "프리우스", "프리우스": "프리우스", "alphard": "알파드", "알파드": "알파드", "الفارد": "알파드",
+  "land cruiser": "랜드크루저", "랜드크루저": "랜드크루저", "لاندكروزر": "랜드크루저", "highlander": "하이랜더",
   "cayenne": "카이엔", "카이엔": "카이엔", "كايين": "카이엔",
   "macan": "마칸", "마칸": "마칸", "ماكان": "마칸",
   "panamera": "파나메라", "파나메라": "파나메라", "باناميرا": "파나메라",
   "taycan": "타이칸", "타이칸": "타이칸", "تايكان": "타이칸",
   "911": "911", "boxster": "박스터", "cayman": "케이맨",
-  "range rover": "레인지로버", "레인지로버": "레인지로버", "رنج روفر": "레인지로버",
-  "range rover sport": "레인지로버 스포츠",
-  "evoque": "레인지로버 이보크",
-  "discovery": "디스커버리", "디스커버리": "디스커버리", "ديسكفري": "디스커버리",
+  "range rover": "레인지로버", "레인지로버": "레인지로버", "رنج روفر": "레인지로버", "range rover sport": "레인지로버 스포츠",
+  "evoque": "레인지로버 이보크", "discovery": "디스커버리", "디스커버리": "디스커버리", "ديسكفري": "디스커버리",
   "defender": "디펜더", "디펜더": "디펜더", "ديفندر": "디펜더",
-  "accord": "어코드", "어코드": "어코드", "اكورد": "어코드",
-  "civic": "시빅", "시빅": "시빅", "سيفيك": "시빅",
+  "accord": "어코드", "어코드": "어코드", "اكورد": "어코드", "civic": "시빅", "시빅": "시빅", "سيفيك": "시빅",
   "cr-v": "CR-V", "crv": "CR-V", "CR-V": "CR-V",
   "qashqai": "캐시카이", "캐시카이": "캐시카이", "قشقاي": "캐시카이",
   "murano": "무라노", "무라노": "무라노", "مورانو": "무라노",
   "patrol": "패트롤", "패트롤": "패트롤", "باترول": "패트롤",
-  "q50": "Q50", "q60": "Q60", "q70": "Q70",
-  "qx50": "QX50", "qx60": "QX60", "qx70": "QX70", "qx80": "QX80",
+  "q50": "Q50", "q60": "Q60", "q70": "Q70", "qx50": "QX50", "qx60": "QX60", "qx70": "QX70", "qx80": "QX80",
   "Q50": "Q50", "QX80": "QX80",
-  "mini cooper": "미니쿠퍼", "cooper": "미니쿠퍼", "미니쿠퍼": "미니쿠퍼",
-  "countryman": "컨트리맨", "컨트리맨": "컨트리맨",
+  "mini cooper": "미니쿠퍼", "cooper": "미니쿠퍼", "미니쿠퍼": "미니쿠퍼", "countryman": "컨트리맨", "컨트리맨": "컨트리맨",
   "mustang": "머스탱", "머스탱": "머스탱", "موستانج": "머스탱",
   "explorer": "익스플로러", "익스플로러": "익스플로러", "اكسبلورر": "익스플로러",
-  "f-150": "F-150", "f150": "F-150",
-  "bronco": "브롱코", "브롱코": "브롱코",
+  "f-150": "F-150", "f150": "F-150", "bronco": "브롱코", "브롱코": "브롱코",
   "wrangler": "랭글러", "랭글러": "랭글러", "رانجلر": "랭글러",
-  "grand cherokee": "그랜드체로키", "그랜드체로키": "그랜드체로키",
-  "compass": "컴패스",
+  "grand cherokee": "그랜드체로키", "그랜드체로키": "그랜드체로키", "compass": "컴패스",
   "navigator": "네비게이터", "네비게이터": "네비게이터", "نافيجيتور": "네비게이터",
   "escalade": "에스컬레이드", "에스컬레이드": "에스컬레이드", "اسكاليد": "에스컬레이드",
   "ct5": "CT5", "ct6": "CT6", "xt4": "XT4", "xt5": "XT5", "xt6": "XT6",
   "model s": "모델 S", "model 3": "모델 3", "model x": "모델 X", "model y": "모델 Y",
-  "모델 3": "모델 3", "모델 y": "모델 Y", "موديل 3": "모델 3", "موديل y": "모델 Y",
-  "cybertruck": "사이버트럭",
-  "ghibli": "기블리", "levante": "레반떼", "레반떼": "레반떼", "ليفانتي": "레반떼",
-  "cayenne coupe": "카이엔",
-  "cx-5": "CX-5", "cx5": "CX-5", "CX-5": "CX-5",
-  "cx-8": "CX-8", "cx-60": "CX-60",
-  "outback": "아웃백", "아웃백": "아웃백",
-  "forester": "포레스터", "포레스터": "포레스터",
+  "모델 3": "모델 3", "모델 y": "모델 Y", "موديل 3": "모델 3", "موديل y": "모델 Y", "cybertruck": "사이버트럭",
+  "ghibli": "기블리", "levante": "레반떼", "레반떼": "레반떼", "ليفانتي": "레반떼", "cayenne coupe": "카이엔",
+  "cx-5": "CX-5", "cx5": "CX-5", "CX-5": "CX-5", "cx-8": "CX-8", "cx-60": "CX-60",
+  "outback": "아웃백", "아웃백": "아웃백", "forester": "포레스터", "포레스터": "포레스터",
   "giulia": "줄리아", "stelvio": "스텔비오",
   "outlander": "아웃랜더", "아웃랜더": "아웃랜더",
-  "continental gt": "컨티넨탈 GT",
-  "bentayga": "벤테이가",
+  "continental gt": "컨티넨탈 GT", "bentayga": "벤테이가",
   "phantom": "팬텀", "ghost": "고스트", "cullinan": "컬리넌",
   "sierra": "시에라", "acadia": "아카디아", "yukon": "유콘",
   "challenger": "챌린저", "charger": "차저", "durango": "듀랑고",
-  "urus": "우루스", "우루스": "우루스",
-  "huracan": "우라칸", "aventador": "아벤타도르",
+  "urus": "우루스", "우루스": "우루스", "huracan": "우라칸", "aventador": "아벤타도르",
 };
 
 const TRANSMISSION_TO_EN: Record<string, string> = {
@@ -611,16 +424,11 @@ const TRANSMISSION_TO_EN: Record<string, string> = {
 };
 
 const COLOR_MAP: Record<string, { ar: string; en: string }> = {
-  "흰색":   { ar: "أبيض",    en: "white" },
-  "검정색": { ar: "أسود",    en: "black" },
-  "쥐색":   { ar: "رمادي",   en: "gray" },
-  "은색":   { ar: "فضي",     en: "silver" },
-  "빨간색": { ar: "أحمر",    en: "red" },
-  "하늘색": { ar: "أزرق فاتح", en: "lightblue" },
-  "갈색":   { ar: "بني",     en: "brown" },
-  "녹색":   { ar: "أخضر",    en: "green" },
-  "노란색": { ar: "أصفر",    en: "yellow" },
-  "주황색": { ar: "برتقالي", en: "orange" },
+  "흰색": { ar: "أبيض", en: "white" }, "검정색": { ar: "أسود", en: "black" },
+  "쥐색": { ar: "رمادي", en: "gray" }, "은색": { ar: "فضي", en: "silver" },
+  "빨간색": { ar: "أحمر", en: "red" }, "하늘색": { ar: "أزرق فاتح", en: "lightblue" },
+  "갈색": { ar: "بني", en: "brown" }, "녹색": { ar: "أخضر", en: "green" },
+  "노란색": { ar: "أصفر", en: "yellow" }, "주황색": { ar: "برتقالي", en: "orange" },
   "연두색": { ar: "أخضر فاتح", en: "lime" },
 };
 
@@ -635,32 +443,19 @@ function formatPrice(price: number): string {
   return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
 
-// [2] إضافة دعم فلاتر السعر والسنة والممشى في الاستعلام الخاص بـ Encar
 function buildEncarQuery(params: {
-  brand?: string;
-  model?: string;
-  modelType?: "group" | "model";
-  sunroof?: boolean;
-  fuelType?: string;
-  transmission?: string;
-  bodyType?: string;
-  color?: string;
-  yearFrom?: number;
-  yearTo?: number;
-  priceMin?: number;
-  priceMax?: number;
-  mileageMax?: number;
+  brand?: string; model?: string; modelType?: "group" | "model";
+  sunroof?: boolean; fuelType?: string; transmission?: string;
+  bodyType?: string; color?: string; yearFrom?: number; yearTo?: number;
+  priceMin?: number; priceMax?: number; mileageMax?: number;
 }): { q: string; modelKr: string | null; modelRaw: string | null } {
   let modelKr: string | null = null;
   let modelRaw: string | null = null;
 
   const KOREAN_MODEL_GROUPS = new Set([
-    "아이오닉5", "아이오닉6", "아이오닉9", "아이오닉",
-    "아반떼", "쏘나타", "그랜저", "투싼", "싼타페", "팰리세이드",
-    "코나", "넥쏘", "베뉴", "캐스퍼", "스타리아", "스타렉스",
-    "K3", "K5", "K8", "K9", "스포티지", "쏘렌토", "텔루라이드",
-    "모하비", "셀토스", "니로", "카니발", "EV3", "EV6", "EV9",
-    "G70", "G80", "G90", "GV60", "GV70", "GV80", "GV90",
+    "아이오닉5", "아이오닉6", "아이오닉9", "아이오닉", "아반떼", "쏘나타", "그랜저", "투싼", "싼타페", "팰리세이드",
+    "코나", "넥쏘", "베뉴", "캐스퍼", "스타리아", "스타렉스", "K3", "K5", "K8", "K9", "스포티지", "쏘렌토", "텔루라이드",
+    "모하비", "셀토스", "니로", "카니발", "EV3", "EV6", "EV9", "G70", "G80", "G90", "GV60", "GV70", "GV80", "GV90",
   ]);
 
   let carType = "";
@@ -671,9 +466,7 @@ function buildEncarQuery(params: {
     const input = params.model.trim();
     const lowerInput = input.toLowerCase();
     const translated = EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[input] ?? input;
-    if (KOREAN_MODEL_GROUPS.has(translated)) {
-      carType = "_.CarType.Y.";
-    }
+    if (KOREAN_MODEL_GROUPS.has(translated)) carType = "_.CarType.Y.";
   }
 
   let q = `(And.Hidden.N.${carType}`;
@@ -685,40 +478,26 @@ function buildEncarQuery(params: {
 
   if (params.model) {
     const input = params.model.trim();
-
-    const cleanInput = input.startsWith("m:") ? input.slice(2)
-                     : input.startsWith("g:") ? input.slice(2)
-                     : input;
+    const cleanInput = input.startsWith("m:") ? input.slice(2) : input.startsWith("g:") ? input.slice(2) : input;
     const forceModel = input.startsWith("m:");
     const forceGroup = input.startsWith("g:");
-
     const isKorean = /[\uAC00-\uD7A3]/.test(cleanInput);
 
-    if (forceModel) {
-      q += `_.Model.${cleanInput}.`;
-      modelKr = cleanInput;
-    } else if (forceGroup) {
-      q += `_.ModelGroup.${cleanInput}.`;
-      modelKr = cleanInput;
-    } else if (params.modelType === "group") {
-      const target = isKorean ? cleanInput : (EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[cleanInput] ?? cleanInput);
+    if (forceModel) { q += `_.Model.${cleanInput}.`; modelKr = cleanInput; }
+    else if (forceGroup) { q += `_.ModelGroup.${cleanInput}.`; modelKr = cleanInput; }
+    else if (params.modelType === "group") {
+      const target = isKorean ? cleanInput : (EN_MODEL_TO_KR[input.toLowerCase()] ?? EN_MODEL_TO_KR[cleanInput] ?? cleanInput);
       const group = MODEL_GROUP_MAP[target];
-      q += `_.ModelGroup.${group || target}.`;
-      modelKr = target;
+      q += `_.ModelGroup.${group || target}.`; modelKr = target;
     } else if (params.modelType === "model") {
-      const target = isKorean ? cleanInput : (EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[cleanInput] ?? cleanInput);
-      q += `_.Model.${target}.`;
-      modelKr = target;
+      const target = isKorean ? cleanInput : (EN_MODEL_TO_KR[input.toLowerCase()] ?? EN_MODEL_TO_KR[cleanInput] ?? cleanInput);
+      q += `_.Model.${target}.`; modelKr = target;
     } else if (isKorean) {
       const group = MODEL_GROUP_MAP[cleanInput];
-      if (group) {
-        q += `_.ModelGroup.${group}.`;
-      } else {
-        q += `_.Model.${cleanInput}.`;
-      }
+      if (group) q += `_.ModelGroup.${group}.`; else q += `_.Model.${cleanInput}.`;
       modelKr = cleanInput;
     } else {
-      let translated = EN_MODEL_TO_KR[lowerInput] ?? EN_MODEL_TO_KR[cleanInput];
+      let translated = EN_MODEL_TO_KR[input.toLowerCase()] ?? EN_MODEL_TO_KR[cleanInput];
       if (!translated) {
         const withoutGen = cleanInput.replace(/\s+[A-Z]\d{2,3}$/i, "").trim();
         translated = EN_MODEL_TO_KR[withoutGen.toLowerCase()] ?? EN_MODEL_TO_KR[withoutGen];
@@ -729,11 +508,7 @@ function buildEncarQuery(params: {
       }
       if (translated) {
         const group = MODEL_GROUP_MAP[translated];
-        if (group) {
-          q += `_.ModelGroup.${group}.`;
-        } else {
-          q += `_.Model.${translated}.`;
-        }
+        if (group) q += `_.ModelGroup.${group}.`; else q += `_.Model.${translated}.`;
         modelKr = translated;
       } else {
         modelRaw = cleanInput;
@@ -757,146 +532,66 @@ function buildEncarQuery(params: {
     const kr = EN_COLOR_TO_KR[params.color.toLowerCase()];
     if (kr) q += `_.Color.${kr}.`;
   }
-
-  // فلترة السنة من المصدر 
   if (params.yearFrom || params.yearTo) {
-    const from = params.yearFrom ? `${params.yearFrom}00` : ""; // صيغة YYYYMM
+    const from = params.yearFrom ? `${params.yearFrom}00` : "";
     const to = params.yearTo ? `${params.yearTo}99` : "";
     q += `_.Year.${from}..${to}.`;
   }
-
-  // فلترة السعر من المصدر (بوحدة الـ 10 آلاف وون كوري)
   if (params.priceMin !== undefined || params.priceMax !== undefined) {
     const min = params.priceMin !== undefined ? params.priceMin : "";
     const max = params.priceMax !== undefined ? params.priceMax : "";
     q += `_.Price.${min}..${max}.`;
   }
-
-  // فلترة الممشى من المصدر
   if (params.mileageMax !== undefined) {
     q += `_.Mileage...${params.mileageMax}.`;
   }
-
   q += ")";
   return { q, modelKr, modelRaw };
 }
 
 interface EncarCar {
-  Id: string;
-  Manufacturer: string;
-  Model: string;
-  Badge?: string;
-  GreenType: string;
-  FuelType: string;
-  Transmission?: string;
-  FormYear: string;
-  Mileage: number;
-  Price: number;
-  Color?: string;
-  Condition?: string[];
-  Trust?: string[];
-  ServiceMark?: string[];
-  BuyType?: string[];
-  HomeServiceVerification?: string;
-  OfficeCityState?: string;
-  Photos?: Array<{ location: string; ordering: number }>;
-  Year?: number;
-  Options?: string[];
+  Id: string; Manufacturer: string; Model: string; Badge?: string;
+  GreenType: string; FuelType: string; Transmission?: string; FormYear: string;
+  Mileage: number; Price: number; Color?: string; Condition?: string[];
+  Trust?: string[]; ServiceMark?: string[]; BuyType?: string[];
+  HomeServiceVerification?: string; OfficeCityState?: string;
+  Photos?: Array<{ location: string; ordering: number }>; Year?: number; Options?: string[];
 }
 
 interface EncarCarExtended extends EncarCar {
-  Vin?: string;
-  BodyType?: string;
-  SeatCount?: number;
-  SeatColor?: string;
-  Displacement?: number;
-  Generation?: string;
-  ChoiceOptions?: ChoiceOption[];
+  Vin?: string; BodyType?: string; SeatCount?: number; SeatColor?: string;
+  Displacement?: number; Generation?: string; ChoiceOptions?: ChoiceOption[];
 }
 
 const BODY_TYPE_KR_TO_AR: Record<string, string> = {
-  "suv": "دفع رباعي (SUV)",
-  "경차": "سيارة صغيرة جدًا",
-  "소형차": "سيارة صغيرة",
-  "준중형차": "سيارة مدمجة",
-  "중형차": "سيارة متوسطة",
-  "대형차": "سيارة كبيرة",
-  "스포츠카": "سيارة رياضية",
-  "승합차": "فان / حافلة صغيرة",
-  "화물차": "شاحنة / نقل",
-  "제네시스": "جينيسيس",
+  "suv": "دفع رباعي (SUV)", "경차": "سيارة صغيرة جدًا", "소형차": "سيارة صغيرة",
+  "준중형차": "سيارة مدمجة", "중형차": "سيارة متوسطة", "대형차": "سيارة كبيرة",
+  "스포츠카": "سيارة رياضية", "승합차": "فان / حافلة صغيرة", "화물차": "شاحنة / نقل", "제네시스": "جينيسيس",
 };
 
-// ── Maps for inspection translations ──────────────────────────────────────
 const PART_NAME_KR_TO_AR: Record<string, string> = {
-  "전면패널": "اللوجة الأمامية",
-  "보닛": "غطاء المحرك",
-  "프론트휀더": "الرفرف الأمامي",
-  "도어": "الباب",
-  "사이드미러": "المرآة الجانبية",
-  "루프패널": "سقف السيارة",
-  "쿼터패널": "الرفرف الخلفي",
-  "트렁크리드": "غطاء الصندوق",
-  "트렁크": "الصندوق الخلفي",
-  "리어범퍼": "الصدام الخلفي",
-  "프론트범퍼": "الصدام الأمامي",
-  "라디에이터서포트": "دعامة الرادياتير",
-  "사이드실패널": "عتبة الباب",
-  "필러": "العمود",
-  "후드": "غطاء المحرك",
-  "앞도어": "الباب الأمامي",
-  "뒷도어": "الباب الخلفي",
-  "슬라이딩도어": "الباب المنزلق",
-  "테일게이트": "باب الصندوق",
-  "리어패널": "اللوحة الخلفية",
-  "프론트패널": "اللوحة الأمامية",
-  "사이드패널": "اللوحة الجانبية",
-  "휀더": "الرفرف",
+  "전면패널": "اللوجة الأمامية", "보닛": "غطاء المحرك", "프론트휀더": "الرفرف الأمامي", "도어": "الباب",
+  "사이드미러": "المرآة الجانبية", "루프패널": "سقف السيارة", "쿼터패널": "الرفرف الخلفي", "트렁크리드": "غطاء الصندوق",
+  "트렁크": "الصندوق الخلفي", "리어범퍼": "الصدام الخلفي", "프론트범퍼": "الصدام الأمامي", "라디에이터서포트": "دعامة الرادياتير",
+  "사이드실패널": "عتبة الباب", "필러": "العمود", "후드": "غطاء المحرك", "앞도어": "الباب الأمامي",
+  "뒷도어": "الباب الخلفي", "슬라이딩도어": "الباب المنزلق", "테일게이트": "باب الصندوق", "리어패널": "اللوحة الخلفية",
+  "프론트패널": "اللوحة الأمامية", "사이드패널": "اللوحة الجانبية", "휀더": "الرفرف",
 };
 
 const DAMAGE_STATUS_KR_TO_AR: Record<string, string> = {
-  "교환": "تغيير",
-  "판금": "رش",
-  "도장": "رش",
-  "부식": "صدأ",
-  "스크래치": "خدش",
-  "찌그러짐": "انبعاج",
-  "손상": "تلف",
-  "파손": "تلف",
-  "교환(이력)": "تغيير",
-  "판금/도장": "رش",
-  "W": "رش",
-  "C": "صدأ",
-  "A": "خدش",
-  "U": "انبعاج",
-  "T": "تلف",
-  "X": "تغيير",
+  "교환": "تغيير", "판금": "رش", "도장": "رش", "부식": "صدأ", "스크래치": "خدش",
+  "찌그러짐": "انبعاج", "손상": "تلف", "파손": "تلف", "교환(이력)": "تغيير", "판금/도장": "رش",
+  "W": "رش", "C": "صدأ", "A": "خدش", "U": "انبعاج", "T": "تلف", "X": "تغيير",
 };
 
 const DAMAGE_STATUS_TO_CODE: Record<string, string> = {
-  "교환": "X",
-  "판금": "W",
-  "도장": "W",
-  "부식": "C",
-  "스크래치": "A",
-  "찌그러짐": "U",
-  "손상": "T",
-  "파손": "T",
-  "W": "W",
-  "C": "C",
-  "A": "A",
-  "U": "U",
-  "T": "T",
-  "X": "X",
+  "교환": "X", "판금": "W", "도장": "W", "부식": "C", "스크래치": "A", "찌그러짐": "U",
+  "손상": "T", "파손": "T", "W": "W", "C": "C", "A": "A", "U": "U", "T": "T", "X": "X",
 };
 
 const ACCIDENT_TYPE_KR_TO_AR: Record<string, string> = {
-  "내차피해": "حادثي",
-  "상대차피해": "الطرف الآخر تحمّل",
-  "자차": "حادثي",
-  "타차": "الطرف الآخر تحمّل",
-  "내차": "حادثي",
-  "상대": "الطرف الآخر تحمّل",
+  "내차피해": "حادثي", "상대차피해": "الطرف الآخر تحمّل", "자차": "حادثي",
+  "타차": "الطرف الآخر تحمّل", "내차": "حادثي", "상대": "الطرف الآخر تحمّل",
 };
 
 function translatePartToAr(partName: string): string {
@@ -927,60 +622,43 @@ function getStatusCode(status: string): string {
   return "W";
 }
 
-interface ChoiceOption {
-  optionCd: string;
-  optionName: string;
-  price?: number;
-}
+interface ChoiceOption { optionCd: string; optionName: string; price?: number; }
 
-// [3] إصلاح معالجة أخطاء جلب الخيارات (Options Error Handling)
 async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
   try {
     const url = `https://api.encar.com/v1/readside/vehicles/car/${carId}/options/choice`;
     const resp = await fetch(url, {
-      headers: {
-        Referer: `https://fem.encar.com/cars/detail/${carId}`,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "application/json",
-      },
+      headers: { Referer: `https://fem.encar.com/cars/detail/${carId}`, "User-Agent": "Mozilla/5.0", Accept: "application/json" },
       signal: AbortSignal.timeout(5000),
     });
     if (!resp.ok) return [];
     const data = (await resp.json()) as any;
     return Array.isArray(data) ? data : [];
   } catch (err: any) {
-    console.error(`[Error] Failed to fetch choice options for car ${carId}: ${err.message}`);
     return [];
   }
 }
 
-// ── [جديد] دالة لجلب تفاصيل الفحص والتأمين من API المباشر (Direct API) ──
-async function fetchDetailedInspectionAPIs(carId: string) {
+// ── [جديد] دالة لجلب الفحص والتأمين من الصفحات المخصصة (الحل الأحدث والأدق) ──
+async function fetchDetailedInspectionHtmls(carId: string) {
   const headers = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-    Accept: "application/json",
-    Referer: `https://fem.encar.com/cars/detail/${carId}`,
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+    Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+    "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
   };
 
   try {
-    // 1. جلب بيانات الفحص (الأجزاء المتضررة)
-    const perfRes = await fetch(`https://api.encar.com/v1/readside/record/vehicle/${carId}/performance`, {
-      headers,
-      signal: AbortSignal.timeout(5000),
-    });
-    const perfData = perfRes.ok ? await perfRes.json() : null;
+    const [inspectResp, accidentResp] = await Promise.all([
+      fetch(`https://fem.encar.com/cars/report/inspect/${carId}`, { headers, signal: AbortSignal.timeout(8000) }).catch(() => null),
+      fetch(`https://fem.encar.com/cars/report/accident/${carId}`, { headers, signal: AbortSignal.timeout(8000) }).catch(() => null)
+    ]);
 
-    // 2. جلب بيانات سجل التأمين (تاريخ الحوادث وتغيير الملاك)
-    const insRes = await fetch(`https://api.encar.com/v1/readside/record/vehicle/${carId}/insurance`, {
-      headers,
-      signal: AbortSignal.timeout(5000),
-    });
-    const insData = insRes.ok ? await insRes.json() : null;
+    const inspectHtml = (inspectResp && inspectResp.ok) ? await inspectResp.text() : "";
+    const accidentHtml = (accidentResp && accidentResp.ok) ? await accidentResp.text() : "";
 
-    return { perfData, insData };
+    return { inspectHtml, accidentHtml };
   } catch (err) {
-    console.error(`[Error] Failed to fetch hidden inspection APIs for ${carId}`, err);
-    return { perfData: null, insData: null };
+    return { inspectHtml: "", accidentHtml: "" };
   }
 }
 
@@ -1009,10 +687,7 @@ const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = 
   { keywords: ["플러그인", "phev", "plug-in", "플러그"], id: "phev", ar: "هجين قابل للشحن" },
 ];
 
-const KOREAN_DOMESTIC_BRANDS = new Set([
-  "현대", "기아", "제네시스", "쌍용", "르노삼성", "한국GM", "쉐보레", "쉐보레(GM대우)", "대우",
-  "hyundai", "kia", "genesis", "ssangyong",
-]);
+const KOREAN_DOMESTIC_BRANDS = new Set(["현대", "기아", "제네시스", "쌍용", "르노삼성", "한국GM", "쉐보레", "쉐보레(GM대우)", "대우", "hyundai", "kia", "genesis", "ssangyong"]);
 
 function getModelYear(car: EncarCar): number {
   const yearStr = car.FormYear ?? String(car.Year ?? 0);
@@ -1035,56 +710,26 @@ function getKoreanBaselineOptions(brand: string, year: number): Array<{ id: stri
   return opts;
 }
 
-const TOP_TRIM_KEYWORDS = [
-  "칼리그라피", "인스퍼레이션", "익스클루시브", "풀옵션", "최고급", "플래티넘",
-  "시그니처", "그래비티", "마스터즈", "prestige", "프레스티지",
-];
-
-const PREMIUM_KEYWORDS = [
-  "럭셔리", "프리미엄", "어드밴스드", "모던", "리미티드",
-  "파인스펙", "스마트", "트렌디", "디럭스플러스",
-];
-
+const TOP_TRIM_KEYWORDS = ["칼리그라피", "인스퍼레이션", "익스클루시브", "풀옵션", "최고급", "플래티넘", "시그니처", "그래비티", "마스터즈", "prestige", "프레스티지"];
+const PREMIUM_KEYWORDS = ["럭셔리", "프리미엄", "어드밴스드", "모던", "리미티드", "파인스펙", "스마트", "트렌디", "디럭스플러스"];
 const BADGE_FEATURE_MAP: Array<{ keywords: string[]; ar: string }> = [
   { keywords: ["m 스포츠", "m스포츠", "m sport", "m-sport"], ar: "حزمة M الرياضية" },
   { keywords: ["럭셔리", "프리미엄", "익스클루시브", "풀옵션", "최고급", "플래티넘", "칼리그라피", "어드밴스드", "인스퍼레이션"], ar: "فئة مميزة" },
 ];
-
-const CONDITION_FEATURE_MAP: Record<string, string> = {
-  Record: "سجل الصيانة",
-  Resume: "تاريخ السيارة",
-};
-
-const TRUST_FEATURE_MAP: Record<string, string> = {
-  HomeService: "توصيل للمنزل",
-};
-
-const SERVICE_MARK_MAP: Record<string, string> = {
-  EncarDiagnosisP1: "تشخيص Encar",
-  EncarDiagnosisP2: "تشخيص Encar",
-  EncarMeetgo: "Encar Meetgo",
-};
+const CONDITION_FEATURE_MAP: Record<string, string> = { Record: "سجل الصيانة", Resume: "تاريخ السيارة" };
+const TRUST_FEATURE_MAP: Record<string, string> = { HomeService: "توصيل للمنزل" };
+const SERVICE_MARK_MAP: Record<string, string> = { EncarDiagnosisP1: "تشخيص Encar", EncarDiagnosisP2: "تشخيص Encar", EncarMeetgo: "Encar Meetgo" };
 
 const ENCAR_OPTION_MAP: Record<string, { id: string; ar: string }> = {
-  "선루프": { id: "sunroof", ar: "فتحة سقف" },
-  "파노라마선루프": { id: "sunroof_pano", ar: "سقف بانورامي" },
-  "열선시트": { id: "heated_seat", ar: "مقاعد مدفأة" },
-  "통풍시트": { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
-  "가죽시트": { id: "leather_seat", ar: "مقاعد جلدية" },
-  "전동시트": { id: "power_seat", ar: "مقاعد كهربائية" },
-  "메모리시트": { id: "memory_seat", ar: "مقاعد بذاكرة" },
-  "네비게이션": { id: "navigation", ar: "ملاحة" },
-  "후방카메라": { id: "camera_rear", ar: "كاميرا خلفية" },
-  "어라운드뷰": { id: "camera_360", ar: "كاميرا 360°" },
-  "스마트키": { id: "smart_key", ar: "مفتاح ذكي" },
-  "오토에어컨": { id: "auto_ac", ar: "مكيّف تلقائي" },
-  "주차보조": { id: "parking_sensor", ar: "حساسات وقوف" },
-  "LED헤드램프": { id: "led_lights", ar: "مصابيح LED" },
-  "어댑티브크루즈": { id: "cruise_control", ar: "كروز تكيّفي" },
-  "차선이탈방지": { id: "lane_assist", ar: "مساعد الحارة" },
-  "사각지대감지": { id: "blind_spot", ar: "كشف النقطة العمياء" },
-  "헤드업디스플레이": { id: "hud", ar: "HUD" },
-  "4WD": { id: "awd", ar: "دفع رباعي" },
+  "선루프": { id: "sunroof", ar: "فتحة سقف" }, "파노라마선루프": { id: "sunroof_pano", ar: "سقف بانورامي" },
+  "열선시트": { id: "heated_seat", ar: "مقاعد مدفأة" }, "통풍시트": { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
+  "가죽시트": { id: "leather_seat", ar: "مقاعد جلدية" }, "전동시트": { id: "power_seat", ar: "مقاعد كهربائية" },
+  "메모리시트": { id: "memory_seat", ar: "مقاعد بذاكرة" }, "네비게이션": { id: "navigation", ar: "ملاحة" },
+  "후방카메라": { id: "camera_rear", ar: "كاميرا خلفية" }, "어라운드뷰": { id: "camera_360", ar: "كاميرا 360°" },
+  "스마트키": { id: "smart_key", ar: "مفتاح ذكي" }, "오토에어컨": { id: "auto_ac", ar: "مكيّف تلقائي" },
+  "주차보조": { id: "parking_sensor", ar: "حساسات وقوف" }, "LED헤드램프": { id: "led_lights", ar: "مصابيح LED" },
+  "어댑티브크루즈": { id: "cruise_control", ar: "كروز تكيّفي" }, "차선이탈방지": { id: "lane_assist", ar: "مساعد الحارة" },
+  "사각지대감지": { id: "blind_spot", ar: "كشف النقطة العمياء" }, "헤드업디스플레이": { id: "hud", ar: "HUD" }, "4WD": { id: "awd", ar: "دفع رباعي" },
 };
 
 function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; ar: string }> {
@@ -1092,10 +737,7 @@ function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; 
   const seen = new Set<string>();
   for (const opt of options) {
     const mapped = ENCAR_OPTION_MAP[opt];
-    if (mapped && !seen.has(mapped.id)) {
-      seen.add(mapped.id);
-      result.push(mapped);
-    }
+    if (mapped && !seen.has(mapped.id)) { seen.add(mapped.id); result.push(mapped); }
   }
   return result;
 }
@@ -1149,45 +791,32 @@ function extractFeatures(car: EncarCar): string[] {
   const seen = new Set<string>();
   const add = (label: string) => { if (!seen.has(label)) { seen.add(label); features.push(label); } };
   const text = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
-  for (const { keywords, ar } of BADGE_FEATURE_MAP) {
-    if (keywords.some((kw) => text.includes(kw.toLowerCase()))) add(ar);
-  }
+  for (const { keywords, ar } of BADGE_FEATURE_MAP) { if (keywords.some((kw) => text.includes(kw.toLowerCase()))) add(ar); }
   for (const c of car.Condition ?? []) { const label = CONDITION_FEATURE_MAP[c]; if (label) add(label); }
   for (const t of car.Trust ?? []) { const label = TRUST_FEATURE_MAP[t]; if (label) add(label); }
   for (const sm of car.ServiceMark ?? []) { const label = SERVICE_MARK_MAP[sm]; if (label) { add(label); break; } }
   const fuel = FUEL_TO_EN[car.FuelType ?? ""] ?? "";
-  const fuelAr: Record<string, string> = {
-    gasoline: "بنزين", diesel: "ديزل", hybrid: "هايبرد",
-    electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG",
-  };
+  const fuelAr: Record<string, string> = { gasoline: "بنزين", diesel: "ديزل", hybrid: "هايبرد", electric: "كهربائي", hydrogen: "هيدروجين", lpg: "غاز LPG" };
   if (fuelAr[fuel]) add(fuelAr[fuel]);
   const trans = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "";
-  if (trans === "auto") add("أوتوماتيك");
-  else if (trans === "manual") add("يدوي");
+  if (trans === "auto") add("أوتوماتيك"); else if (trans === "manual") add("يدوي");
   const condition2 = car.Condition ?? [];
   const inspected = condition2.includes("Inspection") || condition2.includes("InspectionDirect");
   if (inspected) add("فحص معتمد");
   const year = parseInt(car.FormYear ?? "0", 10);
-  if (year >= 2023) add("موديل حديث");
-  else if (year >= 2020) add("موديل جيد");
+  if (year >= 2023) add("موديل حديث"); else if (year >= 2020) add("موديل جيد");
   if ((car.Mileage ?? 0) < 50000) add("ممشى منخفض");
   return features;
 }
 
-interface EncarResponse {
-  Count: number;
-  SearchResults: EncarCar[];
-}
+interface EncarResponse { Count: number; SearchResults: EncarCar[]; }
 
-function getProxyUrl(url: string): string {
-  return `https://wsrv.nl/?url=${encodeURIComponent(url)}&af`;
-}
+function getProxyUrl(url: string): string { return `https://wsrv.nl/?url=${encodeURIComponent(url)}&af`; }
 
 function mapEncarCar(car: EncarCar) {
   const sortedPhotos = (car.Photos ?? []).sort((a, b) => a.ordering - b.ordering);
   const images = sortedPhotos.map(photo => getProxyUrl(`${ENCAR_PHOTO}${photo.location}`));
   const imageUrl = images[0] || "";
-
   const brandEn = MANUFACTURER_TO_EN[car.Manufacturer] ?? car.Manufacturer;
   const fuelEn = FUEL_TO_EN[car.FuelType] ?? "gasoline";
   const transmissionEn = TRANSMISSION_TO_EN[car.Transmission ?? ""] ?? "auto";
@@ -1205,29 +834,11 @@ function mapEncarCar(car: EncarCar) {
   const badgeText = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
   const hasSunroof = ["선루프", "썬루프", "파노라마", "파노라믹", "파노"].some((kw) => badgeText.includes(kw));
   return {
-    id: car.Id,
-    brand: brandEn,
-    model,
-    year,
-    price,
-    priceFormatted: formatPrice(price),
-    mileage: Math.round(car.Mileage),
-    fuelType: fuelEn,
-    transmission: transmissionEn,
-    bodyType: "sedan",
-    color: colorEn,
-    colorAr,
-    sunroof: hasSunroof,
-    inspected,
-    imageUrl,
-    thumbnailUrl: imageUrl,
-    images, 
-    description: `${brandEn} ${car.Model} ${car.FormYear}`,
-    features,
-    options,
-    source: "Encar",
-    sourceUrl: `${ENCAR_DETAIL}${car.Id}`,
-    location: car.OfficeCityState ?? "كوريا",
+    id: car.Id, brand: brandEn, model, year, price, priceFormatted: formatPrice(price),
+    mileage: Math.round(car.Mileage), fuelType: fuelEn, transmission: transmissionEn,
+    bodyType: "sedan", color: colorEn, colorAr, sunroof: hasSunroof, inspected, imageUrl,
+    thumbnailUrl: imageUrl, images, description: `${brandEn} ${car.Model} ${car.FormYear}`,
+    features, options, source: "Encar", sourceUrl: `${ENCAR_DETAIL}${car.Id}`, location: car.OfficeCityState ?? "كوريا",
   };
 }
 
@@ -1235,181 +846,97 @@ function mapEncarCarExtended(car: EncarCarExtended) {
   const base = mapEncarCar(car);
   const bodyTypeRaw = (car.BodyType ?? "").trim();
   const bodyTypeAr = BODY_TYPE_KR_TO_AR[bodyTypeRaw.toLowerCase()] ?? BODY_TYPE_KR_TO_AR[bodyTypeRaw] ?? bodyTypeRaw;
-
-  const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({
-    id: o.optionCd,
-    nameKr: o.optionName,
-    price: o.price ?? null,
-  }));
-
+  const choiceOptions = (car.ChoiceOptions ?? []).map((o) => ({ id: o.optionCd, nameKr: o.optionName, price: o.price ?? null }));
   return {
-    ...base,
-    bodyType: bodyTypeRaw || base.bodyType,
-    bodyTypeAr,
-    vin: car.Vin ?? null,
-    seatCount: car.SeatCount ?? null,
-    seatColor: car.SeatColor ?? null,
-    displacement: car.Displacement ?? null,
-    generation: car.Generation ?? null,
-    choiceOptions,
+    ...base, bodyType: bodyTypeRaw || base.bodyType, bodyTypeAr, vin: car.Vin ?? null,
+    seatCount: car.SeatCount ?? null, seatColor: car.SeatColor ?? null,
+    displacement: car.Displacement ?? null, generation: car.Generation ?? null, choiceOptions,
   };
 }
 
-function safeLog(req: any) {
-  return req.log ?? console;
-}
+function safeLog(req: any) { return req.log ?? console; }
 
 router.get("/brands", (_req, res) => {
   res.json({
     brands: [
-      "Hyundai", "Kia", "Genesis", "SsangYong", "KG Mobility",
-      "Renault Samsung", "Renault Korea", "Chevrolet", "Daewoo",
-      "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Volvo",
-      "Toyota", "Lexus", "Honda", "Nissan", "Infiniti",
-      "Porsche", "Land Rover", "MINI", "Ford", "Jeep",
-      "Lincoln", "Cadillac", "Maserati", "Ferrari", "Lamborghini",
-      "Tesla", "Mazda", "Subaru", "Alfa Romeo", "Mitsubishi",
-      "Chrysler", "Peugeot", "Citroen", "Bentley", "Rolls-Royce", "McLaren",
-      "GMC", "Dodge", "Polestar", "Fiat", "Hummer", "Saab",
-      "Lotus", "BYD", "Maybach",
+      "Hyundai", "Kia", "Genesis", "SsangYong", "KG Mobility", "Renault Samsung", "Renault Korea", "Chevrolet", "Daewoo",
+      "BMW", "Mercedes-Benz", "Audi", "Volkswagen", "Volvo", "Toyota", "Lexus", "Honda", "Nissan", "Infiniti",
+      "Porsche", "Land Rover", "MINI", "Ford", "Jeep", "Lincoln", "Cadillac", "Maserati", "Ferrari", "Lamborghini",
+      "Tesla", "Mazda", "Subaru", "Alfa Romeo", "Mitsubishi", "Chrysler", "Peugeot", "Citroen", "Bentley", "Rolls-Royce", "McLaren",
+      "GMC", "Dodge", "Polestar", "Fiat", "Hummer", "Saab", "Lotus", "BYD", "Maybach",
     ],
   });
 });
 
 router.get("/filters", async (req, res) => {
   const { brand, modelGroup } = req.query as { brand?: string; modelGroup?: string };
-
-  if (!brand) {
-    res.status(400).json({ error: "brand is required" });
-    return;
-  }
-
+  if (!brand) { res.status(400).json({ error: "brand is required" }); return; }
   const krBrand = EN_TO_MANUFACTURER[brand.toLowerCase()];
-  if (!krBrand) {
-    res.status(400).json({ error: "unknown brand" });
-    return;
-  }
-
+  if (!krBrand) { res.status(400).json({ error: "unknown brand" }); return; }
   const isDomestic = DOMESTIC_BRANDS.has(brand.toLowerCase());
   const carTypePart = isDomestic ? "_.CarType.Y." : "";
 
   try {
-    let q: string;
-
-    if (modelGroup) {
-      q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}._.ModelGroup.${modelGroup}.)`;
-    } else {
-      q = `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}.)`;
-    }
-
+    let q: string = modelGroup ? `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}._.ModelGroup.${modelGroup}.)` : `(And.Hidden.N.${carTypePart}_.Manufacturer.${krBrand}.)`;
     const inavParam = encodeURIComponent("|Metadata|Sort");
     const rawUrl = `${ENCAR_API}/search/car/list/premium?count=true&q=${q}&inav=${inavParam}`;
     const resp = await fetch(rawUrl, {
-      headers: {
-        Referer: "https://www.encar.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json, text/plain, */*",
-      },
+      headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" },
       signal: AbortSignal.timeout(10000),
     });
-
     if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
     const data = await resp.json() as { iNav?: { Nodes?: any[] } };
     const nodes = data.iNav?.Nodes ?? [];
 
-    if (modelGroup && req.query.debug === "1") {
-      res.json({
-        nodeNames: nodes.map((n: any) => n.Name),
-        rawNodes: nodes.slice(0, 5),
-      });
-      return;
-    }
-
+    if (modelGroup && req.query.debug === "1") { res.json({ nodeNames: nodes.map((n: any) => n.Name), rawNodes: nodes.slice(0, 5) }); return; }
     if (modelGroup) {
       const modelNode = nodes.find((n: any) => n.Name === "Model");
       let modelFacets = (modelNode?.Facets ?? []).filter((f: any) => f.Count > 0);
-
       if (modelFacets.length === 0) {
         const mgNode = nodes.find((n: any) => n.Name === "ModelGroup");
         const mgFacet = mgNode?.Facets?.find((f: any) => f.Value === modelGroup || f.IsSelected);
         const refinementModel = mgFacet?.Refinements?.Nodes?.find((n: any) => n.Name === "Model");
         modelFacets = (refinementModel?.Facets ?? []).filter((f: any) => f.Count > 0);
       }
-
       if (modelFacets.length === 0) {
         for (const node of nodes) {
           for (const facet of node.Facets ?? []) {
             const refModel = facet?.Refinements?.Nodes?.find((n: any) => n.Name === "Model");
-            if (refModel?.Facets?.length > 0) {
-              modelFacets = refModel.Facets.filter((f: any) => f.Count > 0);
-              break;
-            }
+            if (refModel?.Facets?.length > 0) { modelFacets = refModel.Facets.filter((f: any) => f.Count > 0); break; }
           }
           if (modelFacets.length > 0) break;
         }
       }
-
-      const models = modelFacets.map((f: any) => ({
-        value: f.Value,
-        label: f.DisplayValue,
-        count: f.Count,
-      }));
-      res.json({ models });
-      return;
+      const models = modelFacets.map((f: any) => ({ value: f.Value, label: f.DisplayValue, count: f.Count }));
+      res.json({ models }); return;
     } else {
       const mgNode = nodes.find((n: any) => n.Name === "ModelGroup");
       const mfNode = nodes.find((n: any) => n.Name === "Manufacturer");
       const krFacet = mfNode?.Facets?.find((f: any) => f.Value === krBrand);
       const refinementMG = krFacet?.Refinements?.Nodes?.find((n: any) => n.Name === "ModelGroup");
-
       const rawGroups = refinementMG?.Facets ?? mgNode?.Facets ?? [];
-      const modelGroups = rawGroups
-        .filter((f: any) => f.Count > 0)
-        .map((f: any) => ({
-          value: f.Value,
-          label: f.DisplayValue,
-          count: f.Count,
-        }));
-      res.json({ modelGroups });
-      return;
+      const modelGroups = rawGroups.filter((f: any) => f.Count > 0).map((f: any) => ({ value: f.Value, label: f.DisplayValue, count: f.Count }));
+      res.json({ modelGroups }); return;
     }
   } catch (err) {
-    safeLog(req).error?.({ err }, "Encar filters error") ?? console.error(err);
-    res.status(502).json({ error: "upstream_error" });
-    return;
+    res.status(502).json({ error: "upstream_error" }); return;
   }
 });
 
 router.get("/search", async (req, res) => {
   const parsed = SearchCarsQueryParams.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: "invalid_params", message: "Invalid query parameters" });
-    return;
-  }
-  const {
-    model, brand, yearFrom, yearTo, sunroof, transmission,
-    fuelType, bodyType, color, priceMin, priceMax, mileageMax,
-    page = 1, limit = 20,
-  } = parsed.data;
+  if (!parsed.success) { res.status(400).json({ error: "invalid_params", message: "Invalid query parameters" }); return; }
+  const { model, brand, yearFrom, yearTo, sunroof, transmission, fuelType, bodyType, color, priceMin, priceMax, mileageMax, page = 1, limit = 20 } = parsed.data;
   const modelType = (req.query.modelType as "group" | "model" | undefined);
   
   try {
-    const { q: encarQ, modelRaw } = buildEncarQuery({
-      brand, model, sunroof, fuelType, transmission, bodyType, color,
-      yearFrom, yearTo, modelType, priceMin, priceMax, mileageMax
-    });
+    const { q: encarQ, modelRaw } = buildEncarQuery({ brand, model, sunroof, fuelType, transmission, bodyType, color, yearFrom, yearTo, modelType, priceMin, priceMax, mileageMax });
     const offset = (page - 1) * limit;
     const url = new URL(`${ENCAR_API}/search/car/list/general`);
-    url.searchParams.set("count", "true");
-    url.searchParams.set("q", encarQ);
-    url.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
+    url.searchParams.set("count", "true"); url.searchParams.set("q", encarQ); url.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
     
     const resp = await fetch(url.toString(), {
-      headers: {
-        Referer: "https://www.encar.com",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-        Accept: "application/json, text/plain, */*",
-      },
+      headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" },
       signal: AbortSignal.timeout(10000),
     });
     
@@ -1428,10 +955,8 @@ router.get("/search", async (req, res) => {
       return true;
     });
     
-    // حفظ في الكاش باستخدام الصيغة الجديدة المحمية
     cars.forEach((c) => carCache.set(c.id, { data: c, timestamp: Date.now() }));
     
-    // نترك فلتر rawModel فقط لأنه لا يترجم جيداً في طلب Encar API
     if (modelRaw) {
       const needle = modelRaw.toLowerCase();
       cars = cars.filter((c) => c.model.toLowerCase().includes(needle));
@@ -1444,10 +969,7 @@ router.get("/search", async (req, res) => {
     return;
   } catch (err) {
     safeLog(req).error?.({ err }, "Encar API error") ?? console.error(err);
-    res.status(502).json({
-      error: "upstream_error",
-      message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.",
-    });
+    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى." });
     return;
   }
 });
@@ -1457,25 +979,14 @@ router.get("/:id", async (req, res): Promise<void> => {
   const log = safeLog(req);
 
   try {
-    // ── 1. الجلب من API الرئيسي ─────────────────────────────
-    const includeParams = [
-      "CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT",
-      "MANAGE", "OPTIONS", "CONDITION", "PARTNERSHIP", "CONTACT",
-    ].join(",");
+    const includeParams = ["CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT", "MANAGE", "OPTIONS", "CONDITION", "PARTNERSHIP", "CONTACT"].join(",");
     const apiUrl = `https://api.encar.com/v1/readside/vehicle/${id}?include=${includeParams}`;
     const resp = await fetch(apiUrl, {
-      headers: {
-        Referer: `https://fem.encar.com/cars/detail/${id}`,
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-        Accept: "application/json",
-      },
+      headers: { Referer: `https://fem.encar.com/cars/detail/${id}`, "User-Agent": "Mozilla/5.0", Accept: "application/json" },
       signal: AbortSignal.timeout(10000),
     });
 
     if (!resp.ok) {
-      let bodyText = "";
-      try { bodyText = (await resp.text()).slice(0, 500); } catch { bodyText = "(تعذر قراءة نص الرد)"; }
-      log.error?.({ carId: id, status: resp.status, bodySample: bodyText }, "vehicle endpoint failed") ?? console.error("vehicle failed", resp.status);
       res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
       return;
     }
@@ -1488,34 +999,21 @@ router.get("/:id", async (req, res): Promise<void> => {
     const manage = raw.manage ?? {};
     const conditionData = raw.condition ?? {};
 
-    // ── 2. استخراج البيانات الأساسية ─────────────────────────
     const conditions: string[] = [];
-    const pushCond = (val: any) => {
-      if (typeof val === "string") conditions.push(val);
-      else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && conditions.push(v));
-    };
+    const pushCond = (val: any) => { if (typeof val === "string") conditions.push(val); else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && conditions.push(v)); };
     pushCond(manage.condition);
     if (conditionData.inspection) conditions.push("Inspection");
     if (conditionData.record) conditions.push("Record");
     if (conditionData.resume) conditions.push("Resume");
-    pushCond(raw.condition?.types);
-    pushCond(raw.condition?.list);
+    pushCond(raw.condition?.types); pushCond(raw.condition?.list);
 
     const trusts: string[] = [];
-    const pushTrust = (val: any) => {
-      if (typeof val === "string") trusts.push(val);
-      else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && trusts.push(v));
-    };
-    pushTrust(advertisement.trust);
-    pushTrust(raw.trust);
+    const pushTrust = (val: any) => { if (typeof val === "string") trusts.push(val); else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && trusts.push(v)); };
+    pushTrust(advertisement.trust); pushTrust(raw.trust);
 
     const serviceMarks: string[] = [];
-    const pushSm = (val: any) => {
-      if (typeof val === "string") serviceMarks.push(val);
-      else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && serviceMarks.push(v));
-    };
-    pushSm(advertisement.serviceMark);
-    pushSm(raw.serviceMark);
+    const pushSm = (val: any) => { if (typeof val === "string") serviceMarks.push(val); else if (Array.isArray(val)) val.forEach((v) => typeof v === "string" && serviceMarks.push(v)); };
+    pushSm(advertisement.serviceMark); pushSm(raw.serviceMark);
 
     const optionsList: string[] = [];
     const rawOpts = raw.options ?? manage.options ?? [];
@@ -1527,372 +1025,178 @@ router.get("/:id", async (req, res): Promise<void> => {
       }
     }
 
-    // ── 3. جلب بيانات الفحص من API الخاص بـ Encar المباشر (الحل الجديد) ───
+    // ── 3. جلب بيانات الفحص من صفحات التقارير المنفصلة (الحل النهائي) ───
     let inspectionReport: any = null;
+    const { inspectHtml, accidentHtml } = await fetchDetailedInspectionHtmls(id);
     
-    // المحاولة الأولى: عبر الـ API المباشر
-    const { perfData, insData } = await fetchDetailedInspectionAPIs(id);
+    let damages: any[] = [];
+    let diagramExterior: any[] = [];
+    let diagramInterior: any[] = [];
+    let accidentDetails: any[] = [];
+    let myAccidents = 0;
+    let otherAccidents = 0;
+    let totalMyAccidentCost = 0;
+    let ownerChangeDates: string[] = [];
+    let hasReportData = false;
     
-    if (perfData || insData) {
-      let damages: any[] = [];
-      const rawDamages = perfData?.exchanges || perfData?.damages || perfData?.parts || [];
-      if (Array.isArray(rawDamages)) {
-        damages = rawDamages.map((d: any) => {
-          const partName = d.partName || d.name || "جزء";
-          const status = d.status || d.repairType || d.damageType || "판금";
-          return {
-            part: partName,
-            partAr: translatePartToAr(partName),
-            status,
-            statusAr: translateStatusToAr(status),
-            statusCode: getStatusCode(status),
-            rank: d.rank || d.grade || "Rank 1",
-          };
-        });
-      }
+    let inspectionData: any = null;
+    let insuranceData: any = null;
+    let historyData: any = null;
 
-      let accidentDetails: any[] = [];
-      let myAccidents = 0;
-      let otherAccidents = 0;
-      let totalMyAccidentCost = 0;
-      
-      const rawAccidents = insData?.accidents || insData?.damageList || insData?.claims || [];
-      if (Array.isArray(rawAccidents)) {
-        accidentDetails = rawAccidents.map((a: any) => {
-          const typeStr = a.type || a.accidentType || "";
-          const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차") || typeStr.includes("내사고");
-          const amount = a.amount || a.cost || a.repairCost || 0;
-          
-          if (isMyAccident) {
-            myAccidents++;
-            totalMyAccidentCost += amount;
-          } else {
-            otherAccidents++;
+    // Helper to parse Next.js JSON from HTML
+    const parseNextData = (html: string) => {
+      const nextMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
+      if (nextMatch) try { return JSON.parse(nextMatch[1]); } catch {}
+      const stateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s) || html.match(/window\.__DATA__\s*=\s*({.*?});/s);
+      if (stateMatch) try { return JSON.parse(stateMatch[1]); } catch {}
+      return null;
+    };
+
+    if (inspectHtml) {
+      const data = parseNextData(inspectHtml);
+      if (data) {
+        const carData = data.props?.pageProps?.car ?? data.props?.pageProps?.vehicle ?? data.props?.pageProps ?? data.car ?? data;
+        inspectionData = carData.inspection ?? carData.performanceCheck ?? null;
+        if (inspectionData) {
+          hasReportData = true;
+          const rawDamages = inspectionData.damages || inspectionData.parts || inspectionData.bodyDamages || [];
+          if (Array.isArray(rawDamages)) {
+            damages = rawDamages.map((d: any) => {
+              const partName = d.partName || d.name || d.part || d.panel || "جزء";
+              const status = d.status || d.type || d.repairType || d.damageType || "판금";
+              return {
+                part: partName, partAr: translatePartToAr(partName),
+                status, statusAr: translateStatusToAr(status),
+                statusCode: getStatusCode(status), rank: d.rank || d.grade || d.level || "Rank 1",
+              };
+            });
           }
-
-          return {
-            date: a.date || a.occurrenceDate || a.accidentDate,
-            type: typeStr,
-            typeAr: translateAccidentTypeToAr(typeStr),
-            amount,
-            description: a.description || "",
-          };
-        });
+          const rawDiagram = inspectionData.diagram || inspectionData.bodyDiagram || inspectionData.damageMap || null;
+          if (rawDiagram) {
+            diagramExterior = rawDiagram.exterior || rawDiagram.outer || [];
+            diagramInterior = rawDiagram.interior || rawDiagram.inner || rawDiagram.frame || [];
+          }
+        }
       }
-
-      let ownerChangeDates: string[] = [];
-      const rawOwners = insData?.ownerChanges || insData?.owners || [];
-      if (Array.isArray(rawOwners)) {
-        ownerChangeDates = rawOwners.map((o:any) => o.date || o.changeDate);
-      }
-
-      inspectionReport = buildInspectionReport(perfData, insData, null, null, {
-        damages,
-        accidentDetails,
-        myAccidents,
-        otherAccidents,
-        totalMyAccidentCost,
-        ownerChangeDates,
-      });
-      inspectionReport.source = "direct_api";
-      inspectionReport.message = "تم استخراج الفحص التفصيلي من API بنجاح";
     }
 
-    // المحاولة الثانية (الطوارئ): إذا فشل الـ API نستخدم الـ HTML (كما كان سابقاً)
+    if (accidentHtml) {
+      const data = parseNextData(accidentHtml);
+      if (data) {
+        const carData = data.props?.pageProps?.car ?? data.props?.pageProps?.vehicle ?? data.props?.pageProps ?? data.car ?? data;
+        insuranceData = carData.insurance ?? carData.insuranceHistory ?? null;
+        historyData = carData.history ?? carData.carHistory ?? null;
+        
+        if (insuranceData) {
+          hasReportData = true;
+          const accidents = insuranceData.accidents || insuranceData.claims || [];
+          if (Array.isArray(accidents)) {
+            accidentDetails = accidents.map((a: any) => {
+              const typeStr = a.type || a.accidentType || "";
+              const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차") || typeStr.includes("내사고");
+              const amount = a.amount || a.cost || a.repairCost || a.claimAmount || 0;
+              if (isMyAccident) { myAccidents++; totalMyAccidentCost += amount; } else { otherAccidents++; }
+              return {
+                date: a.date || a.accidentDate || a.occurrenceDate,
+                type: typeStr, typeAr: translateAccidentTypeToAr(typeStr), amount, description: a.description || "",
+              };
+            });
+          }
+          const owners = insuranceData.owners || insuranceData.ownerChanges || [];
+          if (Array.isArray(owners)) {
+             ownerChangeDates = owners.map((o: any) => o.date || o.changeDate || o.regDate).filter((d:any) => d && typeof d === 'string' && d.length >= 4);
+          }
+        }
+      }
+    }
+
+    if (hasReportData) {
+      inspectionReport = buildInspectionReport(inspectionData, insuranceData, null, historyData, {
+        damages, accidentDetails, myAccidents, otherAccidents, totalMyAccidentCost, ownerChangeDates, diagramExterior, diagramInterior,
+      });
+      inspectionReport.source = "dedicated_html";
+      inspectionReport.message = "تم استخراج الفحص التفصيلي من الصفحات المخصصة";
+    }
+
+    // المحاولة الطارئة إذا لم نجد أي بيانات (قراءة نصوص الـ HTML للبحث عن الكلمات مثل 사고 و 보험)
     if (!inspectionReport || !inspectionReport.hasReport) {
       try {
-        const htmlResp = await fetch(`https://fem.encar.com/cars/detail/${id}`, {
-          headers: {
-            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-          },
-          signal: AbortSignal.timeout(8000),
-        });
-        if (htmlResp.ok) {
-          const html = await htmlResp.text();
-          inspectionReport = extractInspectionFromHtml(html, id);
+        const fallbackHtml = inspectHtml + accidentHtml; // دمج الصفحتين للقراءة النصية
+        if (fallbackHtml.length > 500) {
+          inspectionReport = extractInspectionFallback(fallbackHtml, id);
         }
-      } catch (htmlErr) {
-        log.warn?.({ carId: id, err: htmlErr }, "HTML scrape failed") ?? console.log("HTML scrape failed", htmlErr);
-      }
+      } catch (e) {}
     }
 
-    // المحاولة الثالثة (الأخيرة): إرجاع تقرير مختصر لو كل شيء فشل لكن نعرف أن السيارة مفحوصة
     if (!inspectionReport && (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis")))) {
-      inspectionReport = {
-        hasReport: true,
-        source: "basic",
-        message: "فحص معتمد من Encar",
-        performanceCheck: null,
-        insurance: null,
-        accident: null,
-        history: null,
-      };
+      inspectionReport = { hasReport: true, source: "basic", message: "فحص معتمد من Encar", performanceCheck: null, insurance: null, accident: null, history: null };
     } else if (!inspectionReport) {
       inspectionReport = { hasReport: false };
     }
 
-    log.info?.(
-      {
-        carId: id,
-        conditions,
-        inspectionHasReport: inspectionReport?.hasReport,
-        inspectionSource: inspectionReport?.source,
-      },
-      "DEBUG: final inspection report"
-    ) ?? console.log("DEBUG final inspection", { hasReport: inspectionReport?.hasReport, source: inspectionReport?.source });
+    log.info?.({ carId: id, inspectionHasReport: inspectionReport?.hasReport, inspectionSource: inspectionReport?.source }, "DEBUG: final inspection report") ?? 
+    console.log("DEBUG final inspection", { hasReport: inspectionReport?.hasReport, source: inspectionReport?.source });
 
     const encarCarLike: EncarCarExtended = {
-      Id: String(raw.vehicleId ?? id),
-      Manufacturer: category.manufacturerName ?? "",
-      Model: category.modelName ?? "",
-      Badge: category.gradeName ?? category.gradeDetailName ?? "",
-      GreenType: "",
-      FuelType: spec.fuelName ?? "",
-      Transmission: spec.transmissionName ?? "",
-      FormYear: String(category.formYear ?? category.yearMonth ?? ""),
-      Mileage: Number(spec.mileage ?? 0),
-      Price: Number(advertisement.price ?? 0),
-      Color: spec.colorName ?? "",
-      Condition: conditions,
-      Trust: trusts,
-      ServiceMark: serviceMarks,
-      BuyType: [],
-      OfficeCityState: advertisement.city ?? "",
-      Photos: rawPhotos.map((p: any, i: number) => ({
-        location: p.location ?? p.path ?? p.url ?? "",
-        ordering: p.ordering ?? i,
-      })),
-      Year: Number(category.formYear ?? category.yearMonth ?? 0),
-      Options: optionsList,
-      Vin: raw.vin ?? spec.vin ?? undefined,
-      BodyType: spec.bodyName ?? category.bodyName ?? undefined,
-      SeatCount: spec.seatCount ?? undefined,
-      SeatColor: spec.seatColorName ?? undefined,
-      Displacement: spec.displacement ?? undefined,
-      Generation: category.gradeName ?? category.carGradeName ?? undefined,
+      Id: String(raw.vehicleId ?? id), Manufacturer: category.manufacturerName ?? "", Model: category.modelName ?? "",
+      Badge: category.gradeName ?? category.gradeDetailName ?? "", GreenType: "", FuelType: spec.fuelName ?? "",
+      Transmission: spec.transmissionName ?? "", FormYear: String(category.formYear ?? category.yearMonth ?? ""),
+      Mileage: Number(spec.mileage ?? 0), Price: Number(advertisement.price ?? 0), Color: spec.colorName ?? "",
+      Condition: conditions, Trust: trusts, ServiceMark: serviceMarks, BuyType: [], OfficeCityState: advertisement.city ?? "",
+      Photos: rawPhotos.map((p: any, i: number) => ({ location: p.location ?? p.path ?? p.url ?? "", ordering: p.ordering ?? i })),
+      Year: Number(category.formYear ?? category.yearMonth ?? 0), Options: optionsList,
+      Vin: raw.vin ?? spec.vin ?? undefined, BodyType: spec.bodyName ?? category.bodyName ?? undefined,
+      SeatCount: spec.seatCount ?? undefined, SeatColor: spec.seatColorName ?? undefined,
+      Displacement: spec.displacement ?? undefined, Generation: category.gradeName ?? category.carGradeName ?? undefined,
     };
 
     const choiceOptions = await fetchChoiceOptions(id);
     encarCarLike.ChoiceOptions = choiceOptions;
-
     const car = mapEncarCarExtended(encarCarLike);
 
-    const inspection = inspectionReport?.accident
-      ? {
-          hasDamage: inspectionReport.accident.hasAccident,
-          damageCount: inspectionReport.accident.accidentCount || 0,
-          parts: Array.isArray(inspectionReport.accident.parts)
-            ? inspectionReport.accident.parts.map((p: any) => ({
-                name: typeof p === "string" ? p : p.name || p.partName || "جزء",
-                damaged: typeof p === "string" ? true : p.damaged !== false,
-                section: typeof p === "string" ? "خارجي" : p.section || p.location || "خارجي",
-              }))
-            : [],
-        }
-      : inspectionReport?.performanceCheck?.checked
-        ? { hasDamage: false, damageCount: 0, parts: [] }
-        : null;
+    const inspection = inspectionReport?.accident ? {
+      hasDamage: inspectionReport.accident.hasAccident, damageCount: inspectionReport.accident.accidentCount || 0,
+      parts: Array.isArray(inspectionReport.accident.parts) ? inspectionReport.accident.parts.map((p: any) => ({
+        name: typeof p === "string" ? p : p.name || p.partName || "جزء", damaged: typeof p === "string" ? true : p.damaged !== false, section: typeof p === "string" ? "خارجي" : p.section || p.location || "خارجي",
+      })) : [],
+    } : inspectionReport?.performanceCheck?.checked ? { hasDamage: false, damageCount: 0, parts: [] } : null;
 
-    const insurance = inspectionReport?.insurance
-      ? {
-          totalAccidents: inspectionReport.history?.accidents || inspectionReport.accident?.accidentCount || 0,
-          myAccidents: inspectionReport.myAccidents || 0,
-          otherAccidents: inspectionReport.otherAccidents || 0,
-          ownerChanges: inspectionReport.insurance.ownerChanges || inspectionReport.history?.previousOwners || 0,
-          ownerChangeDates: inspectionReport.ownerChangeDates || [],
-        }
-      : inspectionReport?.history
-        ? {
-            totalAccidents: inspectionReport.history.accidents || 0,
-            myAccidents: inspectionReport.myAccidents || 0,
-            otherAccidents: inspectionReport.otherAccidents || 0,
-            ownerChanges: inspectionReport.history.previousOwners || 0,
-            ownerChangeDates: inspectionReport.ownerChangeDates || [],
-          }
-        : null;
+    const insurance = inspectionReport?.insurance ? {
+      totalAccidents: inspectionReport.history?.accidents || inspectionReport.accident?.accidentCount || 0,
+      myAccidents: inspectionReport.myAccidents || 0, otherAccidents: inspectionReport.otherAccidents || 0,
+      ownerChanges: inspectionReport.insurance.ownerChanges || inspectionReport.history?.previousOwners || 0,
+      ownerChangeDates: inspectionReport.ownerChangeDates || [],
+    } : inspectionReport?.history ? {
+      totalAccidents: inspectionReport.history.accidents || 0, myAccidents: inspectionReport.myAccidents || 0,
+      otherAccidents: inspectionReport.otherAccidents || 0, ownerChanges: inspectionReport.history.previousOwners || 0,
+      ownerChangeDates: inspectionReport.ownerChangeDates || [],
+    } : null;
 
-    const inspectionDetailed = inspectionReport
-      ? {
-          hasReport: inspectionReport.hasReport,
-          source: inspectionReport.source,
-          message: inspectionReport.message || null,
-          diagram: {
-            exterior: inspectionReport.diagramExterior || [],
-            interior: inspectionReport.diagramInterior || [],
-          },
-          damages: inspectionReport.damages || [],
-          insuranceSummary: {
-            totalAccidents: (inspectionReport.accidentDetails || []).length,
-            myAccidents: inspectionReport.myAccidents || 0,
-            otherAccidents: inspectionReport.otherAccidents || 0,
-            ownerChanges: inspectionReport.insurance?.ownerChanges || inspectionReport.history?.previousOwners || 0,
-            ownerChangeDates: inspectionReport.ownerChangeDates || [],
-          },
-          accidentDetails: inspectionReport.accidentDetails || [],
-          totalMyAccidentCost: inspectionReport.totalMyAccidentCost || 0,
-          performanceCheck: inspectionReport.performanceCheck || null,
-        }
-      : null;
+    const inspectionDetailed = inspectionReport ? {
+      hasReport: inspectionReport.hasReport, source: inspectionReport.source, message: inspectionReport.message || null,
+      diagram: { exterior: inspectionReport.diagramExterior || [], interior: inspectionReport.diagramInterior || [] },
+      damages: inspectionReport.damages || [],
+      insuranceSummary: {
+        totalAccidents: (inspectionReport.accidentDetails || []).length, myAccidents: inspectionReport.myAccidents || 0,
+        otherAccidents: inspectionReport.otherAccidents || 0,
+        ownerChanges: inspectionReport.insurance?.ownerChanges || inspectionReport.history?.previousOwners || 0,
+        ownerChangeDates: inspectionReport.ownerChangeDates || [],
+      },
+      accidentDetails: inspectionReport.accidentDetails || [], totalMyAccidentCost: inspectionReport.totalMyAccidentCost || 0,
+      performanceCheck: inspectionReport.performanceCheck || null,
+    } : null;
 
     res.json({ ...car, inspectionReport, inspection, insurance, inspectionDetailed });
     return;
   } catch (err) {
     log.error?.({ err, id }, "Encar detail API error") ?? console.error(err);
-    res.status(502).json({
-      error: "upstream_error",
-      message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.",
-    });
+    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى." });
     return;
   }
 });
 
-// ── دالة استخراج الفحص من HTML (الخطة البديلة) ───────────────────
-function extractInspectionFromHtml(html: string, carId: string): any | null {
-  let damages: any[] = [];
-  let accidentDetails: any[] = [];
-  let ownerChangeDates: string[] = [];
-  let totalMyAccidentCost = 0;
-  let myAccidents = 0;
-  let otherAccidents = 0;
-  let diagramExterior: any[] = [];
-  let diagramInterior: any[] = [];
-
-  const nextDataMatch = html.match(/<script id="__NEXT_DATA__" type="application\/json">([\s\S]*?)<\/script>/i);
-  if (nextDataMatch) {
-    try {
-      const nextData = JSON.parse(nextDataMatch[1]);
-      const pageProps = nextData.props?.pageProps ?? {};
-      const carData = pageProps.car ?? pageProps.vehicle ?? pageProps;
-
-      const inspection = carData.inspection ?? carData.performanceCheck ?? null;
-      if (inspection) {
-        const rawDamages = inspection.damages || inspection.parts || inspection.bodyDamages || [];
-        if (Array.isArray(rawDamages)) {
-          damages = rawDamages.map((d: any) => {
-            const partName = d.partName || d.name || d.part || d.panel || "جزء";
-            const status = d.status || d.type || d.repairType || d.damageType || "판금";
-            const rank = d.rank || d.grade || d.level || "Rank 1";
-            return {
-              part: partName,
-              partAr: translatePartToAr(partName),
-              status,
-              statusAr: translateStatusToAr(status),
-              statusCode: getStatusCode(status),
-              rank,
-            };
-          });
-        }
-        const rawDiagram = inspection.diagram || inspection.bodyDiagram || inspection.damageMap || null;
-        if (rawDiagram) {
-          diagramExterior = rawDiagram.exterior || rawDiagram.outer || [];
-          diagramInterior = rawDiagram.interior || rawDiagram.inner || rawDiagram.frame || [];
-        }
-      }
-
-      const insuranceData = carData.insurance ?? carData.insuranceHistory ?? null;
-      if (insuranceData) {
-        const accidents = insuranceData.accidents || insuranceData.claims || [];
-        if (Array.isArray(accidents)) {
-          accidentDetails = accidents.map((a: any) => {
-            const typeStr = a.type || a.accidentType || "";
-            const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차") || typeStr.includes("내사고");
-            const amount = a.amount || a.cost || a.repairCost || a.claimAmount || 0;
-            if (isMyAccident) {
-              myAccidents++;
-              totalMyAccidentCost += amount;
-            } else {
-              otherAccidents++;
-            }
-            return {
-              date: a.date || a.accidentDate || a.occurrenceDate,
-              type: typeStr,
-              typeAr: translateAccidentTypeToAr(typeStr),
-              amount,
-              description: a.description || "",
-            };
-          });
-        }
-        const owners = insuranceData.owners || insuranceData.ownerChanges || [];
-        if (Array.isArray(owners)) {
-          const currentYear = new Date().getFullYear();
-          ownerChangeDates = owners
-            .map((o: any) => o.date || o.changeDate || o.regDate)
-            .filter((d: any) => {
-              if (!d) return false;
-              // [4] حماية عملية قراءة التاريخ (Safeguard) لتفادي انهيار الكود
-              const year = (d && typeof d === 'string' && d.length >= 4) ? parseInt(d.slice(0, 4), 10) : 0;
-              return year >= 1990 && year <= currentYear;
-            });
-        }
-      }
-
-      const historyData = carData.history ?? carData.carHistory ?? null;
-      if (historyData) {
-        const currentYear = new Date().getFullYear();
-        if (ownerChangeDates.length === 0) {
-          const owners = historyData.owners || historyData.ownerChanges || [];
-          if (Array.isArray(owners)) {
-            ownerChangeDates = owners
-              .map((o: any) => o.date || o.changeDate || o.regDate)
-              .filter((d: any) => {
-                if (!d) return false;
-                const year = (d && typeof d === 'string' && d.length >= 4) ? parseInt(d.slice(0, 4), 10) : 0;
-                return year >= 1990 && year <= currentYear;
-              });
-          }
-        }
-        if (accidentDetails.length === 0 && historyData.accidents) {
-          accidentDetails = historyData.accidents.map((a: any) => ({
-            date: a.date || a.accidentDate,
-            type: a.type || a.accidentType,
-            typeAr: translateAccidentTypeToAr(a.type || a.accidentType),
-            amount: a.amount || a.cost || 0,
-            description: a.description || "",
-          }));
-        }
-      }
-
-      if (damages.length > 0 || accidentDetails.length > 0 || ownerChangeDates.length > 0 || inspection) {
-        return buildInspectionReport(inspection, insuranceData, null, historyData, {
-          damages,
-          accidentDetails,
-          ownerChangeDates,
-          totalMyAccidentCost,
-          myAccidents,
-          otherAccidents,
-          diagramExterior,
-          diagramInterior,
-        });
-      }
-    } catch { /* ignore */ }
-  }
-
-  const initialStateMatch = html.match(/window\.__INITIAL_STATE__\s*=\s*({.*?});/s) ||
-                              html.match(/window\.__DATA__\s*=\s*({.*?});/s);
-  if (initialStateMatch) {
-    try {
-      const data = JSON.parse(initialStateMatch[1]);
-      const inspection = data.inspection ?? data.performanceCheck ?? data.car?.inspection ?? null;
-      const insuranceData = data.insurance ?? data.car?.insurance ?? null;
-      const historyData = data.history ?? data.car?.history ?? null;
-
-      if (inspection || insuranceData || historyData) {
-        return buildInspectionReport(inspection, insuranceData, null, historyData, {
-          damages,
-          accidentDetails,
-          ownerChangeDates,
-          totalMyAccidentCost,
-          myAccidents,
-          otherAccidents,
-          diagramExterior,
-          diagramInterior,
-        });
-      }
-    } catch { /* ignore */ }
-  }
-
+// دالة الطوارئ لاستخراج المعلومات الأساسية كـ Text Scrape
+function extractInspectionFallback(html: string, carId: string): any | null {
   const hasInspection = html.includes("성능점검") || html.includes("performance check") || html.includes("inspection");
   const hasInsurance = html.includes("보험처리이력") || html.includes("insurance history");
   const hasAccident = html.includes("사고이력") || html.includes("accident history");
@@ -1901,97 +1205,55 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
     const accidentCountMatch = html.match(/사고\s*(\d+)\s*회/) || html.match(/accident[s]?\s*[:\\s]*(\d+)/i);
     const repairAmountMatch = html.match(/보험\s*([\d,]+)\s*만원/) || html.match(/repair\s*[:\\s]*([\d,]+)/i);
     const ownerChangeMatch = html.match(/소유자\s*변경\s*(\d+)\s*회/) || html.match(/owner\s*change[s]?\s*[:\\s]*(\d+)/i);
-
+    let ownerChangeDates: string[] = [];
     const dateMatches = html.match(/(\d{4}[-./]\d{2}[-./]\d{2})/g);
-    if (dateMatches) {
-      ownerChangeDates = [...new Set(dateMatches)].slice(0, 10);
-    }
+    if (dateMatches) ownerChangeDates = [...new Set(dateMatches)].slice(0, 10);
 
     return {
-      hasReport: true,
-      source: "html_scrape",
-      message: "تقرير الفحص مستخرج من صفحة Encar",
+      hasReport: true, source: "html_scrape", message: "تقرير الفحص مستخرج بصيغة نصية",
       performanceCheck: hasInspection ? { checked: true, date: null, result: null } : null,
       insurance: hasInsurance ? {
-        totalLoss: html.includes("전손") || html.includes("total loss"),
-        flood: html.includes("침수") || html.includes("flood"),
-        theft: html.includes("도난") || html.includes("theft"),
-        repairCount: accidentCountMatch ? parseInt(accidentCountMatch[1], 10) : null,
+        totalLoss: html.includes("전손") || html.includes("total loss"), flood: html.includes("침수") || html.includes("flood"),
+        theft: html.includes("도난") || html.includes("theft"), repairCount: accidentCountMatch ? parseInt(accidentCountMatch[1], 10) : null,
         repairAmount: repairAmountMatch ? parseInt(repairAmountMatch[1].replace(/,/g, ""), 10) : null,
         ownerChanges: ownerChangeMatch ? parseInt(ownerChangeMatch[1], 10) : null,
       } : null,
       accident: hasAccident ? {
-        hasAccident: true,
-        accidentCount: accidentCountMatch ? parseInt(accidentCountMatch[1], 10) : null,
+        hasAccident: true, accidentCount: accidentCountMatch ? parseInt(accidentCountMatch[1], 10) : null,
         repairAmount: repairAmountMatch ? parseInt(repairAmountMatch[1].replace(/,/g, ""), 10) : null,
       } : null,
-      history: null,
-      damages,
-      accidentDetails,
-      ownerChangeDates,
-      totalMyAccidentCost: 0,
-      myAccidents: 0,
-      otherAccidents: 0,
-      diagramExterior,
-      diagramInterior,
+      history: null, damages: [], accidentDetails: [], ownerChangeDates, totalMyAccidentCost: 0, myAccidents: 0, otherAccidents: 0,
+      diagramExterior: [], diagramInterior: [],
     };
   }
-
   return null;
 }
 
-function buildInspectionReport(
-  inspection: any,
-  insurance: any,
-  accident: any,
-  history: any,
-  extras?: {
-    damages?: any[];
-    accidentDetails?: any[];
-    ownerChangeDates?: string[];
-    totalMyAccidentCost?: number;
-    myAccidents?: number;
-    otherAccidents?: number;
-    diagramExterior?: any[];
-    diagramInterior?: any[];
-  }
-): any {
+function buildInspectionReport(inspection: any, insurance: any, accident: any, history: any, extras?: any): any {
   const ext = extras || {};
-
   return {
-    hasReport: true,
-    source: "next_data",
+    hasReport: true, source: "next_data",
     performanceCheck: inspection ? {
       date: inspection.checkDate ?? inspection.date ?? inspection.inspectionDate ?? null,
       result: inspection.result ?? inspection.status ?? inspection.grade ?? null,
       details: inspection.details ?? inspection.items ?? inspection.checkItems ?? null,
     } : null,
     insurance: insurance ? {
-      totalLoss: insurance.totalLoss ?? insurance.isTotalLoss ?? false,
-      flood: insurance.flood ?? insurance.isFlood ?? false,
-      theft: insurance.theft ?? insurance.isTheft ?? false,
-      repairCount: insurance.repairCount ?? insurance.repair ?? null,
+      totalLoss: insurance.totalLoss ?? insurance.isTotalLoss ?? false, flood: insurance.flood ?? insurance.isFlood ?? false,
+      theft: insurance.theft ?? insurance.isTheft ?? false, repairCount: insurance.repairCount ?? insurance.repair ?? null,
       ownerChanges: insurance.ownerChanges ?? insurance.ownerCount ?? null,
     } : null,
     accident: accident ? {
-      hasAccident: accident.hasAccident ?? accident.isAccident ?? false,
-      damage: accident.damage ?? accident.repairAmount ?? null,
+      hasAccident: accident.hasAccident ?? accident.isAccident ?? false, damage: accident.damage ?? accident.repairAmount ?? null,
       parts: accident.parts ?? accident.damagedParts ?? null,
     } : null,
     history: history ? {
-      accidents: history.accidents ?? history.accidentCount ?? 0,
-      previousOwners: history.previousOwners ?? history.ownerCount ?? null,
-      firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null,
-      accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
+      accidents: history.accidents ?? history.accidentCount ?? 0, previousOwners: history.previousOwners ?? history.ownerCount ?? null,
+      firstRegistrationDate: history.firstRegistrationDate ?? history.regDate ?? null, accidentDetails: Array.isArray(history.accidentDetails) ? history.accidentDetails : null,
     } : null,
-    damages: ext.damages ?? [],
-    accidentDetails: ext.accidentDetails ?? [],
-    ownerChangeDates: ext.ownerChangeDates ?? [],
-    totalMyAccidentCost: ext.totalMyAccidentCost ?? 0,
-    myAccidents: ext.myAccidents ?? 0,
-    otherAccidents: ext.otherAccidents ?? 0,
-    diagramExterior: ext.diagramExterior ?? [],
-    diagramInterior: ext.diagramInterior ?? [],
+    damages: ext.damages ?? [], accidentDetails: ext.accidentDetails ?? [], ownerChangeDates: ext.ownerChangeDates ?? [],
+    totalMyAccidentCost: ext.totalMyAccidentCost ?? 0, myAccidents: ext.myAccidents ?? 0, otherAccidents: ext.otherAccidents ?? 0,
+    diagramExterior: ext.diagramExterior ?? [], diagramInterior: ext.diagramInterior ?? [],
   };
 }
 
