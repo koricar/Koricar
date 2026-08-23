@@ -954,6 +954,36 @@ async function fetchChoiceOptions(carId: string): Promise<ChoiceOption[]> {
   }
 }
 
+// ── [جديد] دالة لجلب تفاصيل الفحص والتأمين من API المباشر (Direct API) ──
+async function fetchDetailedInspectionAPIs(carId: string) {
+  const headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+    Accept: "application/json",
+    Referer: `https://fem.encar.com/cars/detail/${carId}`,
+  };
+
+  try {
+    // 1. جلب بيانات الفحص (الأجزاء المتضررة)
+    const perfRes = await fetch(`https://api.encar.com/v1/readside/record/vehicle/${carId}/performance`, {
+      headers,
+      signal: AbortSignal.timeout(5000),
+    });
+    const perfData = perfRes.ok ? await perfRes.json() : null;
+
+    // 2. جلب بيانات سجل التأمين (تاريخ الحوادث وتغيير الملاك)
+    const insRes = await fetch(`https://api.encar.com/v1/readside/record/vehicle/${carId}/insurance`, {
+      headers,
+      signal: AbortSignal.timeout(5000),
+    });
+    const insData = insRes.ok ? await insRes.json() : null;
+
+    return { perfData, insData };
+  } catch (err) {
+    console.error(`[Error] Failed to fetch hidden inspection APIs for ${carId}`, err);
+    return { perfData: null, insData: null };
+  }
+}
+
 const HARDWARE_OPTIONS: Array<{ keywords: string[]; id: string; ar: string }> = [
   { keywords: ["파노라마", "파노라믹", "파노라믹선루프"], id: "sunroof_pano", ar: "سقف بانورامي" },
   { keywords: ["선루프", "썬루프", "sunroof"], id: "sunroof", ar: "فتحة سقف" },
@@ -1407,8 +1437,6 @@ router.get("/search", async (req, res) => {
       cars = cars.filter((c) => c.model.toLowerCase().includes(needle));
     }
     
-    // تمت إزالة الفلاتر المحلية (year, price, mileage) لأن API الخاص بـ Encar يتكفل بها الآن
-    
     const total = data.Count;
     const totalPages = Math.ceil(total / limit);
     const paginated = cars.slice(0, limit);
@@ -1499,25 +1527,98 @@ router.get("/:id", async (req, res): Promise<void> => {
       }
     }
 
-    // ── 3. جلب بيانات الفحص من HTML الصفحة ───────────────────
+    // ── 3. جلب بيانات الفحص من API الخاص بـ Encar المباشر (الحل الجديد) ───
     let inspectionReport: any = null;
-    try {
-      const htmlResp = await fetch(`https://fem.encar.com/cars/detail/${id}`, {
-        headers: {
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
-          Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
-          "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
-        },
-        signal: AbortSignal.timeout(8000),
-      });
-      if (htmlResp.ok) {
-        const html = await htmlResp.text();
-        inspectionReport = extractInspectionFromHtml(html, id);
+    
+    // المحاولة الأولى: عبر الـ API المباشر
+    const { perfData, insData } = await fetchDetailedInspectionAPIs(id);
+    
+    if (perfData || insData) {
+      let damages: any[] = [];
+      const rawDamages = perfData?.exchanges || perfData?.damages || perfData?.parts || [];
+      if (Array.isArray(rawDamages)) {
+        damages = rawDamages.map((d: any) => {
+          const partName = d.partName || d.name || "جزء";
+          const status = d.status || d.repairType || d.damageType || "판금";
+          return {
+            part: partName,
+            partAr: translatePartToAr(partName),
+            status,
+            statusAr: translateStatusToAr(status),
+            statusCode: getStatusCode(status),
+            rank: d.rank || d.grade || "Rank 1",
+          };
+        });
       }
-    } catch (htmlErr) {
-      log.warn?.({ carId: id, err: htmlErr }, "HTML scrape failed") ?? console.log("HTML scrape failed", htmlErr);
+
+      let accidentDetails: any[] = [];
+      let myAccidents = 0;
+      let otherAccidents = 0;
+      let totalMyAccidentCost = 0;
+      
+      const rawAccidents = insData?.accidents || insData?.damageList || insData?.claims || [];
+      if (Array.isArray(rawAccidents)) {
+        accidentDetails = rawAccidents.map((a: any) => {
+          const typeStr = a.type || a.accidentType || "";
+          const isMyAccident = typeStr.includes("내차") || typeStr.includes("자차") || typeStr.includes("내사고");
+          const amount = a.amount || a.cost || a.repairCost || 0;
+          
+          if (isMyAccident) {
+            myAccidents++;
+            totalMyAccidentCost += amount;
+          } else {
+            otherAccidents++;
+          }
+
+          return {
+            date: a.date || a.occurrenceDate || a.accidentDate,
+            type: typeStr,
+            typeAr: translateAccidentTypeToAr(typeStr),
+            amount,
+            description: a.description || "",
+          };
+        });
+      }
+
+      let ownerChangeDates: string[] = [];
+      const rawOwners = insData?.ownerChanges || insData?.owners || [];
+      if (Array.isArray(rawOwners)) {
+        ownerChangeDates = rawOwners.map((o:any) => o.date || o.changeDate);
+      }
+
+      inspectionReport = buildInspectionReport(perfData, insData, null, null, {
+        damages,
+        accidentDetails,
+        myAccidents,
+        otherAccidents,
+        totalMyAccidentCost,
+        ownerChangeDates,
+      });
+      inspectionReport.source = "direct_api";
+      inspectionReport.message = "تم استخراج الفحص التفصيلي من API بنجاح";
     }
 
+    // المحاولة الثانية (الطوارئ): إذا فشل الـ API نستخدم الـ HTML (كما كان سابقاً)
+    if (!inspectionReport || !inspectionReport.hasReport) {
+      try {
+        const htmlResp = await fetch(`https://fem.encar.com/cars/detail/${id}`, {
+          headers: {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120.0.0.0 Safari/537.36",
+            Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
+            "Accept-Language": "ko-KR,ko;q=0.9,en-US;q=0.8,en;q=0.7",
+          },
+          signal: AbortSignal.timeout(8000),
+        });
+        if (htmlResp.ok) {
+          const html = await htmlResp.text();
+          inspectionReport = extractInspectionFromHtml(html, id);
+        }
+      } catch (htmlErr) {
+        log.warn?.({ carId: id, err: htmlErr }, "HTML scrape failed") ?? console.log("HTML scrape failed", htmlErr);
+      }
+    }
+
+    // المحاولة الثالثة (الأخيرة): إرجاع تقرير مختصر لو كل شيء فشل لكن نعرف أن السيارة مفحوصة
     if (!inspectionReport && (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis")))) {
       inspectionReport = {
         hasReport: true,
@@ -1647,7 +1748,7 @@ router.get("/:id", async (req, res): Promise<void> => {
   }
 });
 
-// ── دالة استخراج الفحص من HTML ───────────────────────────────
+// ── دالة استخراج الفحص من HTML (الخطة البديلة) ───────────────────
 function extractInspectionFromHtml(html: string, carId: string): any | null {
   let damages: any[] = [];
   let accidentDetails: any[] = [];
@@ -1737,7 +1838,6 @@ function extractInspectionFromHtml(html: string, carId: string): any | null {
               .map((o: any) => o.date || o.changeDate || o.regDate)
               .filter((d: any) => {
                 if (!d) return false;
-                // [4] حماية عملية قراءة التاريخ هنا أيضاً
                 const year = (d && typeof d === 'string' && d.length >= 4) ? parseInt(d.slice(0, 4), 10) : 0;
                 return year >= 1990 && year <= currentYear;
               });
