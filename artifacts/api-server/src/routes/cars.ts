@@ -579,13 +579,13 @@ const PART_NAME_KR_TO_AR: Record<string, string> = {
 };
 
 const DAMAGE_STATUS_KR_TO_AR: Record<string, string> = {
-  "교환": "تغيير", "판금": "رش", "도장": "رش", "부식": "صدأ", "스크래치": "خدش",
+  "판금/용접": "سمكرة / لحام", "용접": "لحام", "요철": "انبعاج", "교환": "تغيير", "판금": "سمكرة / لحام", "도장": "رش", "부식": "صدأ", "스크래치": "خدش",
   "찌그러짐": "انبعاج", "손상": "تلف", "파손": "تلف", "교환(이력)": "تغيير", "판금/도장": "رش",
   "W": "رش", "C": "صدأ", "A": "خدش", "U": "انبعاج", "T": "تلف", "X": "تغيير",
 };
 
 const DAMAGE_STATUS_TO_CODE: Record<string, string> = {
-  "교환": "X", "판금": "W", "도장": "W", "부식": "C", "스크래치": "A", "찌그러짐": "U",
+  "용접": "W", "요철": "U", "교환": "X", "판금": "W", "도장": "W", "부식": "C", "스크래치": "A", "찌그러짐": "U",
   "손상": "T", "파손": "T", "W": "W", "C": "C", "A": "A", "U": "U", "T": "T", "X": "X",
 };
 
@@ -1355,6 +1355,37 @@ async function searchFromDb(req: any, res: any, p: any): Promise<boolean> {
   }
 }
 
+/** "RANK_ONE" -> "Rank 1" for display */
+function rankLabel(r?: string): string {
+  const m: Record<string, string> = { RANK_ONE: "Rank 1", RANK_TWO: "Rank 2", RANK_THREE: "Rank 3", RANK_FOUR: "Rank 4" };
+  if (!r) return "Rank 1";
+  return m[r] ?? r.replace(/^RANK_/, "Rank ");
+}
+
+/**
+ * Approximate position (in % of the exterior diagram image) for a damaged part.
+ * The diagram shows the left side view, a top view and the right side view, front at the top.
+ */
+function diagramPosition(part: string, i: number): { x: number; y: number } {
+  const left = part.includes("(좌)");
+  const right = part.includes("(우)");
+  const sideX = (l: number, r: number) => (right ? r : l);
+  const p = part.replace(/\s+/g, "");
+  if (p.includes("프론트휀더") || p.includes("앞휀더")) return { x: sideX(20, 80), y: 26 };
+  if (p.includes("프론트도어") || p.includes("앞도어")) return { x: sideX(22, 78), y: 42 };
+  if (p.includes("리어도어") || p.includes("뒷도어")) return { x: sideX(22, 78), y: 58 };
+  if (p.includes("쿼터")) return { x: sideX(18, 82), y: 74 };
+  if (p.includes("사이드실") || p.includes("로커")) return { x: sideX(28, 72), y: 52 };
+  if (p.includes("후드") || p.includes("보닛")) return { x: 50, y: 20 };
+  if (p.includes("트렁크")) return { x: 50, y: 88 };
+  if (p.includes("루프")) return { x: 50, y: 56 };
+  if (p.includes("프론트범퍼") || p.includes("앞범퍼")) return { x: 50, y: 6 };
+  if (p.includes("리어범퍼") || p.includes("뒷범퍼")) return { x: 50, y: 96 };
+  if (p.includes("프론트패널") || p.includes("라디에이터")) return { x: 50, y: 10 };
+  if (p.includes("리어패널")) return { x: 50, y: 92 };
+  return { x: left ? 30 : right ? 70 : 50, y: 40 + ((i * 9) % 30) };
+}
+
 async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
   if (!CATALOG_TENANT) return false;
   try {
@@ -1373,10 +1404,11 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           return {
             part: d.part, partAr: translatePartToAr(d.part ?? ""),
             status, statusAr: translateStatusToAr(status), statusCode: getStatusCode(status),
-            rank: Array.isArray(d.ranks) && d.ranks[0] ? String(d.ranks[0]) : "Rank 1",
+            rank: rankLabel(Array.isArray(d.ranks) ? d.ranks[0] : undefined),
           };
         })
       : [];
+    const diagramExterior = damages.map((d: any, i: number) => ({ ...diagramPosition(d.part ?? "", i), code: d.statusCode, label: `${d.partAr} — ${d.statusAr}` }));
     const accidentDetails = Array.isArray(rec?.accidents)
       ? rec.accidents.map((a: any) => ({
           date: a.date, type: "", typeAr: "", amount: a.insuranceBenefit ?? 0, description: "",
@@ -1392,7 +1424,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           history: rec ? { accidents: (rec.myAccidentCnt ?? 0) + (rec.otherAccidentCnt ?? 0), previousOwners: rec.ownerChangeCnt ?? null, firstRegistrationDate: rec.firstDate ?? null, accidentDetails: null } : null,
           damages, accidentDetails, ownerChangeDates: [], totalMyAccidentCost: rec?.myAccidentCost ?? 0,
           myAccidents: rec?.myAccidentCnt ?? 0, otherAccidents: rec?.otherAccidentCnt ?? 0,
-          diagramExterior: [], diagramInterior: [],
+          diagramExterior, diagramInterior: [],
         }
       : { hasReport: false };
 
@@ -1405,7 +1437,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           otherAccidents: rec.otherAccidentCnt ?? 0, ownerChanges: rec.ownerChangeCnt ?? 0, ownerChangeDates: [] }
       : null;
     const inspectionDetailed = hasReport
-      ? { hasReport: true, source: "stored", message: null, diagram: { exterior: [], interior: [] }, damages,
+      ? { hasReport: true, source: `#${row.encarId}`, message: null, diagram: { exterior: diagramExterior, interior: [] }, damages,
           insuranceSummary: insurance ?? { totalAccidents: 0, myAccidents: 0, otherAccidents: 0, ownerChanges: 0, ownerChangeDates: [] },
           accidentDetails, totalMyAccidentCost: rec?.myAccidentCost ?? 0, performanceCheck: inspectionReport.performanceCheck }
       : null;
