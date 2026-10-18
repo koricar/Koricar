@@ -1,6 +1,7 @@
 import { Router, type IRouter, type Request, type Response } from "express";
 import { and, asc, desc, eq, gte, ilike, inArray, lte, or, sql, type SQL } from "drizzle-orm";
 import { toPublicCar } from "../lib/public-car";
+import { ensureCatalogTables } from "../lib/ensure-tables";
 
 /**
  * DB-backed catalog (stored Encar cars + manually entered auction cars).
@@ -9,7 +10,10 @@ import { toPublicCar } from "../lib/public-car";
  */
 const router: IRouter = Router();
 
-const loadDb = () => import("@workspace/db");
+const loadDb = async () => {
+  await ensureCatalogTables();
+  return import("@workspace/db");
+};
 
 async function getTenant(req: Request, res: Response) {
   const slug = String(req.query.tenant ?? req.header("x-tenant") ?? "").trim();

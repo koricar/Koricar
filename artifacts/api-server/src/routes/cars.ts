@@ -1298,6 +1298,7 @@ async function searchFromDb(req: any, res: any, p: any): Promise<boolean> {
   if (!CATALOG_TENANT) return false;
   try {
     const { and, eq, gte, lte, ilike, inArray, or, desc, sql } = await import("drizzle-orm");
+    await (await import("../lib/ensure-tables")).ensureCatalogTables();
     const { db, cars, tenants } = await import("@workspace/db");
     const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, CATALOG_TENANT)).limit(1);
     if (!tenant || !tenant.active) { res.status(404).json({ error: "tenant_not_found" }); return true; }
@@ -1358,6 +1359,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
   if (!CATALOG_TENANT) return false;
   try {
     const { eq } = await import("drizzle-orm");
+    await (await import("../lib/ensure-tables")).ensureCatalogTables();
     const { db, cars } = await import("@workspace/db");
     const [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
     if (!row) { res.status(404).json({ error: "not_found", message: "السيارة غير موجودة أو لم تعد متاحة." }); return true; }
