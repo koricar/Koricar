@@ -928,7 +928,9 @@ router.get("/search", async (req, res) => {
   if (!parsed.success) { res.status(400).json({ error: "invalid_params", message: "Invalid query parameters" }); return; }
   const { model, brand, yearFrom, yearTo, sunroof, transmission, fuelType, bodyType, color, priceMin, priceMax, mileageMax, page = 1, limit = 20 } = parsed.data;
   const modelType = (req.query.modelType as "group" | "model" | undefined);
-  
+
+  if (await searchFromDb(req, res, parsed.data)) return;
+
   try {
     const { q: encarQ, modelRaw } = buildEncarQuery({ brand, model, sunroof, fuelType, transmission, bodyType, color, yearFrom, yearTo, modelType, priceMin, priceMax, mileageMax });
     const offset = (page - 1) * limit;
@@ -977,6 +979,8 @@ router.get("/search", async (req, res) => {
 router.get("/:id", async (req, res): Promise<void> => {
   const { id } = req.params;
   const log = safeLog(req);
+
+  if (await detailFromDb(req, res, String(id))) return;
 
   try {
     const includeParams = ["CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT", "MANAGE", "OPTIONS", "CONDITION", "PARTNERSHIP", "CONTACT"].join(",");
@@ -1255,6 +1259,162 @@ function buildInspectionReport(inspection: any, insurance: any, accident: any, h
     totalMyAccidentCost: ext.totalMyAccidentCost ?? 0, myAccidents: ext.myAccidents ?? 0, otherAccidents: ext.otherAccidents ?? 0,
     diagramExterior: ext.diagramExterior ?? [], diagramInterior: ext.diagramInterior ?? [],
   };
+}
+
+// ───────────────────────── DB-backed mode ─────────────────────────
+// Active when CATALOG_TENANT is set: search/detail read the stored Encar catalog (filled by
+// `import:apify`) instead of calling Encar live, and respond in the same shape the frontend expects.
+const CATALOG_TENANT = process.env.CATALOG_TENANT?.trim();
+
+function dbRowToEncarCar(row: any): EncarCarExtended {
+  const condition: string[] = [];
+  if (row.inspection) condition.push("Inspection");
+  if (row.record) condition.push("Record");
+  const raw = (row.raw ?? {}) as Record<string, any>;
+  return {
+    Id: String(row.encarId), Manufacturer: row.manufacturer ?? "", Model: row.model ?? "", Badge: row.badge ?? "",
+    GreenType: "", FuelType: row.fuel ?? "", Transmission: row.transmission ?? "", FormYear: String(row.year ?? ""),
+    Mileage: row.mileage ?? 0, Price: row.priceManwon ?? 0, Color: row.color ?? "", Condition: condition,
+    Trust: [], ServiceMark: [], BuyType: [], OfficeCityState: row.region ?? "",
+    Photos: ((row.photoUrls ?? []) as string[]).map((u, i) => ({
+      location: u.startsWith(ENCAR_PHOTO) ? u.slice(ENCAR_PHOTO.length) : u,
+      ordering: i,
+    })),
+    Year: row.year ?? 0, Options: row.options ?? [],
+    // the full VIN is never exposed publicly
+    BodyType: typeof raw.bodyName === "string" ? raw.bodyName : undefined,
+    SeatCount: typeof raw.seatCount === "number" ? raw.seatCount : undefined,
+    Displacement: typeof raw.displacement === "number" ? raw.displacement : undefined,
+  };
+}
+
+function koreanKeysFor(map: Record<string, string>, en: string): string[] {
+  const needle = en.toLowerCase();
+  return Object.entries(map).filter(([, v]) => v.toLowerCase() === needle).map(([k]) => k);
+}
+
+/** returns true when the request was answered from the DB */
+async function searchFromDb(req: any, res: any, p: any): Promise<boolean> {
+  if (!CATALOG_TENANT) return false;
+  try {
+    const { and, eq, gte, lte, ilike, inArray, or, desc, sql } = await import("drizzle-orm");
+    const { db, cars, tenants } = await import("@workspace/db");
+    const [tenant] = await db.select().from(tenants).where(eq(tenants.slug, CATALOG_TENANT)).limit(1);
+    if (!tenant || !tenant.active) { res.status(404).json({ error: "tenant_not_found" }); return true; }
+    const f = tenant.filter ?? {};
+
+    const where: any[] = [eq(cars.status, "available")];
+    if (f.makes?.length) where.push(inArray(cars.manufacturer, f.makes));
+    if (f.yearMin) where.push(gte(cars.year, f.yearMin));
+    if (f.yearMax) where.push(lte(cars.year, f.yearMax));
+    if (f.priceMinManwon) where.push(gte(cars.priceManwon, f.priceMinManwon));
+    if (f.priceMaxManwon) where.push(lte(cars.priceManwon, f.priceMaxManwon));
+
+    if (p.brand) {
+      const keys = koreanKeysFor(MANUFACTURER_TO_EN, p.brand);
+      where.push(keys.length ? inArray(cars.manufacturer, keys) : ilike(cars.manufacturer, `%${p.brand}%`));
+    }
+    if (p.model) where.push(or(ilike(cars.model, `%${p.model}%`), ilike(cars.badge, `%${p.model}%`)));
+    if (p.yearFrom) where.push(gte(cars.year, p.yearFrom));
+    if (p.yearTo) where.push(lte(cars.year, p.yearTo));
+    if (p.priceMin !== undefined) where.push(gte(cars.priceManwon, p.priceMin));
+    if (p.priceMax !== undefined) where.push(lte(cars.priceManwon, p.priceMax));
+    if (p.mileageMax !== undefined) where.push(lte(cars.mileage, p.mileageMax));
+    if (p.fuelType && p.fuelType !== "any") {
+      const keys = koreanKeysFor(FUEL_TO_EN, p.fuelType);
+      const conds: any[] = keys.length ? [inArray(cars.fuel, keys)] : [];
+      if (p.fuelType === "lpg") conds.push(ilike(cars.fuel, "LPG%"));
+      if (conds.length) where.push(or(...conds));
+    }
+    if (p.transmission && p.transmission !== "any") {
+      const kr = EN_TO_TRANSMISSION_KR[p.transmission];
+      if (kr) where.push(eq(cars.transmission, kr));
+    }
+    if (p.sunroof === true) {
+      where.push(or(ilike(cars.badge, "%선루프%"), ilike(cars.badge, "%파노라마%"), sql`${cars.options}::text ilike '%선루프%'`));
+    }
+
+    const limit = Math.min(Math.max(p.limit ?? 20, 1), 60);
+    const page = Math.max(p.page ?? 1, 1);
+    const cond = and(...where);
+    const [rows, [{ total }]] = await Promise.all([
+      db.select().from(cars).where(cond).orderBy(desc(cars.encarModifiedAt)).limit(limit).offset((page - 1) * limit),
+      db.select({ total: sql<number>`count(*)::int` }).from(cars).where(cond),
+    ]);
+    const mapped = rows.map((r: any) => {
+      const c = mapEncarCar(dbRowToEncarCar(r));
+      return { ...c, updatedAt: r.lastSyncedAt };
+    });
+    res.json({ cars: mapped, total, page, limit, totalPages: Math.ceil(total / limit) });
+    return true;
+  } catch (err) {
+    safeLog(req).error?.({ err }, "catalog DB search failed") ?? console.error(err);
+    res.status(500).json({ error: "catalog_error", message: "تعذر جلب السيارات حاليًا." });
+    return true;
+  }
+}
+
+async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
+  if (!CATALOG_TENANT) return false;
+  try {
+    const { eq } = await import("drizzle-orm");
+    const { db, cars } = await import("@workspace/db");
+    const [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
+    if (!row) { res.status(404).json({ error: "not_found", message: "السيارة غير موجودة أو لم تعد متاحة." }); return true; }
+    const car = mapEncarCarExtended(dbRowToEncarCar(row));
+    const insp = (row.inspection ?? null) as any;
+    const rec = (row.record ?? null) as any;
+
+    const damages = Array.isArray(insp?.parts)
+      ? insp.parts.map((d: any) => {
+          const status = (d.statuses?.[0] as string) ?? "판금";
+          return {
+            part: d.part, partAr: translatePartToAr(d.part ?? ""),
+            status, statusAr: translateStatusToAr(status), statusCode: getStatusCode(status),
+            rank: Array.isArray(d.ranks) && d.ranks[0] ? String(d.ranks[0]) : "Rank 1",
+          };
+        })
+      : [];
+    const accidentDetails = Array.isArray(rec?.accidents)
+      ? rec.accidents.map((a: any) => ({
+          date: a.date, type: "", typeAr: "", amount: a.insuranceBenefit ?? 0, description: "",
+        }))
+      : [];
+    const hasReport = !!(insp || rec);
+    const inspectionReport = hasReport
+      ? {
+          hasReport: true, source: "stored", message: "تقرير الفحص من قاعدة البيانات",
+          performanceCheck: insp ? { date: insp.inspectionDate ?? null, result: insp.carState ?? null, details: null } : null,
+          insurance: rec ? { totalLoss: (rec.totalLossCnt ?? 0) > 0, flood: (rec.floodTotalLossCnt ?? 0) > 0, theft: (rec.robberCnt ?? 0) > 0, repairCount: null, ownerChanges: rec.ownerChangeCnt ?? null } : null,
+          accident: insp ? { hasAccident: !!insp.accident, damage: null, parts: damages.map((d: any) => ({ name: d.partAr, damaged: true, section: "خارجي" })) } : null,
+          history: rec ? { accidents: (rec.myAccidentCnt ?? 0) + (rec.otherAccidentCnt ?? 0), previousOwners: rec.ownerChangeCnt ?? null, firstRegistrationDate: rec.firstDate ?? null, accidentDetails: null } : null,
+          damages, accidentDetails, ownerChangeDates: [], totalMyAccidentCost: rec?.myAccidentCost ?? 0,
+          myAccidents: rec?.myAccidentCnt ?? 0, otherAccidents: rec?.otherAccidentCnt ?? 0,
+          diagramExterior: [], diagramInterior: [],
+        }
+      : { hasReport: false };
+
+    const inspection = insp
+      ? { hasDamage: !!insp.accident || damages.length > 0, damageCount: damages.length,
+          parts: damages.map((d: any) => ({ name: d.partAr, damaged: true, section: "خارجي" })) }
+      : null;
+    const insurance = rec
+      ? { totalAccidents: (rec.myAccidentCnt ?? 0) + (rec.otherAccidentCnt ?? 0), myAccidents: rec.myAccidentCnt ?? 0,
+          otherAccidents: rec.otherAccidentCnt ?? 0, ownerChanges: rec.ownerChangeCnt ?? 0, ownerChangeDates: [] }
+      : null;
+    const inspectionDetailed = hasReport
+      ? { hasReport: true, source: "stored", message: null, diagram: { exterior: [], interior: [] }, damages,
+          insuranceSummary: insurance ?? { totalAccidents: 0, myAccidents: 0, otherAccidents: 0, ownerChanges: 0, ownerChangeDates: [] },
+          accidentDetails, totalMyAccidentCost: rec?.myAccidentCost ?? 0, performanceCheck: inspectionReport.performanceCheck }
+      : null;
+
+    res.json({ ...car, updatedAt: row.lastSyncedAt, inspectionReport, inspection, insurance, inspectionDetailed });
+    return true;
+  } catch (err) {
+    safeLog(req).error?.({ err, id }, "catalog DB detail failed") ?? console.error(err);
+    res.status(500).json({ error: "catalog_error", message: "تعذر جلب السيارة حاليًا." });
+    return true;
+  }
 }
 
 export default router;
