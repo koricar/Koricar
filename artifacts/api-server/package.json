@@ -8,6 +8,7 @@
     "build": "node ./build.mjs",
     "start": "node --enable-source-maps ./dist/index.mjs",
     "import:apify": "tsx ./src/scripts/import-apify.ts",
+    "tenant:create": "tsx ./src/scripts/create-tenant.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {

@@ -29,6 +29,8 @@ export const tenants = pgTable("tenants", {
     priceMinManwon?: number;
     priceMaxManwon?: number;
   }>().notNull().default({}),
+  /** secret used by the dealer to manage auction cars (x-admin-key header) */
+  adminKey: text("admin_key"),
   active: boolean("active").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
