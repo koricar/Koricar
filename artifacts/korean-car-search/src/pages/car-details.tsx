@@ -5,6 +5,7 @@ import { useGetCarById } from "@workspace/api-client-react";
 import { Layout } from "@/components/layout";
 import { formatNumber, formatPriceKRW } from "@/lib/utils";
 import { useState, useEffect } from "react";
+import { useSarPerManwon } from "@/lib/use-rate";
 import {
   Loader2, Calendar, Settings2, Fuel, Gauge, Car, Palette,
   Armchair, MapPin, Hash, DollarSign, CheckCircle2, Shield,
@@ -32,6 +33,7 @@ const TABS = [
 
 export default function CarDetails() {
   const { id } = useParams();
+  const sarPerManwon = useSarPerManwon();
   const [currentImgIndex, setCurrentImgIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<"specs" | "features" | "inspection">("specs");
 
@@ -337,7 +339,7 @@ export default function CarDetails() {
                 </div>
                 {car?.price && (
                   <p className="text-xs text-muted-foreground">
-                    ≈ {Math.round(car.price * 27.4).toLocaleString()} ريال سعودي
+                    ≈ {Math.round(car.price * sarPerManwon).toLocaleString()} ريال سعودي
                   </p>
                 )}
               </div>

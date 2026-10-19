@@ -438,8 +438,10 @@ const EN_COLOR_TO_KR: Record<string, string> = {
   "brown": "갈색", "green": "녹색", "yellow": "노란색", "orange": "주황색", "lime": "연두색",
 };
 
+import { sarPerManwon, warmExchangeRate } from "../lib/exchange-rate";
+warmExchangeRate();
 function formatPrice(price: number): string {
-  const sar = Math.round(price * 27.4);
+  const sar = Math.round(price * sarPerManwon());
   return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
 

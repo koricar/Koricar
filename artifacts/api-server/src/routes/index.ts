@@ -4,10 +4,12 @@ import carsRouter from "./cars";
 import catalogRouter from "./catalog";
 import adminRouter from "./admin";
 import marketPriceRouter from "./market-price";
+import rateRouter from "./rate";
 import equipmentRouter from "./equipment";
 
 const router: IRouter = Router();
 router.use(healthRouter);
+router.use(rateRouter);
 router.use("/cars", carsRouter);
 router.use("/catalog", catalogRouter);
 router.use("/admin", adminRouter);

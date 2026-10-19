@@ -1,5 +1,5 @@
 import { useState } from "react";
-const KRW_TO_SAR = 0.00274;
+import { useSarPerManwon } from "@/lib/use-rate";
 const countries = [
   { code:"sa", name:"السعودية", flag:"🇸🇦", customs:0.05, vat:0.15, currency:"ر.س", rate:1 },
   { code:"ae", name:"الإمارات", flag:"🇦🇪", customs:0.05, vat:0.05, currency:"د.إ", rate:1.02 },
@@ -12,10 +12,11 @@ const countries = [
   { code:"iq", name:"العراق", flag:"🇮🇶", customs:0.10, vat:0, currency:"د.ع", rate:490 },
 ];
 export default function ImportCalculator({ carPriceKRW = 0 }: { carPriceKRW?: number }) {
+  const krwToSar = useSarPerManwon() / 10000;
   const [sel, setSel] = useState("sa");
   const [shipping, setShipping] = useState(5000);
   const [open, setOpen] = useState(false);
-  const priceSAR = carPriceKRW * KRW_TO_SAR;
+  const priceSAR = carPriceKRW * krwToSar;
   const c = countries.find((x) => x.code === sel)!;
   const cif = priceSAR + shipping;
   const customsAmt = cif * c.customs;
