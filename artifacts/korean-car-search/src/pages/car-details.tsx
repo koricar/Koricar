@@ -87,8 +87,7 @@ export default function CarDetails() {
     { label: "الشركة المصنعة", value: car?.brand || "—", icon: <Car className="w-4 h-4" /> },
     { label: "الموديل", value: car?.model || "—", icon: <Hash className="w-4 h-4" /> },
     { label: "سنة الصنع", value: car?.year || "—", icon: <Calendar className="w-4 h-4" /> },
-    { label: "الجيل", value: car?.generation || car?.model || "—", icon: <Car className="w-4 h-4" /> },
-    { label: "ناقل الحركة", value: TRANS_MAP[car?.transmission?.toLowerCase()] || car?.transmission || "—", icon: <Cog className="w-4 h-4" /> },
+        { label: "ناقل الحركة", value: TRANS_MAP[car?.transmission?.toLowerCase()] || car?.transmission || "—", icon: <Cog className="w-4 h-4" /> },
     { label: "المسافة المقطوعة", value: car?.mileage ? `${formatNumber(car.mileage)} كم` : "—", icon: <Gauge className="w-4 h-4" /> },
     { label: "الوقود", value: FUEL_MAP[car?.fuelType?.toLowerCase()] || car?.fuelType || "—", icon: <FuelIcon className="w-4 h-4" /> },
     { label: "سعة المحرك", value: car?.displacement ? `${car.displacement} cc` : "—", icon: <Settings2 className="w-4 h-4" /> },
@@ -252,24 +251,30 @@ export default function CarDetails() {
                         </div>
                       )}
 
-                      {car?.options?.length > 0 && (
-                        <div>
-                          <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
-                            <Settings2 className="w-5 h-5 text-primary" />
-                            المواصفات التقنية
-                          </h3>
-                          <div className="flex flex-wrap gap-2">
-                            {car.options.map((opt: any, i: number) => (
-                              <span
-                                key={i}
-                                className="px-4 py-2 rounded-full bg-muted text-foreground text-sm font-medium border border-border"
-                              >
-                                {opt.ar || opt.label || opt}
-                              </span>
-                            ))}
+                      {car?.options?.length > 0 && (() => {
+                        const groups: Record<string, any[]> = {};
+                        for (const opt of car.options) {
+                          const g = opt?.group || "المواصفات التقنية";
+                          (groups[g] ||= []).push(opt);
+                        }
+                        const order = ["السلامة", "الراحة", "المقاعد", "الوسائط", "الخارجية", "المواصفات التقنية", "أخرى"];
+                        const names = Object.keys(groups).sort((x, y) => (order.indexOf(x) + 99) % 99 - (order.indexOf(y) + 99) % 99);
+                        return names.map((g) => (
+                          <div key={g}>
+                            <h3 className="text-lg font-bold mb-3 flex items-center gap-2">
+                              <Settings2 className="w-5 h-5 text-primary" />
+                              {g} <span className="text-sm text-muted-foreground font-normal">({groups[g].length})</span>
+                            </h3>
+                            <div className="flex flex-wrap gap-2">
+                              {groups[g].map((opt: any, i: number) => (
+                                <span key={i} className="px-4 py-2 rounded-full bg-muted text-foreground text-sm font-medium border border-border">
+                                  {opt.ar || opt.label || opt}
+                                </span>
+                              ))}
+                            </div>
                           </div>
-                        </div>
-                      )}
+                        ));
+                      })()}
 
                       {car?.choiceOptions?.length > 0 && (
                         <div>

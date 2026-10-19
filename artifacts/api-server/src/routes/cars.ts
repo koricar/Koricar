@@ -720,24 +720,67 @@ const CONDITION_FEATURE_MAP: Record<string, string> = { Record: "سجل الصي
 const TRUST_FEATURE_MAP: Record<string, string> = { HomeService: "توصيل للمنزل" };
 const SERVICE_MARK_MAP: Record<string, string> = { EncarDiagnosisP1: "تشخيص Encar", EncarDiagnosisP2: "تشخيص Encar", EncarMeetgo: "Encar Meetgo" };
 
-const ENCAR_OPTION_MAP: Record<string, { id: string; ar: string }> = {
-  "선루프": { id: "sunroof", ar: "فتحة سقف" }, "파노라마선루프": { id: "sunroof_pano", ar: "سقف بانورامي" },
-  "열선시트": { id: "heated_seat", ar: "مقاعد مدفأة" }, "통풍시트": { id: "ventilated_seat", ar: "مقاعد مهوّاة" },
-  "가죽시트": { id: "leather_seat", ar: "مقاعد جلدية" }, "전동시트": { id: "power_seat", ar: "مقاعد كهربائية" },
-  "메모리시트": { id: "memory_seat", ar: "مقاعد بذاكرة" }, "네비게이션": { id: "navigation", ar: "ملاحة" },
-  "후방카메라": { id: "camera_rear", ar: "كاميرا خلفية" }, "어라운드뷰": { id: "camera_360", ar: "كاميرا 360°" },
-  "스마트키": { id: "smart_key", ar: "مفتاح ذكي" }, "오토에어컨": { id: "auto_ac", ar: "مكيّف تلقائي" },
-  "주차보조": { id: "parking_sensor", ar: "حساسات وقوف" }, "LED헤드램프": { id: "led_lights", ar: "مصابيح LED" },
-  "어댑티브크루즈": { id: "cruise_control", ar: "كروز تكيّفي" }, "차선이탈방지": { id: "lane_assist", ar: "مساعد الحارة" },
-  "사각지대감지": { id: "blind_spot", ar: "كشف النقطة العمياء" }, "헤드업디스플레이": { id: "hud", ar: "HUD" }, "4WD": { id: "awd", ar: "دفع رباعي" },
+// Full Korean -> Arabic option dictionary, grouped for display
+const OPTION_GROUPS: Record<string, Array<[string, string]>> = {
+  "السلامة": [
+    ["브레이크 잠김 방지(ABS)", "فرامل ABS"], ["미끄럼 방지(TCS)", "نظام منع الانزلاق TCS"],
+    ["차체자세 제어장치(ESC)", "نظام الثبات الإلكتروني ESC"], ["에어백(운전석)", "وسادة هوائية للسائق"],
+    ["에어백(동승석)", "وسادة هوائية للراكب"], ["에어백(사이드)", "وسائد هوائية جانبية"],
+    ["에어백(커튼)", "وسائد هوائية ستارية"], ["타이어 공기압센서(TPMS)", "حساس ضغط الإطارات TPMS"],
+    ["전자식 주차브레이크(EPB)", "فرامل يد إلكترونية EPB"], ["후측방 경보 시스템", "تنبيه النقطة العمياء"],
+    ["차선이탈 경보 시스템(LDWS)", "تنبيه الخروج من المسار"], ["차선이탈방지", "مساعد الحارة"],
+    ["사각지대감지", "كشف النقطة العمياء"], ["크루즈 컨트롤(어댑티브)", "مثبت سرعة تكيّفي"],
+    ["크루즈 컨트롤(일반)", "مثبت سرعة عادي"], ["어댑티브크루즈", "مثبت سرعة تكيّفي"],
+    ["주차감지센서(후방)", "حساسات وقوف خلفية"], ["주차감지센서(전방)", "حساسات وقوف أمامية"],
+    ["주차보조", "مساعد ركن"], ["후방 카메라", "كاميرا خلفية"], ["후방카메라", "كاميرا خلفية"],
+    ["360도 어라운드 뷰", "كاميرا 360°"], ["어라운드뷰", "كاميرا 360°"], ["레인센서", "حساس مطر"],
+    ["전방 충돌 방지 보조", "تجنب الاصطدام الأمامي"], ["차선 유지 보조", "مساعد البقاء في المسار"],
+    ["자동 긴급 제동", "فرامل طوارئ تلقائية"], ["경사로 밀림 방지", "منع التدحرج في المنحدرات"],
+    ["도난경보장치", "جهاز إنذار سرقة"], ["어린이 시트 고정장치(ISOFIX)", "تثبيت مقعد أطفال ISOFIX"],
+  ],
+  "الراحة": [
+    ["자동 에어컨", "مكيّف أوتوماتيك"], ["오토에어컨", "مكيّف أوتوماتيك"], ["듀얼 에어컨", "مكيّف ثنائي المنطقة"],
+    ["스마트키", "مفتاح ذكي"], ["무선도어 잠금장치", "قفل مركزي عن بُعد"], ["파워 도어록", "أقفال أبواب كهربائية"],
+    ["파워 윈도우", "نوافذ كهربائية"], ["파워 스티어링 휠", "مقود هيدروليكي/كهربائي"],
+    ["스티어링 휠 리모컨", "أزرار تحكم بالمقود"], ["열선 스티어링 휠", "مقود مدفأ"],
+    ["전동 조절 스티어링 휠", "مقود كهربائي التعديل"], ["패들 시프트", "مجدافات تغيير السرعة"],
+    ["전동접이 사이드 미러", "مرايا جانبية كهربائية قابلة للطي"], ["ECM 룸미러", "مرآة داخلية مضادة للوهج ECM"],
+    ["오토 라이트", "إضاءة تلقائية"], ["하이패스", "جهاز Hi-Pass للرسوم"], ["파워 전동 트렁크", "صندوق خلفي كهربائي"],
+    ["커튼/블라인드(뒷좌석)", "ستائر خلفية (مقاعد خلفية)"], ["커튼/블라인드(후방)", "ستارة الزجاج الخلفي"],
+    ["선루프", "فتحة سقف"], ["파노라마선루프", "سقف بانورامي"], ["파노라마 선루프", "سقف بانورامي"],
+    ["오토 홀드", "Auto Hold"], ["핸들 열선", "مقود مدفأ"],
+  ],
+  "المقاعد": [
+    ["가죽시트", "مقاعد جلد"], ["전동시트(운전석)", "مقعد سائق كهربائي"], ["전동시트(동승석)", "مقعد راكب كهربائي"],
+    ["열선시트(앞좌석)", "تدفئة المقاعد الأمامية"], ["열선시트(뒷좌석)", "تدفئة المقاعد الخلفية"],
+    ["열선시트", "مقاعد مدفأة"], ["통풍시트(운전석)", "تهوية مقعد السائق"], ["통풍시트(동승석)", "تهوية مقعد الراكب"],
+    ["통풍시트", "مقاعد مهوّاة"], ["메모리 시트(운전석)", "ذاكرة مقعد السائق"], ["메모리시트", "مقاعد بذاكرة"],
+    ["마사지 시트", "مقاعد مساج"], ["전동시트", "مقاعد كهربائية"],
+  ],
+  "الوسائط": [
+    ["내비게이션", "نظام ملاحة"], ["네비게이션", "نظام ملاحة"], ["앞좌석 AV 모니터", "شاشة وسائط أمامية"],
+    ["뒷좌석 AV 모니터", "شاشة وسائط خلفية"], ["블루투스", "بلوتوث"], ["USB 단자", "منفذ USB"],
+    ["AUX 단자", "منفذ AUX"], ["CD 플레이어", "مشغل CD"], ["헤드업 디스플레이(HUD)", "شاشة HUD على الزجاج"],
+    ["헤드업디스플레이", "شاشة HUD على الزجاج"], ["무선 충전", "شحن لاسلكي"],
+  ],
+  "الخارجية": [
+    ["알루미늄 휠", "جنوط ألمنيوم"], ["헤드램프(LED)", "مصابيح أمامية LED"], ["LED헤드램프", "مصابيح أمامية LED"],
+    ["헤드램프(HID)", "مصابيح أمامية زينون HID"], ["LED 리어램프", "مصابيح خلفية LED"],
+    ["4WD", "دفع رباعي"], ["루프랙", "حامل سقف"],
+  ],
 };
+const ENCAR_OPTION_MAP: Record<string, { id: string; ar: string; group: string }> = {};
+for (const [group, list] of Object.entries(OPTION_GROUPS)) {
+  for (const [kr, ar] of list) ENCAR_OPTION_MAP[kr.replace(/\s+/g, "")] = { id: kr, ar, group };
+}
 
-function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; ar: string }> {
-  const result: Array<{ id: string; ar: string }> = [];
+function extractOptionsFromEncarOptions(options: string[]): Array<{ id: string; ar: string; group?: string }> {
+  const result: Array<{ id: string; ar: string; group?: string }> = [];
   const seen = new Set<string>();
   for (const opt of options) {
-    const mapped = ENCAR_OPTION_MAP[opt];
-    if (mapped && !seen.has(mapped.id)) { seen.add(mapped.id); result.push(mapped); }
+    const mapped = ENCAR_OPTION_MAP[String(opt).replace(/\s+/g, "")];
+    const item = mapped ?? { id: String(opt), ar: String(opt), group: "أخرى" };
+    if (!seen.has(item.id)) { seen.add(item.id); result.push(item); }
   }
   return result;
 }
@@ -802,7 +845,7 @@ function extractFeatures(car: EncarCar): string[] {
   if (trans === "auto") add("أوتوماتيك"); else if (trans === "manual") add("يدوي");
   const condition2 = car.Condition ?? [];
   const inspected = condition2.includes("Inspection") || condition2.includes("InspectionDirect");
-  if (inspected) add("فحص معتمد");
+  if (inspected) add("تقرير فحص Encar");
   const year = parseInt(car.FormYear ?? "0", 10);
   if (year >= 2023) add("موديل حديث"); else if (year >= 2020) add("موديل جيد");
   if ((car.Mileage ?? 0) < 50000) add("ممشى منخفض");
@@ -1133,7 +1176,7 @@ router.get("/:id", async (req, res): Promise<void> => {
     }
 
     if (!inspectionReport && (conditions.includes("Inspection") || conditions.includes("InspectionDirect") || serviceMarks.some((s) => s.includes("Diagnosis")))) {
-      inspectionReport = { hasReport: true, source: "basic", message: "فحص معتمد من Encar", performanceCheck: null, insurance: null, accident: null, history: null };
+      inspectionReport = { hasReport: true, source: "basic", message: "تقرير فحص من Encar", performanceCheck: null, insurance: null, accident: null, history: null };
     } else if (!inspectionReport) {
       inspectionReport = { hasReport: false };
     }
