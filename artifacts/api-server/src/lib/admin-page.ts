@@ -64,6 +64,17 @@ export const ADMIN_PAGE_HTML = `<!doctype html>
     <button id="upload">رفع واستيراد</button>
     <pre id="importOut">—</pre>
   </section>
+  <section>
+    <h2>مزامنة Encar (مجانية)</h2>
+    <small>تجيب السيارات الجديدة فقط مع الفحص والتأمين، وتحدّث الأسعار، وتعلّم المباعة.</small>
+    <label>أقصى عدد سيارات جديدة بالمرة<input id="maxNew" type="number" inputmode="numeric" value="40"></label>
+    <button id="sync">حدّث الآن</button>
+    <button id="syncStatus">حالة المزامنة</button>
+    <pre id="syncOut">—</pre>
+    <label>اختبار سيارة (رقم Encar)<input id="probeId" dir="ltr" inputmode="numeric"></label>
+    <button id="probe">اختبار الاتصال بـ Encar</button>
+    <pre id="probeOut">—</pre>
+  </section>
 </main>
 <script>
 const $ = (id) => document.getElementById(id);
@@ -97,6 +108,9 @@ $('upload').onclick = async () => {
   } catch (e) { $('importOut').className = 'err'; $('importOut').textContent = String(e); }
   $('upload').disabled = false;
 };
+$('sync').onclick = async () => { show($('syncOut'), await api('/sync', { method: 'POST', body: JSON.stringify({ maxNew: $('maxNew').value }) })); };
+$('syncStatus').onclick = async () => { show($('syncOut'), await api('/sync/status')); };
+$('probe').onclick = async () => { $('probeOut').textContent = '...'; show($('probeOut'), await api('/probe/' + $('probeId').value.trim())); };
 </script>
 </body>
 </html>`;
