@@ -46,13 +46,18 @@ export function mapInspection(j: any) {
       });
     }
   }
+  const titles = (v: any) => (Array.isArray(v) ? v.map((t: any) => t?.title ?? t?.code).filter(Boolean) : []);
+  const serious = titles(d.seriousTypes);
   return {
-    accident: !!(m.accdient ?? m.accident), simpleRepair: !!m.simpleRepair, flooded: !!d.waterlogging,
-    recordNo: m.supplyNum ?? null, inspectionDate: d.issueDate ?? null,
-    firstRegistrationDate: d.firstRegistrationDate ?? m.registrationDate ?? null, mileage: d.mileage ?? null,
-    boardState: d.guaranty?.title ?? null, carState: d.carStateTitle ?? null,
-    tuning: !!d.tuning, recall: !!d.recall, usageChangeTypes: [], parts, partSummary: {}, repairNeeded: [], innerIssues: [],
-    inspectionPhotoUrls: [],
+    accident: !!(m.accdient ?? m.accident), simpleRepair: !!m.simpleRepair,
+    flooded: serious.some((t: string) => t.includes("침수")),
+    recordNo: d.recordNo ?? m.supplyNum ?? null,
+    inspectionDate: d.issueDate ?? (typeof m.registrationDate === "string" ? m.registrationDate.slice(0, 10).replace(/-/g, "") : null),
+    validityStartDate: d.validityStartDate ?? null, validityEndDate: d.validityEndDate ?? null,
+    firstRegistrationDate: d.firstRegistrationDate ?? null, mileage: d.mileage ?? null,
+    boardState: d.boardStateType?.title ?? null, carState: d.carStateType?.title ?? d.mileageStateType?.title ?? null,
+    tuning: !!d.tuning, recall: !!d.recall, seriousTypes: serious, usageChangeTypes: titles(d.usageChangeTypes),
+    parts, partSummary: {}, repairNeeded: [], innerIssues: [], inspectionPhotoUrls: [],
   };
 }
 
@@ -64,12 +69,32 @@ export function mapRecord(j: any, carNo: string | null) {
     myAccidentCost: j.myAccidentCost ?? 0, otherAccidentCost: j.otherAccidentCost ?? 0,
     ownerChangeCnt: j.ownerChangeCnt ?? 0, carNoChangeCnt: j.carNoChangeCnt ?? 0,
     robberCnt: j.robberCnt ?? 0, totalLossCnt: j.totalLossCnt ?? 0, floodTotalLossCnt: j.floodTotalLossCnt ?? 0,
-    governmentUseCnt: j.governmentCnt ?? j.governmentUseCnt ?? 0, businessUseCnt: j.businessCnt ?? j.businessUseCnt ?? 0,
-    loanUseCnt: j.loanCnt ?? j.loanUseCnt ?? 0,
+    governmentUseCnt: j.government ?? j.governmentCnt ?? 0, businessUseCnt: j.business ?? j.businessCnt ?? 0,
+    loanUseCnt: j.loan ?? j.loanCnt ?? 0,
     accidents: Array.isArray(j.accidents) ? j.accidents.map((a: any) => ({
       date: a.date, insuranceBenefit: a.insuranceBenefit ?? 0, partCost: a.partCost ?? 0, laborCost: a.laborCost ?? 0, paintingCost: a.paintingCost ?? 0,
     })) : [],
   };
+}
+
+const optionNames = new Map<string, string>(); // code -> Korean name, learned at runtime
+async function resolveStandardOptions(id: string, codes: string[], warnings: string[]): Promise<string[]> {
+  if (!codes.length) return [];
+  if (!codes.some((c) => /^\d+$/.test(c))) return codes; // already names
+  if (!codes.every((c) => optionNames.has(c))) {
+    try {
+      const r = await getJson(`${API}/v1/readside/vehicles/car/${id}/options/standard`, `https://fem.encar.com/cars/detail/${id}`);
+      const arr = Array.isArray(r.json) ? r.json : Array.isArray(r.json?.options) ? r.json.options : [];
+      for (const o of arr) {
+        const cd = o?.optionCd ?? o?.code, nm = o?.optionName ?? o?.name ?? o?.title;
+        if (cd && nm) optionNames.set(String(cd), String(nm));
+      }
+      if (!r.ok) warnings.push(`options/standard ${r.status}`);
+    } catch (e) { warnings.push(`options/standard ${(e as Error).message}`); }
+  }
+  const names = codes.map((c) => optionNames.get(c)).filter((x): x is string => !!x);
+  if (names.length < codes.length) warnings.push(`options: ${codes.length - names.length}/${codes.length} codes unresolved`);
+  return names;
 }
 
 /** Fetch one car fully and return it in the Apify item shape that importApifyItems understands. */
@@ -93,7 +118,7 @@ export async function fetchFullCar(id: string, listItem?: any) {
   } catch (e) { warnings.push(`record ${(e as Error).message}`); }
 
   const opts = d.options ?? {};
-  const optionsStandard = Array.isArray(opts.standard) ? opts.standard.map(String) : [];
+  const optionsStandard = await resolveStandardOptions(id, Array.isArray(opts.standard) ? opts.standard.map(String) : [], warnings);
   const photos = (Array.isArray(d.photos) ? d.photos : []).map((p: any) => (p?.path ? `${PHOTO}${p.path}` : null)).filter(Boolean);
   const item = {
     vehicleId: String(id), vin: d.vin ?? null, manufacturer: cat.manufacturerName ?? listItem?.Manufacturer,
@@ -197,12 +222,15 @@ export async function probeCar(id: string) {
     detail: `${API}/v1/readside/vehicle/${id}?include=${inc}`,
     inspection: `${API}/v1/readside/inspection/vehicle/${id}`,
     record: `${API}/v1/readside/record/vehicle/${id}/open`,
+    optionsStandard: `${API}/v1/readside/vehicles/car/${id}/options/standard`,
   };
   for (const [k, url] of Object.entries(targets)) {
     try {
       const r = await getJson(url, ref);
       out[k] = { status: r.status, keys: r.json ? Object.keys(r.json) : null, sample: r.json ? JSON.stringify(r.json).slice(0, 700) : r.text };
       if (k === "detail" && r.json) out.optionsSample = JSON.stringify(r.json.options ?? null).slice(0, 400);
+      if (k === "inspection" && r.json) { out.outersSample = JSON.stringify((r.json.outers ?? []).slice(0, 3)).slice(0, 700); out.innersSample = JSON.stringify((r.json.inners ?? []).slice(0, 2)).slice(0, 500); out.masterDetail = JSON.stringify(r.json.master?.detail ?? null).slice(0, 900); }
+      if (k === "record" && r.json) out.accidentsSample = JSON.stringify((r.json.accidents ?? []).slice(0, 2)).slice(0, 500);
     } catch (e) { out[k] = { error: (e as Error).message }; }
   }
   return out;
