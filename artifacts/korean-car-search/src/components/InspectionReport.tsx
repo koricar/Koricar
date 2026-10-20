@@ -139,8 +139,9 @@ export default function InspectionReport({ inspection, displayNumber }: Props) {
 
   if (!inspection || !inspection.hasReport) {
     return (
-      <div className="bg-slate-800 rounded-2xl p-6 text-center text-slate-400">
-        <p>لا يوجد تقرير فحص متاح لهذه السيارة</p>
+      <div className="bg-slate-800 rounded-2xl p-6 text-center text-slate-300 space-y-2">
+        <p className="font-bold">لا يوجد تقرير فحص أو سجل تأمين مسجّل لهذه السيارة في Encar</p>
+        <p className="text-sm text-slate-400">هذا لا يعني وجود مشكلة بالسيارة، بل أن التقرير غير متوفر من المصدر. اسأل عن حالتها عبر واتساب قبل اتخاذ القرار.</p>
       </div>
     );
   }
