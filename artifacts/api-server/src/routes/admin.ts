@@ -3,7 +3,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { importApifyItems } from "../lib/import-cars";
 import { ensureCatalogTables } from "../lib/ensure-tables";
-import { runSync, syncState, probeCar, learnOptionCodes, reresolveOptions, backfillReports } from "../lib/encar-sync";
+import { runSync, syncState, probeCar, learnOptionCodes, reresolveOptions, backfillReports, probeSearchFilters } from "../lib/encar-sync";
 import { ADMIN_PAGE_HTML } from "../lib/admin-page";
 
 /**
@@ -123,6 +123,11 @@ router.get("/synced-with-reports", auth, async (_req, res) => {
       ORDER BY damaged_parts DESC, encar_id DESC LIMIT 12`);
     res.json(r.rows.map((x: any) => ({ id: x.encar_id, car: `${x.model ?? ""} ${x.badge ?? ""} ${x.year ?? ""}`.trim(), price: x.price_manwon, inspection: x.has_inspection, record: x.has_record, damagedParts: x.damaged_parts, link: `/cars/${x.encar_id}` })));
   } catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
+});
+
+router.get("/probe-search", auth, async (_req, res) => {
+  try { res.json(await probeSearchFilters()); }
+  catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
 });
 
 router.get("/probe/:id", auth, async (req, res) => {

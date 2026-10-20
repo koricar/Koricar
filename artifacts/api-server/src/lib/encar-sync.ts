@@ -388,3 +388,41 @@ export async function reresolveOptions() {
   }
   return { updated, unknownCodes: [...unknownOptionCodes].filter((c) => !optionNames.has(c)) };
 }
+
+/** Tries candidate Encar query filters (accident-free, has-report...) and verifies them against real accident records. */
+export async function probeSearchFilters() {
+  const base = "(And.Hidden.N._.CarType.Y._.Manufacturer.현대._.ModelGroup.쏘나타.";
+  const candidates: Record<string, string> = {
+    baseline: "",
+    "Accident.N": "_.Accident.N.",
+    "Accident.무사고": "_.Accident.무사고.",
+    "AccidentFree.Y": "_.AccidentFree.Y.",
+    "Record.무사고": "_.Record.무사고.",
+    "MyAccidentCnt.0": "_.MyAccidentCnt.0.",
+    "Condition.Record": "_.Condition.Record.",
+    "Condition.Inspection": "_.Condition.Inspection.",
+  };
+  const out: any[] = [];
+  for (const [name, part] of Object.entries(candidates)) {
+    const q = `${base}${part})`;
+    const u = new URL(`${API}/search/car/list/general`);
+    u.searchParams.set("count", "true"); u.searchParams.set("q", q); u.searchParams.set("sr", "|ModifiedDate|0|8");
+    try {
+      const r = await getJson(u.toString());
+      const rows: any[] = r.json?.SearchResults ?? [];
+      const entry: any = { filter: name, status: r.status, count: r.json?.Count ?? null, returned: rows.length };
+      if (r.ok && rows.length && name !== "baseline") {
+        const acc: any[] = [];
+        for (const c of rows.slice(0, 5)) {
+          const rec = await getJson(`${API}/v1/readside/record/vehicle/${c.Id}/open`, `https://fem.encar.com/cars/detail/${c.Id}`);
+          acc.push(rec.ok ? (rec.json?.myAccidentCnt ?? 0) + (rec.json?.otherAccidentCnt ?? 0) : `rec${rec.status}`);
+          await sleep(200);
+        }
+        entry.accidentsOfFirst5 = acc;
+      }
+      out.push(entry);
+    } catch (e) { out.push({ filter: name, error: (e as Error).message }); }
+    await sleep(300);
+  }
+  return out;
+}
