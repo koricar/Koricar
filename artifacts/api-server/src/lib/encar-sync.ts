@@ -95,6 +95,16 @@ export function mapRecord(j: any, carNo: string | null) {
 
 // Encar standard-option code -> Korean name (derived from matching Apify data against Encar codes; extend as new codes appear)
 const KNOWN_OPTION_NAMES: Record<string, string> = {
+  "002": "전자제어 서스펜션(ECS)",
+  "003": "CD 플레이어",
+  "029": "헤드램프(HID)",
+  "059": "파워 전동 트렁크",
+  "075": "헤드램프(LED)",
+  "084": "패들 시프트",
+  "087": "360도 어라운드 뷰",
+  "091": "마사지 시트",
+  "093": "커튼/블라인드(후방)",
+  "095": "헤드업 디스플레이(HUD)",
   "001": "브레이크 잠김 방지(ABS)",
   "004": "앞좌석 AV 모니터",
   "005": "내비게이션",
@@ -344,5 +354,5 @@ export async function reresolveOptions() {
     await db.update(cars).set({ options: names }).where(eq(cars.encarId, r.encarId));
     updated++;
   }
-  return { updated, unknownCodes: [...unknownOptionCodes] };
+  return { updated, unknownCodes: [...unknownOptionCodes].filter((c) => !optionNames.has(c)) };
 }
