@@ -23,12 +23,25 @@ export interface SyncFilter { makes?: string[]; yearMin?: number; yearMax?: numb
 
 const DOMESTIC_MAKES = new Set(["현대", "기아", "제네시스", "쌍용", "KG모빌리티", "르노코리아(삼성)", "르노삼성", "쉐보레(GM대우)", "쉐보레", "대우"]);
 
-export function buildListQuery(f: SyncFilter, make?: string): string {
+export function buildListQuery(f: SyncFilter, make?: string, withRanges = true): string {
   let q = "(And.Hidden.N." + (make && DOMESTIC_MAKES.has(make) ? "_.CarType.Y." : "");
   if (make) q += `_.Manufacturer.${make}.`;
-  if (f.yearMin || f.yearMax) q += `_.Year.${f.yearMin ? `${f.yearMin}00` : ""}..${f.yearMax ? `${f.yearMax}99` : ""}.`;
-  if (f.priceMinManwon || f.priceMaxManwon) q += `_.Price.${f.priceMinManwon ?? ""}..${f.priceMaxManwon ?? ""}.`;
+  if (withRanges) {
+    if (f.yearMin || f.yearMax) q += `_.Year.range(${f.yearMin ?? 1990}00..${f.yearMax ?? 2099}99).`;
+    if (f.priceMinManwon || f.priceMaxManwon) q += `_.Price.range(${f.priceMinManwon ?? 0}..${f.priceMaxManwon ?? 99999}).`;
+  }
   return q + ")";
+}
+
+/** Client-side check so results are correct even when the query could not carry the ranges. */
+function matchesFilter(c: any, f: SyncFilter): boolean {
+  const y = parseInt(String(c.FormYear ?? c.Year ?? "").slice(0, 4), 10);
+  const price = Number(c.Price ?? 0);
+  if (f.yearMin && y && y < f.yearMin) return false;
+  if (f.yearMax && y && y > f.yearMax) return false;
+  if (f.priceMinManwon && price < f.priceMinManwon) return false;
+  if (f.priceMaxManwon && price > f.priceMaxManwon) return false;
+  return true;
 }
 
 const STATUS_KR: Record<string, string> = { X: "교환", W: "판금/용접", C: "부식", A: "흠집", U: "요철", T: "손상" };
@@ -196,19 +209,24 @@ export async function runSync(opts: { maxNew?: number; maxPages?: number; markSo
     const listed = new Map<string, any>();
     for (const f of filters) {
       for (const make of f.makes?.length ? f.makes : [undefined]) {
-        const q = buildListQuery(f, make);
+        let withRanges = true;
         for (let page = 0; page < maxPages; page++) {
           const mk = (qq: string) => { const u = new URL(`${API}/search/car/list/general`); u.searchParams.set("count", "true"); u.searchParams.set("q", qq); u.searchParams.set("sr", `|ModifiedDate|${page * PAGE}|${PAGE}`); return u.toString(); };
+          let q = buildListQuery(f, make, withRanges);
           let r = await getJson(mk(q));
+          if (!r.ok && withRanges) {
+            note(`list ${r.status} for q=${q}; retrying without year/price in query`);
+            withRanges = false; q = buildListQuery(f, make, false); r = await getJson(mk(q));
+          }
           if (!r.ok) {
             note(`list ${r.status} for q=${q}`);
             const q2 = q.replace("_.CarType.Y.", "");
-            if (q2 !== q) { r = await getJson(mk(q2)); if (!r.ok) note(`retry without CarType: ${r.status}`); }
+            if (q2 !== q) { r = await getJson(mk(q2)); note(`retry without CarType: ${r.status}`); }
           }
           if (!r.ok || !r.json) throw new Error(`list HTTP ${r.status} q=${q} ${r.text}`);
           const rows: any[] = r.json.SearchResults ?? [];
-          for (const c of rows) listed.set(String(c.Id), c);
-          note(`${make ?? "all"} page ${page + 1}: ${rows.length}`);
+          for (const c of rows) if (matchesFilter(c, f)) listed.set(String(c.Id), c);
+          note(`${make ?? "all"} page ${page + 1}: ${rows.length} (kept ${listed.size})`);
           if (rows.length < PAGE) break;
           if (page === maxPages - 1) result.complete = false;
           await sleep(300);
