@@ -70,6 +70,7 @@ export const ADMIN_PAGE_HTML = `<!doctype html>
     <label>أقصى عدد سيارات جديدة بالمرة<input id="maxNew" type="number" inputmode="numeric" value="40"></label>
     <button id="sync">حدّث الآن</button>
     <button id="syncStatus">حالة المزامنة</button>
+    <button id="learn">تعلّم أسماء الخيارات</button>
     <pre id="syncOut">—</pre>
     <label>اختبار سيارة (رقم Encar)<input id="probeId" dir="ltr" inputmode="numeric"></label>
     <button id="probe">اختبار الاتصال بـ Encar</button>
@@ -109,6 +110,7 @@ $('upload').onclick = async () => {
   $('upload').disabled = false;
 };
 $('sync').onclick = async () => { show($('syncOut'), await api('/sync', { method: 'POST', body: JSON.stringify({ maxNew: $('maxNew').value }) })); };
+$('learn').onclick = async () => { $('syncOut').textContent = '... (قد تأخذ دقيقة)'; show($('syncOut'), await api('/learn-options', { method: 'POST' })); };
 $('syncStatus').onclick = async () => { show($('syncOut'), await api('/sync/status')); };
 $('probe').onclick = async () => { $('probeOut').textContent = '...'; show($('probeOut'), await api('/probe/' + $('probeId').value.trim())); };
 </script>

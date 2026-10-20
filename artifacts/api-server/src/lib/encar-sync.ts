@@ -166,12 +166,11 @@ export async function fetchFullCar(id: string, listItem?: any) {
 
   let inspection: any = null, record: any = null;
   {
-    try { const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}`, `https://fem.encar.com/cars/detail/${id}`); if (r.ok) inspection = mapInspection(r.json); else warnings.push(`inspection ${r.status}`); } catch (e) { warnings.push(`inspection ${(e as Error).message}`); }
+    try { const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}`, `https://fem.encar.com/cars/detail/${id}`); if (r.ok) inspection = mapInspection(r.json); else if (r.status !== 404) warnings.push(`inspection ${r.status}`); } catch (e) { warnings.push(`inspection ${(e as Error).message}`); }
   }
   try {
-    const q = carNo ? `?vehicleNo=${encodeURIComponent(carNo)}` : "";
-    const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open${q}`, `https://fem.encar.com/cars/detail/${id}`);
-    if (r.ok) record = mapRecord(r.json, carNo); else warnings.push(`record ${r.status}`);
+    const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, `https://fem.encar.com/cars/detail/${id}`);
+    if (r.ok) record = mapRecord(r.json, carNo); else if (r.status !== 404) warnings.push(`record ${r.status}`);
   } catch (e) { warnings.push(`record ${(e as Error).message}`); }
 
   const opts = d.options ?? {};
@@ -185,7 +184,7 @@ export async function fetchFullCar(id: string, listItem?: any) {
     fuelName: spec.fuelName ?? listItem?.FuelType, transmissionName: spec.transmissionName ?? listItem?.Transmission,
     displacement: spec.displacement, bodyName: spec.bodyName, colorName: spec.colorName, seatCount: spec.seatCount,
     region: d.contact?.address ?? listItem?.OfficeCityState, modifyDateTime: ad.modifyDateTime ?? ad.modifiedDate ?? null,
-    optionsStandard, optionsChoice: Array.isArray(opts.choice) ? opts.choice : [],
+    optionsStandard, optionCodes: Array.isArray(opts.standard) ? opts.standard.map(String) : [], optionsChoice: Array.isArray(opts.choice) ? opts.choice : [],
     photoUrls: photos.length ? photos : (listItem?.Photos ?? []).map((p: any) => `${PHOTO}${p.location}`),
     record, inspection, diagnosis: null, _syncWarnings: warnings,
   };
@@ -301,4 +300,49 @@ export async function probeCar(id: string) {
     } catch (e) { out[k] = { error: (e as Error).message }; }
   }
   return out;
+}
+
+/**
+ * Learn code -> name pairs from cars that came from Apify (names known) by fetching their codes from Encar.
+ * Names are listed in code order, so positions line up; conflicts are reported and skipped.
+ */
+export async function learnOptionCodes() {
+  const { db, cars } = await import("@workspace/db");
+  const rows = await db.select({ encarId: cars.encarId, options: cars.options, raw: cars.raw }).from(cars);
+  const learned: Record<string, string> = {};
+  const conflicts: string[] = [];
+  let used = 0, skipped = 0;
+  for (const r of rows as any[]) {
+    const names: string[] = Array.isArray(r.options) ? r.options : [];
+    if (!names.length || r.raw?.optionCodes) continue; // only Apify-origin cars (no stored codes)
+    try {
+      const det = await getJson(`${API}/v1/readside/vehicle/${r.encarId}?include=OPTIONS`, `https://fem.encar.com/cars/detail/${r.encarId}`);
+      const codes: string[] = det.json?.options?.standard ?? [];
+      if (!det.ok || codes.length !== names.length) { skipped++; continue; }
+      used++;
+      codes.forEach((c, i) => {
+        if (learned[c] && learned[c] !== names[i]) conflicts.push(`${c}: ${learned[c]} vs ${names[i]}`);
+        else learned[c] = names[i];
+      });
+    } catch { skipped++; }
+    await sleep(250);
+  }
+  for (const [c, n] of Object.entries(learned)) if (!conflicts.some((x) => x.startsWith(c + ":"))) optionNames.set(c, n);
+  const fresh = Object.fromEntries(Object.entries(learned).filter(([c]) => !(c in KNOWN_OPTION_NAMES)));
+  return { carsUsed: used, carsSkipped: skipped, newCodes: fresh, conflicts };
+}
+
+/** Re-resolve option names for synced cars whose raw.optionCodes were stored, using the current dictionary. */
+export async function reresolveOptions() {
+  const { db, cars } = await import("@workspace/db");
+  const rows = await db.select({ encarId: cars.encarId, raw: cars.raw }).from(cars);
+  let updated = 0;
+  for (const r of rows as any[]) {
+    const codes: string[] = r.raw?.optionCodes;
+    if (!Array.isArray(codes) || !codes.length) continue;
+    const names = codes.map((c) => optionNames.get(c)).filter((x): x is string => !!x);
+    await db.update(cars).set({ options: names }).where(eq(cars.encarId, r.encarId));
+    updated++;
+  }
+  return { updated, unknownCodes: [...unknownOptionCodes] };
 }

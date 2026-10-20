@@ -3,7 +3,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { importApifyItems } from "../lib/import-cars";
 import { ensureCatalogTables } from "../lib/ensure-tables";
-import { runSync, syncState, probeCar } from "../lib/encar-sync";
+import { runSync, syncState, probeCar, learnOptionCodes, reresolveOptions } from "../lib/encar-sync";
 import { ADMIN_PAGE_HTML } from "../lib/admin-page";
 
 /**
@@ -98,6 +98,11 @@ router.post("/sync", auth, async (req, res) => {
 });
 
 router.get("/sync/status", auth, (_req, res) => { res.json(syncState); });
+
+router.post("/learn-options", auth, async (_req, res) => {
+  try { res.json({ learn: await learnOptionCodes(), reresolve: await reresolveOptions() }); }
+  catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
+});
 
 router.get("/probe/:id", auth, async (req, res) => {
   res.json(await probeCar(String(req.params.id).replace(/\D/g, "")));
