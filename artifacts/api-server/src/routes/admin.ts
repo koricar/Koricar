@@ -111,6 +111,20 @@ router.post("/backfill-reports", auth, async (req, res) => {
   catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
 });
 
+router.get("/synced-with-reports", auth, async (_req, res) => {
+  try {
+    const { pool } = await import("@workspace/db");
+    const r = await pool.query(`
+      SELECT encar_id, manufacturer, model, badge, year, price_manwon,
+             (inspection IS NOT NULL) AS has_inspection, (record IS NOT NULL) AS has_record,
+             jsonb_array_length(COALESCE(inspection->'parts','[]'::jsonb)) AS damaged_parts
+      FROM cars
+      WHERE raw ? 'reportStatus' AND status = 'available' AND (inspection IS NOT NULL OR record IS NOT NULL)
+      ORDER BY damaged_parts DESC, encar_id DESC LIMIT 12`);
+    res.json(r.rows.map((x: any) => ({ id: x.encar_id, car: `${x.model ?? ""} ${x.badge ?? ""} ${x.year ?? ""}`.trim(), price: x.price_manwon, inspection: x.has_inspection, record: x.has_record, damagedParts: x.damaged_parts, link: `/cars/${x.encar_id}` })));
+  } catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
+});
+
 router.get("/probe/:id", auth, async (req, res) => {
   res.json(await probeCar(String(req.params.id).replace(/\D/g, "")));
 });

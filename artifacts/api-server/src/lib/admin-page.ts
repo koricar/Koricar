@@ -71,6 +71,7 @@ export const ADMIN_PAGE_HTML = `<!doctype html>
     <button id="sync">حدّث الآن</button>
     <button id="syncStatus">حالة المزامنة</button>
     <button id="learn">تعلّم أسماء الخيارات</button>
+    <button id="withRep">سيارات من المزامنة فيها فحص/تأمين</button>
     <button id="backfill">إكمال الفحص والتأمين الناقص</button>
     <pre id="syncOut">—</pre>
     <label>اختبار سيارة (رقم Encar)<input id="probeId" dir="ltr" inputmode="numeric"></label>
@@ -113,6 +114,7 @@ $('upload').onclick = async () => {
 $('sync').onclick = async () => { show($('syncOut'), await api('/sync', { method: 'POST', body: JSON.stringify({ maxNew: $('maxNew').value }) })); };
 $('learn').onclick = async () => { $('syncOut').textContent = '... (قد تأخذ دقيقة)'; show($('syncOut'), await api('/learn-options', { method: 'POST' })); };
 $('backfill').onclick = async () => { $('syncOut').textContent = '... (قد تأخذ دقيقة)'; show($('syncOut'), await api('/backfill-reports', { method: 'POST', body: JSON.stringify({ limit: 60 }) })); };
+$('withRep').onclick = async () => { show($('syncOut'), await api('/synced-with-reports')); };
 $('syncStatus').onclick = async () => { show($('syncOut'), await api('/sync/status')); };
 $('probe').onclick = async () => { $('probeOut').textContent = '...'; show($('probeOut'), await api('/probe/' + $('probeId').value.trim())); };
 </script>
