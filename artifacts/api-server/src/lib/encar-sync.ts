@@ -164,6 +164,44 @@ async function resolveStandardOptions(_id: string, codes: string[], warnings: st
   return names;
 }
 
+/** Inspection + accident record for one car; records HTTP statuses so missing reports can be diagnosed. */
+export async function fetchReports(id: string, carNo: string | null, warnings: string[] = []) {
+  const ref = `https://fem.encar.com/cars/detail/${id}`;
+  const status: Record<string, number | string> = {};
+  let inspection: any = null, record: any = null;
+  try {
+    const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}`, ref);
+    status.inspection = r.status;
+    if (r.ok) inspection = mapInspection(r.json); else if (r.status !== 404) warnings.push(`inspection ${r.status}`);
+  } catch (e) { status.inspection = "err"; warnings.push(`inspection ${(e as Error).message}`); }
+  try {
+    let r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, ref);
+    status.record = r.status;
+    if (!r.ok && carNo) { r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open?vehicleNo=${encodeURIComponent(carNo)}`, ref); status.recordWithNo = r.status; }
+    if (r.ok) record = mapRecord(r.json, carNo); else if (r.status !== 404) warnings.push(`record ${r.status}`);
+  } catch (e) { status.record = "err"; warnings.push(`record ${(e as Error).message}`); }
+  return { inspection, record, status };
+}
+
+/** Re-fetch reports for stored cars that have neither inspection nor record. */
+export async function backfillReports(limit = 60) {
+  const { db, cars } = await import("@workspace/db");
+  const rows = await db.select({ encarId: cars.encarId, vin: cars.vin, raw: cars.raw, inspection: cars.inspection, record: cars.record }).from(cars).where(eq(cars.status, "available"));
+  const todo = (rows as any[]).filter((r) => !r.inspection && !r.record).slice(0, limit);
+  const stats: Record<string, number> = { checked: 0, gotInspection: 0, gotRecord: 0, stillNone: 0 };
+  const sample: any[] = [];
+  for (const r of todo) {
+    const rep = await fetchReports(r.encarId, null);
+    stats.checked++;
+    if (rep.inspection) stats.gotInspection++;
+    if (rep.record) stats.gotRecord++;
+    if (!rep.inspection && !rep.record) { stats.stillNone++; if (sample.length < 5) sample.push({ id: r.encarId, status: rep.status }); continue; }
+    await db.update(cars).set({ inspection: rep.inspection ?? null, record: rep.record ?? null }).where(eq(cars.encarId, r.encarId));
+    await sleep(300);
+  }
+  return { remainingWithoutReports: Math.max(0, (rows as any[]).filter((r) => !r.inspection && !r.record).length - stats.checked), ...stats, sampleStatuses: sample };
+}
+
 /** Fetch one car fully and return it in the Apify item shape that importApifyItems understands. */
 export async function fetchFullCar(id: string, listItem?: any) {
   const inc = ["CATEGORY", "SPEC", "PHOTOS", "ADVERTISEMENT", "MANAGE", "OPTIONS", "CONDITION", "CONTACT"].join(",");
@@ -174,14 +212,8 @@ export async function fetchFullCar(id: string, listItem?: any) {
   const carNo: string | null = d.vehicleNo ?? null;
   const warnings: string[] = [];
 
-  let inspection: any = null, record: any = null;
-  {
-    try { const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}`, `https://fem.encar.com/cars/detail/${id}`); if (r.ok) inspection = mapInspection(r.json); else if (r.status !== 404) warnings.push(`inspection ${r.status}`); } catch (e) { warnings.push(`inspection ${(e as Error).message}`); }
-  }
-  try {
-    const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, `https://fem.encar.com/cars/detail/${id}`);
-    if (r.ok) record = mapRecord(r.json, carNo); else if (r.status !== 404) warnings.push(`record ${r.status}`);
-  } catch (e) { warnings.push(`record ${(e as Error).message}`); }
+  const rep = await fetchReports(id, carNo, warnings);
+  const inspection = rep.inspection, record = rep.record;
 
   const opts = d.options ?? {};
   const optionsStandard = await resolveStandardOptions(id, Array.isArray(opts.standard) ? opts.standard.map(String) : [], warnings);
@@ -196,7 +228,7 @@ export async function fetchFullCar(id: string, listItem?: any) {
     region: d.contact?.address ?? listItem?.OfficeCityState, modifyDateTime: ad.modifyDateTime ?? ad.modifiedDate ?? null,
     optionsStandard, optionCodes: Array.isArray(opts.standard) ? opts.standard.map(String) : [], optionsChoice: Array.isArray(opts.choice) ? opts.choice : [],
     photoUrls: photos.length ? photos : (listItem?.Photos ?? []).map((p: any) => `${PHOTO}${p.location}`),
-    record, inspection, diagnosis: null, _syncWarnings: warnings,
+    record, inspection, diagnosis: null, reportStatus: rep.status, _syncWarnings: warnings,
   };
   return item;
 }

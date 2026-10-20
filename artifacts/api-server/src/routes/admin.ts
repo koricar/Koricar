@@ -3,7 +3,7 @@ import { randomBytes, timingSafeEqual } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
 import { importApifyItems } from "../lib/import-cars";
 import { ensureCatalogTables } from "../lib/ensure-tables";
-import { runSync, syncState, probeCar, learnOptionCodes, reresolveOptions } from "../lib/encar-sync";
+import { runSync, syncState, probeCar, learnOptionCodes, reresolveOptions, backfillReports } from "../lib/encar-sync";
 import { ADMIN_PAGE_HTML } from "../lib/admin-page";
 
 /**
@@ -37,7 +37,9 @@ router.get("/stats", auth, async (_req, res) => {
     const { db, cars, tenants } = await import("@workspace/db");
     const [{ total }] = await db.select({ total: sql<number>`count(*)::int` }).from(cars);
     const list = await db.select({ slug: tenants.slug, name: tenants.name, filter: tenants.filter }).from(tenants);
-    res.json({ cars: total, tenants: list });
+    const [{ withInspection }] = await db.select({ withInspection: sql<number>`count(*) filter (where inspection is not null)::int` }).from(cars);
+    const [{ withRecord }] = await db.select({ withRecord: sql<number>`count(*) filter (where record is not null)::int` }).from(cars);
+    res.json({ cars: total, withInspection, withRecord, tenants: list });
   } catch (err) {
     res.status(500).json({ error: String((err as Error).message ?? err) });
   }
@@ -101,6 +103,11 @@ router.get("/sync/status", auth, (_req, res) => { res.json(syncState); });
 
 router.post("/learn-options", auth, async (_req, res) => {
   try { res.json({ learn: await learnOptionCodes(), reresolve: await reresolveOptions() }); }
+  catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
+});
+
+router.post("/backfill-reports", auth, async (req, res) => {
+  try { res.json(await backfillReports(num(req.body?.limit) ?? 60)); }
   catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
 });
 
