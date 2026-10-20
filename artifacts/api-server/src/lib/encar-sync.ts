@@ -8,6 +8,7 @@ import { importApifyItems } from "./import-cars";
 const API = "https://api.encar.com";
 const PHOTO = "https://ci.encar.com";
 const HEADERS = { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" };
+const PAGE = 50;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function getJson(url: string, referer?: string) {
@@ -20,8 +21,10 @@ async function getJson(url: string, referer?: string) {
 
 export interface SyncFilter { makes?: string[]; yearMin?: number; yearMax?: number; priceMinManwon?: number; priceMaxManwon?: number }
 
+const DOMESTIC_MAKES = new Set(["현대", "기아", "제네시스", "쌍용", "KG모빌리티", "르노코리아(삼성)", "르노삼성", "쉐보레(GM대우)", "쉐보레", "대우"]);
+
 export function buildListQuery(f: SyncFilter, make?: string): string {
-  let q = "(And.Hidden.N.";
+  let q = "(And.Hidden.N." + (make && DOMESTIC_MAKES.has(make) ? "_.CarType.Y." : "");
   if (make) q += `_.Manufacturer.${make}.`;
   if (f.yearMin || f.yearMax) q += `_.Year.${f.yearMin ? `${f.yearMin}00` : ""}..${f.yearMax ? `${f.yearMax}99` : ""}.`;
   if (f.priceMinManwon || f.priceMaxManwon) q += `_.Price.${f.priceMinManwon ?? ""}..${f.priceMaxManwon ?? ""}.`;
@@ -195,13 +198,18 @@ export async function runSync(opts: { maxNew?: number; maxPages?: number; markSo
       for (const make of f.makes?.length ? f.makes : [undefined]) {
         const q = buildListQuery(f, make);
         for (let page = 0; page < maxPages; page++) {
-          const url = `${API}/search/car/list/general?count=true&q=${encodeURIComponent(q)}&sr=${encodeURIComponent(`|ModifiedDate|${page * 100}|100`)}`;
-          const r = await getJson(url);
-          if (!r.ok || !r.json) throw new Error(`list HTTP ${r.status} ${r.text}`);
+          const mk = (qq: string) => { const u = new URL(`${API}/search/car/list/general`); u.searchParams.set("count", "true"); u.searchParams.set("q", qq); u.searchParams.set("sr", `|ModifiedDate|${page * PAGE}|${PAGE}`); return u.toString(); };
+          let r = await getJson(mk(q));
+          if (!r.ok) {
+            note(`list ${r.status} for q=${q}`);
+            const q2 = q.replace("_.CarType.Y.", "");
+            if (q2 !== q) { r = await getJson(mk(q2)); if (!r.ok) note(`retry without CarType: ${r.status}`); }
+          }
+          if (!r.ok || !r.json) throw new Error(`list HTTP ${r.status} q=${q} ${r.text}`);
           const rows: any[] = r.json.SearchResults ?? [];
           for (const c of rows) listed.set(String(c.Id), c);
           note(`${make ?? "all"} page ${page + 1}: ${rows.length}`);
-          if (rows.length < 100) break;
+          if (rows.length < PAGE) break;
           if (page === maxPages - 1) result.complete = false;
           await sleep(300);
         }
