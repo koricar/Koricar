@@ -50,7 +50,7 @@ export function mapInspection(j: any) {
   const serious = titles(d.seriousTypes);
   return {
     accident: !!(m.accdient ?? m.accident), simpleRepair: !!m.simpleRepair,
-    flooded: serious.some((t: string) => t.includes("침수")),
+    flooded: !!d.waterlog || serious.some((t: string) => t.includes("침수")),
     recordNo: d.recordNo ?? m.supplyNum ?? null,
     inspectionDate: d.issueDate ?? (typeof m.registrationDate === "string" ? m.registrationDate.slice(0, 10).replace(/-/g, "") : null),
     validityStartDate: d.validityStartDate ?? null, validityEndDate: d.validityEndDate ?? null,
@@ -77,23 +77,64 @@ export function mapRecord(j: any, carNo: string | null) {
   };
 }
 
-const optionNames = new Map<string, string>(); // code -> Korean name, learned at runtime
-async function resolveStandardOptions(id: string, codes: string[], warnings: string[]): Promise<string[]> {
+// Encar standard-option code -> Korean name (derived from matching Apify data against Encar codes; extend as new codes appear)
+const KNOWN_OPTION_NAMES: Record<string, string> = {
+  "001": "브레이크 잠김 방지(ABS)",
+  "004": "앞좌석 AV 모니터",
+  "005": "내비게이션",
+  "006": "파워 도어록",
+  "007": "파워 윈도우",
+  "008": "파워 스티어링 휠",
+  "010": "선루프",
+  "014": "가죽시트",
+  "015": "무선도어 잠금장치",
+  "017": "알루미늄 휠",
+  "019": "미끄럼 방지(TCS)",
+  "020": "에어백(사이드)",
+  "021": "전동시트(운전석)",
+  "022": "열선시트(앞좌석)",
+  "023": "자동 에어컨",
+  "024": "전동접이 사이드 미러",
+  "026": "에어백(운전석)",
+  "027": "에어백(동승석)",
+  "030": "ECM 룸미러",
+  "031": "스티어링 휠 리모컨",
+  "032": "주차감지센서(후방)",
+  "033": "타이어 공기압센서(TPMS)",
+  "034": "통풍시트(운전석)",
+  "035": "전동시트(동승석)",
+  "051": "메모리 시트(운전석)",
+  "055": "차체자세 제어장치(ESC)",
+  "056": "에어백(커튼)",
+  "057": "스마트키",
+  "058": "후방 카메라",
+  "063": "열선시트(뒷좌석)",
+  "068": "크루즈 컨트롤(일반)",
+  "071": "AUX 단자",
+  "072": "USB 단자",
+  "074": "하이패스",
+  "077": "통풍시트(동승석)",
+  "079": "크루즈 컨트롤(어댑티브)",
+  "081": "레인센서",
+  "082": "열선 스티어링 휠",
+  "083": "전동 조절 스티어링 휠",
+  "085": "주차감지센서(전방)",
+  "086": "후측방 경보 시스템",
+  "088": "차선이탈 경보 시스템(LDWS)",
+  "092": "커튼/블라인드(뒷좌석)",
+  "094": "전자식 주차브레이크(EPB)",
+  "096": "블루투스",
+  "097": "오토 라이트"
+};
+const optionNames = new Map<string, string>(Object.entries(KNOWN_OPTION_NAMES));
+export const unknownOptionCodes = new Set<string>();
+async function resolveStandardOptions(_id: string, codes: string[], warnings: string[]): Promise<string[]> {
   if (!codes.length) return [];
   if (!codes.some((c) => /^\d+$/.test(c))) return codes; // already names
-  if (!codes.every((c) => optionNames.has(c))) {
-    try {
-      const r = await getJson(`${API}/v1/readside/vehicles/car/${id}/options/standard`, `https://fem.encar.com/cars/detail/${id}`);
-      const arr = Array.isArray(r.json) ? r.json : Array.isArray(r.json?.options) ? r.json.options : [];
-      for (const o of arr) {
-        const cd = o?.optionCd ?? o?.code, nm = o?.optionName ?? o?.name ?? o?.title;
-        if (cd && nm) optionNames.set(String(cd), String(nm));
-      }
-      if (!r.ok) warnings.push(`options/standard ${r.status}`);
-    } catch (e) { warnings.push(`options/standard ${(e as Error).message}`); }
-  }
   const names = codes.map((c) => optionNames.get(c)).filter((x): x is string => !!x);
-  if (names.length < codes.length) warnings.push(`options: ${codes.length - names.length}/${codes.length} codes unresolved`);
+  const missing = codes.filter((c) => !optionNames.has(c));
+  missing.forEach((c) => unknownOptionCodes.add(c));
+  if (missing.length) warnings.push(`unknown option codes: ${missing.join(",")}`);
   return names;
 }
 
@@ -203,6 +244,7 @@ export async function runSync(opts: { maxNew?: number; maxPages?: number; markSo
       await sleep(500);
     }
     result.deferred = Math.max(0, fresh.length - maxNew);
+    if (unknownOptionCodes.size) note(`unknown option codes seen: ${[...unknownOptionCodes].join(",")}`);
     note(`done: ${JSON.stringify(result)}`);
     syncState.result = result;
   } catch (e) {
@@ -222,7 +264,6 @@ export async function probeCar(id: string) {
     detail: `${API}/v1/readside/vehicle/${id}?include=${inc}`,
     inspection: `${API}/v1/readside/inspection/vehicle/${id}`,
     record: `${API}/v1/readside/record/vehicle/${id}/open`,
-    optionsStandard: `${API}/v1/readside/vehicles/car/${id}/options/standard`,
   };
   for (const [k, url] of Object.entries(targets)) {
     try {
