@@ -21,7 +21,7 @@ async function getJson(url: string, referer?: string) {
 export interface SyncFilter { makes?: string[]; yearMin?: number; yearMax?: number; priceMinManwon?: number; priceMaxManwon?: number }
 
 export function buildListQuery(f: SyncFilter, make?: string): string {
-  let q = "(And.Hidden.N._.CarType.A.";
+  let q = "(And.Hidden.N.";
   if (make) q += `_.Manufacturer.${make}.`;
   if (f.yearMin || f.yearMax) q += `_.Year.${f.yearMin ? `${f.yearMin}00` : ""}..${f.yearMax ? `${f.yearMax}99` : ""}.`;
   if (f.priceMinManwon || f.priceMaxManwon) q += `_.Price.${f.priceMinManwon ?? ""}..${f.priceMaxManwon ?? ""}.`;
