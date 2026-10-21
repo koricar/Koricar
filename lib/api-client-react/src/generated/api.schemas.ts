@@ -77,6 +77,10 @@ export type SearchCarsParams = {
    */
   sunroof?: boolean;
   /**
+   * Only cars with an open insurance record showing zero accidents (live Encar search)
+   */
+  noAccident?: boolean;
+  /**
    * Transmission type (auto, manual)
    */
   transmission?: SearchCarsTransmission;

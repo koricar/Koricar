@@ -38,6 +38,7 @@ export const SearchCarsQueryParams = zod.object({
   yearFrom: zod.coerce.number().optional().describe("Model year from"),
   yearTo: zod.coerce.number().optional().describe("Model year to"),
   sunroof: zod.coerce.boolean().optional().describe("Has sunroof"),
+  noAccident: zod.coerce.boolean().optional().describe("Only cars with zero accidents (live Encar search)"),
   transmission: zod
     .enum(["auto", "manual", "any"])
     .optional()

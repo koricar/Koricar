@@ -57,6 +57,11 @@ paths:
           description: Has sunroof
           schema:
             type: boolean
+        - name: noAccident
+          in: query
+          description: Only cars with an open insurance record showing zero accidents (live Encar search)
+          schema:
+            type: boolean
         - name: transmission
           in: query
           description: Transmission type (auto, manual)

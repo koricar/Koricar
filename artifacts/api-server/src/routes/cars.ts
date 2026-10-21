@@ -968,11 +968,83 @@ router.get("/filters", async (req, res) => {
   }
 });
 
+// ── Live "no accidents" search over ALL of Encar ─────────────────────────
+const recordCache = new Map<string, { rec: any | null; at: number }>();
+const RECORD_TTL_MS = 12 * 60 * 60 * 1000;
+
+async function getAccidentRecord(id: string): Promise<any | null> {
+  const hit = recordCache.get(id);
+  if (hit && Date.now() - hit.at < RECORD_TTL_MS) return hit.rec;
+  let rec: any | null = null;
+  try {
+    const r = await fetch(`${ENCAR_API}/v1/readside/record/vehicle/${id}/open`, {
+      headers: { Referer: `https://fem.encar.com/cars/detail/${id}`, "User-Agent": "Mozilla/5.0", Accept: "application/json" },
+      signal: AbortSignal.timeout(8000),
+    });
+    if (r.ok) { const j = (await r.json()) as any; rec = j?.openData === false ? null : j; }
+    else if (r.status !== 404) return null; // transient error: do not cache
+  } catch { return null; }
+  recordCache.set(id, { rec, at: Date.now() });
+  if (recordCache.size > 20000) recordCache.delete(recordCache.keys().next().value as string);
+  return rec;
+}
+
+async function mapLimit<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): Promise<R[]> {
+  const out: R[] = new Array(items.length);
+  let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) { const k = i++; out[k] = await fn(items[k]); }
+  }));
+  return out;
+}
+
+async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
+  const limit = p.limit ?? 12, page = p.page ?? 1;
+  const skip = (page - 1) * limit;
+  const need = skip + limit + 1; // one extra to know whether another page exists
+  const PAGE = 50, MAX_PAGES = 14;
+  try {
+    const modelType = req.query.modelType as "group" | "model" | undefined;
+    const { q: baseQ, modelRaw } = buildEncarQuery({ brand: p.brand, model: p.model, sunroof: p.sunroof, fuelType: p.fuelType, transmission: p.transmission, bodyType: p.bodyType, color: p.color, yearFrom: p.yearFrom, yearTo: p.yearTo, modelType, priceMin: p.priceMin, priceMax: p.priceMax, mileageMax: p.mileageMax });
+    const q = baseQ.replace(/\)$/, "_.Accident.N.)");
+    const matched: ReturnType<typeof mapEncarCar>[] = [];
+    let exhausted = false, noRecord = 0;
+    for (let pg = 0; pg < MAX_PAGES && matched.length < need; pg++) {
+      const url = new URL(`${ENCAR_API}/search/car/list/general`);
+      url.searchParams.set("count", "true"); url.searchParams.set("q", q); url.searchParams.set("sr", `|ModifiedDate|${pg * PAGE}|${PAGE}`);
+      const resp = await fetch(url.toString(), { headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" }, signal: AbortSignal.timeout(10000) });
+      if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
+      const data = (await resp.json()) as EncarResponse;
+      const rows = data.SearchResults ?? [];
+      const recs = await mapLimit(rows, 8, (c) => getAccidentRecord(String(c.Id)));
+      rows.forEach((c, i) => {
+        const r = recs[i];
+        if (!r) { noRecord++; return; }
+        if ((r.myAccidentCnt ?? 0) === 0 && (r.otherAccidentCnt ?? 0) === 0) {
+          const m = mapEncarCar(c);
+          carCache.set(m.id, { data: m, timestamp: Date.now() });
+          matched.push({ ...m, noAccidentVerified: true } as any);
+        }
+      });
+      if (rows.length < PAGE) { exhausted = true; break; }
+    }
+    const pageItems = matched.slice(skip, skip + limit);
+    const hasMore = matched.length > skip + limit || !exhausted;
+    const total = hasMore ? skip + limit + 1 : matched.length;
+    res.json({ cars: pageItems, total, page, limit, totalPages: hasMore ? page + 1 : Math.max(1, Math.ceil(matched.length / limit)), filter: "noAccident", skippedNoRecord: noRecord });
+  } catch (err) {
+    safeLog(req).error?.({ err }, "noAccident search error") ?? console.error(err);
+    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى." });
+  }
+}
+
 router.get("/search", async (req, res) => {
   const parsed = SearchCarsQueryParams.safeParse(req.query);
   if (!parsed.success) { res.status(400).json({ error: "invalid_params", message: "Invalid query parameters" }); return; }
   const { model, brand, yearFrom, yearTo, sunroof, transmission, fuelType, bodyType, color, priceMin, priceMax, mileageMax, page = 1, limit = 20 } = parsed.data;
   const modelType = (req.query.modelType as "group" | "model" | undefined);
+
+  if (["1", "true"].includes(String(req.query.noAccident ?? ""))) { await searchNoAccident(req, res, parsed.data); return; }
 
   if (await searchFromDb(req, res, parsed.data)) return;
 
@@ -1438,7 +1510,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
     await (await import("../lib/ensure-tables")).ensureCatalogTables();
     const { db, cars } = await import("@workspace/db");
     const [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
-    if (!row) { res.status(404).json({ error: "not_found", message: "السيارة غير موجودة أو لم تعد متاحة." }); return true; }
+    if (!row) return false; // not in our catalog: fall through to the live Encar detail
     const car = mapEncarCarExtended(dbRowToEncarCar(row));
     const insp = (row.inspection ?? null) as any;
     const rec = (row.record ?? null) as any;

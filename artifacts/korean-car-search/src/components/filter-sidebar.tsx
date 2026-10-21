@@ -991,6 +991,24 @@ export function FilterSidebar({ filters, updateFilter, resetFilters, className }
             >
               🌤 فتحة سقف فقط
             </button>
+
+            {/* بدون حوادث */}
+            <button
+              onClick={() => updateFilter("noAccident", filters.noAccident ? undefined : true)}
+              className={cn(
+                "w-full px-3 py-2.5 rounded-xl border text-sm font-medium transition-all",
+                filters.noAccident
+                  ? "border-emerald-500 bg-emerald-50 text-emerald-700"
+                  : "border-gray-200 text-gray-700 hover:border-emerald-300 hover:bg-emerald-50"
+              )}
+            >
+              ✅ بدون حوادث (سجل التأمين)
+            </button>
+            {filters.noAccident && (
+              <p className="text-xs text-gray-500 leading-relaxed">
+                يعرض فقط السيارات التي سجلها مفتوح ولا توجد فيه حوادث. قد يستغرق البحث عدة ثوانٍ في المرة الأولى.
+              </p>
+            )}
           </div>
         )}
       </div>
