@@ -48,7 +48,7 @@ export function CarCard({ car }: { car: Car }) {
           {car.inspected && (
             <div className="bg-emerald-500/90 backdrop-blur-md text-white text-xs font-bold px-2.5 py-1.5 rounded-lg shadow-lg flex items-center gap-1.5">
               <ShieldCheck className="w-3.5 h-3.5" />
-              فحص معتمد
+              تقرير فحص Encar
             </div>
           )}
           {car.sunroof && (
