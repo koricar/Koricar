@@ -1009,15 +1009,28 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
     const q = baseQ.replace(/\)$/, "_.Accident.N.)");
     if (!q.includes("Accident.N")) throw new Error(`could not build query from ${baseQ}`);
     const matched: ReturnType<typeof mapEncarCar>[] = [];
-    let exhausted = false, noRecord = 0;
+    let exhausted = false, noRecord = 0, pagesScanned = 0, lastError = "";
+    const started = Date.now();
     for (let pg = 0; pg < MAX_PAGES && matched.length < need; pg++) {
+      if (Date.now() - started > 40000) break; // time budget: return what we have
       const url = new URL(`${ENCAR_API}/search/car/list/general`);
       url.searchParams.set("count", "true"); url.searchParams.set("q", q); url.searchParams.set("sr", `|ModifiedDate|${pg * PAGE}|${PAGE}`);
-      const resp = await fetch(url.toString(), { headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" }, signal: AbortSignal.timeout(10000) });
-      if (!resp.ok) throw new Error(`Encar HTTP ${resp.status} q=${q}`);
-      const data = (await resp.json()) as EncarResponse;
+      let data: EncarResponse | null = null;
+      for (let attempt = 0; attempt < 3 && !data; attempt++) {
+        try {
+          const resp = await fetch(url.toString(), { headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" }, signal: AbortSignal.timeout(10000) });
+          if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
+          data = (await resp.json()) as EncarResponse;
+        } catch (e) {
+          const c: any = (e as any)?.cause;
+          lastError = `${(e as Error).message} ${c?.code ?? c?.message ?? (c?.errors ? c.errors.map((x: any) => x?.code).join("/") : "")} q=${q}`;
+          await new Promise((r) => setTimeout(r, 700 * (attempt + 1)));
+        }
+      }
+      if (!data) { if (!matched.length) throw new Error(lastError); break; }
+      pagesScanned++;
       const rows = data.SearchResults ?? [];
-      const recs = await mapLimit(rows, 8, (c) => getAccidentRecord(String(c.Id)));
+      const recs = await mapLimit(rows, 5, (c) => getAccidentRecord(String(c.Id)));
       rows.forEach((c, i) => {
         const r = recs[i];
         if (!r) { noRecord++; return; }
@@ -1032,7 +1045,7 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
     const pageItems = matched.slice(skip, skip + limit);
     const hasMore = matched.length > skip + limit || !exhausted;
     const total = hasMore ? skip + limit + 1 : matched.length;
-    res.json({ cars: pageItems, total, page, limit, totalPages: hasMore ? page + 1 : Math.max(1, Math.ceil(matched.length / limit)), filter: "noAccident", skippedNoRecord: noRecord });
+    res.json({ cars: pageItems, total, page, limit, totalPages: hasMore ? page + 1 : Math.max(1, Math.ceil(matched.length / limit)), filter: "noAccident", skippedNoRecord: noRecord, pagesScanned, ...(lastError ? { warning: lastError.slice(0, 200) } : {}) });
   } catch (err) {
     safeLog(req).error?.({ err }, "noAccident search error") ?? console.error(err);
     res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.", detail: `${String((err as Error)?.message ?? err)} ${String((err as any)?.cause?.code ?? (err as any)?.cause?.message ?? "")}`.slice(0, 300) });
