@@ -1,6 +1,7 @@
 import { Router, type IRouter } from "express";
 import { SearchCarsQueryParams } from "@workspace/api-zod";
-import { searchList, fetchRecordRaw } from "../lib/encar-sync";
+import { searchList, fetchRecordRaw, fetchFullCar } from "../lib/encar-sync";
+import { importApifyItems } from "../lib/import-cars";
 
 const router: IRouter = Router();
 
@@ -1513,15 +1514,38 @@ function diagramPosition(part: string, i: number): { x: number; y: number } {
   return { x: left ? 30 : right ? 70 : 50, y: 40 + ((i * 9) % 30) };
 }
 
+const importing = new Map<string, Promise<void>>();
+function importOnDemand(id: string): Promise<void> {
+  let p = importing.get(id);
+  if (!p) {
+    p = (async () => { const item = await fetchFullCar(id); await importApifyItems([item], false); })()
+      .finally(() => importing.delete(id));
+    importing.set(id, p);
+  }
+  return p;
+}
+
 async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
   if (!CATALOG_TENANT) return false;
   try {
     const { eq } = await import("drizzle-orm");
     await (await import("../lib/ensure-tables")).ensureCatalogTables();
     const { db, cars } = await import("@workspace/db");
-    const [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
-    if (!row) return false; // not in our catalog: fall through to the live Encar detail
+    let [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
+    if (!row) {
+      // Not stored yet (e.g. found through the live all-Encar search): fetch once from Encar, store, then serve from the DB.
+      try {
+        await importOnDemand(id);
+        [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
+      } catch (e) { safeLog(req).error?.({ e, id }, "on-demand import failed") ?? console.error(e); }
+      if (!row) return false; // fall through to the old live detail
+    }
     const car = mapEncarCarExtended(dbRowToEncarCar(row));
+    const choiceCodes = (row.raw as any)?.optionsChoice;
+    if (Array.isArray(choiceCodes) && choiceCodes.length) {
+      const co = await fetchChoiceOptions(id);
+      (car as any).choiceOptions = co.map((o) => ({ id: o.optionCd, nameKr: o.optionName, price: o.price ?? null }));
+    }
     const insp = (row.inspection ?? null) as any;
     const rec = (row.record ?? null) as any;
 

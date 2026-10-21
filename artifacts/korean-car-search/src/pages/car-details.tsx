@@ -293,7 +293,7 @@ export default function CarDetails() {
                                 <span className="text-sm">{opt.nameKr || opt.name}</span>
                                 {opt.price && (
                                   <span className="text-sm font-bold text-primary">
-                                    +{formatNumber(opt.price)} ₩
+                                    +{formatNumber(opt.price)} 만원
                                   </span>
                                 )}
                               </div>
