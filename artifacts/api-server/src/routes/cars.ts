@@ -1007,13 +1007,14 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
     const modelType = req.query.modelType as "group" | "model" | undefined;
     const { q: baseQ, modelRaw } = buildEncarQuery({ brand: p.brand, model: p.model, sunroof: p.sunroof, fuelType: p.fuelType, transmission: p.transmission, bodyType: p.bodyType, color: p.color, yearFrom: p.yearFrom, yearTo: p.yearTo, modelType, priceMin: p.priceMin, priceMax: p.priceMax, mileageMax: p.mileageMax });
     const q = baseQ.replace(/\)$/, "_.Accident.N.)");
+    if (!q.includes("Accident.N")) throw new Error(`could not build query from ${baseQ}`);
     const matched: ReturnType<typeof mapEncarCar>[] = [];
     let exhausted = false, noRecord = 0;
     for (let pg = 0; pg < MAX_PAGES && matched.length < need; pg++) {
       const url = new URL(`${ENCAR_API}/search/car/list/general`);
       url.searchParams.set("count", "true"); url.searchParams.set("q", q); url.searchParams.set("sr", `|ModifiedDate|${pg * PAGE}|${PAGE}`);
       const resp = await fetch(url.toString(), { headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" }, signal: AbortSignal.timeout(10000) });
-      if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
+      if (!resp.ok) throw new Error(`Encar HTTP ${resp.status} q=${q}`);
       const data = (await resp.json()) as EncarResponse;
       const rows = data.SearchResults ?? [];
       const recs = await mapLimit(rows, 8, (c) => getAccidentRecord(String(c.Id)));
@@ -1034,7 +1035,7 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
     res.json({ cars: pageItems, total, page, limit, totalPages: hasMore ? page + 1 : Math.max(1, Math.ceil(matched.length / limit)), filter: "noAccident", skippedNoRecord: noRecord });
   } catch (err) {
     safeLog(req).error?.({ err }, "noAccident search error") ?? console.error(err);
-    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى." });
+    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.", detail: String((err as Error)?.message ?? err).slice(0, 300) });
   }
 }
 
