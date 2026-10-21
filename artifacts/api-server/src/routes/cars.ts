@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { SearchCarsQueryParams } from "@workspace/api-zod";
+import { searchList, fetchRecordRaw } from "../lib/encar-sync";
 
 const router: IRouter = Router();
 
@@ -977,11 +978,8 @@ async function getAccidentRecord(id: string): Promise<any | null> {
   if (hit && Date.now() - hit.at < RECORD_TTL_MS) return hit.rec;
   let rec: any | null = null;
   try {
-    const r = await fetch(`${ENCAR_API}/v1/readside/record/vehicle/${id}/open`, {
-      headers: { Referer: `https://fem.encar.com/cars/detail/${id}`, "User-Agent": "Mozilla/5.0", Accept: "application/json" },
-      signal: AbortSignal.timeout(8000),
-    });
-    if (r.ok) { const j = (await r.json()) as any; rec = j?.openData === false ? null : j; }
+    const r = await fetchRecordRaw(id);
+    if (r.ok) rec = r.json?.openData === false ? null : r.json;
     else if (r.status !== 404) return null; // transient error: do not cache
   } catch { return null; }
   recordCache.set(id, { rec, at: Date.now() });
@@ -1013,14 +1011,12 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
     const started = Date.now();
     for (let pg = 0; pg < MAX_PAGES && matched.length < need; pg++) {
       if (Date.now() - started > 40000) break; // time budget: return what we have
-      const url = new URL(`${ENCAR_API}/search/car/list/general`);
-      url.searchParams.set("count", "true"); url.searchParams.set("q", q); url.searchParams.set("sr", `|ModifiedDate|${pg * PAGE}|${PAGE}`);
       let data: EncarResponse | null = null;
       for (let attempt = 0; attempt < 3 && !data; attempt++) {
         try {
-          const resp = await fetch(url.toString(), { headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" }, signal: AbortSignal.timeout(10000) });
-          if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
-          data = (await resp.json()) as EncarResponse;
+          const r = await searchList(q, pg * PAGE, PAGE);
+          if (!r.ok || !r.json) throw new Error(`Encar HTTP ${r.status} ${r.text}`);
+          data = r.json as EncarResponse;
         } catch (e) {
           const c: any = (e as any)?.cause;
           lastError = `${(e as Error).message} ${c?.code ?? c?.message ?? (c?.errors ? c.errors.map((x: any) => x?.code).join("/") : "")} q=${q}`;

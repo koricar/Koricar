@@ -430,3 +430,16 @@ export async function probeSearchFilters() {
   }
   return out;
 }
+
+/** One page of Encar search results via the same code path the admin probe uses. */
+export async function searchList(q: string, offset: number, limit: number) {
+  const u = new URL(`${API}/search/car/list/general`);
+  u.searchParams.set("count", "true"); u.searchParams.set("q", q); u.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
+  return getJson(u.toString());
+}
+
+/** Accident record via the same helper (null when no open record). */
+export async function fetchRecordRaw(id: string): Promise<{ ok: boolean; status: number; json: any }> {
+  const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, `https://fem.encar.com/cars/detail/${id}`);
+  return { ok: r.ok, status: r.status, json: r.json };
+}
