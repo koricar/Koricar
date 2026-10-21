@@ -1035,7 +1035,7 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
     res.json({ cars: pageItems, total, page, limit, totalPages: hasMore ? page + 1 : Math.max(1, Math.ceil(matched.length / limit)), filter: "noAccident", skippedNoRecord: noRecord });
   } catch (err) {
     safeLog(req).error?.({ err }, "noAccident search error") ?? console.error(err);
-    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.", detail: String((err as Error)?.message ?? err).slice(0, 300) });
+    res.status(502).json({ error: "upstream_error", message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى.", detail: `${String((err as Error)?.message ?? err)} ${String((err as any)?.cause?.code ?? (err as any)?.cause?.message ?? "")}`.slice(0, 300) });
   }
 }
 
