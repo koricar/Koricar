@@ -65,10 +65,12 @@ router.post("/tenant", auth, async (req, res) => {
     const [existing] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
     const adminKey = existing?.adminKey ?? randomBytes(18).toString("hex");
     const whatsapp = b.whatsapp ? String(b.whatsapp).trim() : null;
+    const logoUrl = b.logoUrl ? String(b.logoUrl).trim() : null;
+    const domain = b.domain ? String(b.domain).trim().toLowerCase().replace(/^https?:\/\//, "").replace(/^www\./, "").replace(/\/.*$/, "") : null;
     await db
       .insert(tenants)
-      .values({ slug, name, filter, adminKey, whatsapp })
-      .onConflictDoUpdate({ target: tenants.slug, set: { name, filter, whatsapp } });
+      .values({ slug, name, filter, adminKey, whatsapp, logoUrl, domain })
+      .onConflictDoUpdate({ target: tenants.slug, set: { name, filter, whatsapp, logoUrl, domain } });
     res.json({ ok: true, slug, adminKey, filter });
   } catch (err) {
     res.status(500).json({ error: String((err as Error).message ?? err) });

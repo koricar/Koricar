@@ -52,7 +52,9 @@ export const ADMIN_PAGE_HTML = `<!doctype html>
       <label>سعر من (만원)<input id="priceMin" type="number" inputmode="numeric"></label>
       <label>سعر إلى (만원)<input id="priceMax" type="number" inputmode="numeric"></label>
     </div>
-    <label>واتساب<input id="whatsapp" dir="ltr" placeholder="+82..."></label>
+    <label>واتساب<input id="whatsapp" dir="ltr" placeholder="821012345678"></label>
+    <label>رابط الشعار (اختياري)<input id="logoUrl" dir="ltr" placeholder="https://..."></label>
+    <label>الدومين (اختياري)<input id="domain" dir="ltr" placeholder="cars.dealer.com"></label>
     <button id="mkTenant">حفظ التاجر</button>
     <pre id="tenantOut">—</pre>
   </section>
@@ -97,7 +99,7 @@ function show(el, r) {
 }
 $('check').onclick = async () => { $('check').disabled = true; try { show($('stats'), await api('/stats')); } catch (e) { $('stats').textContent = String(e); } $('check').disabled = false; };
 $('mkTenant').onclick = async () => {
-  const body = {}; for (const k of ['slug','name','makes','yearMin','yearMax','priceMin','priceMax','whatsapp']) body[k] = $(k).value;
+  const body = {}; for (const k of ['slug','name','makes','yearMin','yearMax','priceMin','priceMax','whatsapp','logoUrl','domain']) body[k] = $(k).value;
   $('mkTenant').disabled = true;
   try { show($('tenantOut'), await api('/tenant', { method: 'POST', body: JSON.stringify(body) })); } catch (e) { $('tenantOut').textContent = String(e); }
   $('mkTenant').disabled = false;

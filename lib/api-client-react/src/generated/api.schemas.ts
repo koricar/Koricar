@@ -81,6 +81,10 @@ export type SearchCarsParams = {
    */
   noAccident?: boolean;
   /**
+   * Dealer site slug (scopes the search to the dealer filter)
+   */
+  tenant?: string;
+  /**
    * Transmission type (auto, manual)
    */
   transmission?: SearchCarsTransmission;

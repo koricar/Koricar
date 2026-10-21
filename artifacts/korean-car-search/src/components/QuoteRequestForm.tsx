@@ -1,21 +1,23 @@
 import { useState } from "react";
 import { supabase } from '../lib/supabase';
+import { useTenant, waDigits } from '@/lib/tenant';
 
 interface Props { carName?: string; carPrice?: string; carId?: number; }
 export default function QuoteRequestForm({ carName="", carPrice="", carId }: Props) {
   const [open, setOpen] = useState(false);
   const [step, setStep] = useState(1);
+  const { tenant } = useTenant();
   const [loading, setLoading] = useState(false);
   const [done, setDone] = useState(false);
   const [form, setForm] = useState({ name:"", phone:"", country:"sa", inspection:"yes", contact:"whatsapp", notes:"" });
   const countries: Record<string,string> = { sa:"🇸🇦 السعودية", ae:"🇦🇪 الإمارات", kw:"🇰🇼 الكويت", qa:"🇶🇦 قطر", bh:"🇧🇭 البحرين", om:"🇴🇲 عُمان", jo:"🇯🇴 الأردن", eg:"🇪🇬 مصر", iq:"🇮🇶 العراق" };
   const set = (k: string, v: string) => setForm(f => ({...f, [k]:v}));
-  const msg = () => encodeURIComponent(`🚗 *طلب تسعيرة استيراد*\n\n*السيارة:* ${carName}\n*السعر:* ${carPrice}\n*الرابط:* https://koricar-ba7l.onrender.com/cars/${carId}\n\n*الاسم:* ${form.name}\n*الجوال:* ${form.phone}\n*الدولة:* ${countries[form.country]}\n*فحص:* ${form.inspection==="yes"?"✅ نعم":"❌ لا"}\n*التواصل:* ${form.contact==="whatsapp"?"واتساب":"اتصال"}\n*ملاحظات:* ${form.notes||"لا يوجد"}`);
+  const msg = () => encodeURIComponent(`🚗 *طلب تسعيرة استيراد*\n\n*السيارة:* ${carName}\n*السعر:* ${carPrice}\n*الرابط:* ${window.location.origin}/cars/${carId}\n\n*الاسم:* ${form.name}\n*الجوال:* ${form.phone}\n*الدولة:* ${countries[form.country]}\n*فحص:* ${form.inspection==="yes"?"✅ نعم":"❌ لا"}\n*التواصل:* ${form.contact==="whatsapp"?"واتساب":"اتصال"}\n*ملاحظات:* ${form.notes||"لا يوجد"}`);
   const submit = async () => {
     if (!form.name||!form.phone) return;
     setLoading(true);
     try {
-      await supabase.from('orders').insert([{
+      if (!tenant) await supabase.from('orders').insert([{
         car_name: carName, car_price: carPrice, car_id: carId,
         customer_name: form.name, phone: form.phone,
         country: countries[form.country],
@@ -23,10 +25,10 @@ export default function QuoteRequestForm({ carName="", carPrice="", carId }: Pro
         contact_method: form.contact,
         notes: form.notes || null, status: 'new'
       }]);
-      await fetch("https://formsubmit.co/ajax/Salahohyeah@gmail.com",{ method:"POST", headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify({ subject:`طلب تسعيرة - ${carName}`, name:form.name, phone:form.phone, car:carName, price:carPrice, country:countries[form.country], inspection:form.inspection==="yes"?"نعم":"لا", contact:form.contact==="whatsapp"?"واتساب":"اتصال", notes:form.notes||"لا يوجد" }) });
+      if (!tenant) await fetch("https://formsubmit.co/ajax/Salahohyeah@gmail.com",{ method:"POST", headers:{"Content-Type":"application/json",Accept:"application/json"}, body:JSON.stringify({ subject:`طلب تسعيرة - ${carName}`, name:form.name, phone:form.phone, car:carName, price:carPrice, country:countries[form.country], inspection:form.inspection==="yes"?"نعم":"لا", contact:form.contact==="whatsapp"?"واتساب":"اتصال", notes:form.notes||"لا يوجد" }) });
     } catch(e){ console.error(e); }
     setLoading(false); setDone(true);
-    setTimeout(()=>{ window.open(`https://wa.me/821068152732?text=${msg()}`,"_blank"); },500);
+    setTimeout(()=>{ window.open(`https://wa.me/${tenant ? waDigits(tenant.whatsapp) : "821068152732"}?text=${msg()}`,"_blank"); },500);
   };
   if (done) return (
     <div className="mt-4 border border-green-500/30 bg-green-500/10 rounded-2xl p-6 text-center" dir="rtl">

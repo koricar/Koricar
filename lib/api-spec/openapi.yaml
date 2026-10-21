@@ -57,6 +57,11 @@ paths:
           description: Has sunroof
           schema:
             type: boolean
+        - name: tenant
+          in: query
+          description: Dealer site slug (scopes the search to the dealer filter)
+          schema:
+            type: string
         - name: noAccident
           in: query
           description: Only cars with an open insurance record showing zero accidents (live Encar search)

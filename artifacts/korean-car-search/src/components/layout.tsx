@@ -3,6 +3,7 @@ import { Search, Car, Menu, X, Heart, User, ChevronLeft, Phone, Mail, MapPin, In
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { useTenant, waDigits } from "@/lib/tenant";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -12,6 +13,7 @@ export function Layout({ children }: LayoutProps) {
   const [isScrolled, setIsScrolled] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [location] = useLocation();
+  const { tenant } = useTenant();
 
   useEffect(() => {
     const handleScroll = () => setIsScrolled(window.scrollY > 20);
@@ -35,14 +37,18 @@ export function Layout({ children }: LayoutProps) {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between">
             <Link href="/" className="flex items-center gap-3 group">
-              <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
-                <Car className="w-6 h-6" />
-              </div>
+              {tenant?.logoUrl ? (
+                <img src={tenant.logoUrl} alt={tenant.name} className="h-10 w-auto rounded-lg object-contain" />
+              ) : (
+                <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-lg shadow-primary/30 group-hover:scale-105 transition-transform">
+                  <Car className="w-6 h-6" />
+                </div>
+              )}
               <span className={cn(
                 "text-xl font-bold tracking-tight transition-colors duration-300",
                 !isScrolled && location === '/' ? "text-white" : "text-foreground"
               )}>
-                كوري<span className="text-primary font-black">كار</span>
+                {tenant ? tenant.name : <>كوري<span className="text-primary font-black">كار</span></>}
               </span>
             </Link>
 
@@ -137,11 +143,11 @@ export function Layout({ children }: LayoutProps) {
                   <Car className="w-6 h-6" />
                 </div>
                 <span className="text-2xl font-bold tracking-tight text-white">
-                  كوري<span className="text-primary font-black">كار</span>
+                  {tenant ? tenant.name : <>كوري<span className="text-primary font-black">كار</span></>}
                 </span>
               </div>
               <p className="text-slate-400 text-sm leading-relaxed mb-6">
-                منصتك الأولى الموثوقة للبحث واستيراد السيارات الكورية المستعملة والجديدة بأفضل الأسعار وأعلى معايير الجودة.
+                {tenant ? "تصفّح سيارات كوريا المتاحة الآن، وتواصل معنا لمعرفة التفاصيل والأسعار." : "منصتك الأولى الموثوقة للبحث واستيراد السيارات الكورية المستعملة والجديدة بأفضل الأسعار وأعلى معايير الجودة."}
               </p>
               {/* Social links */}
               <div className="flex gap-3">
@@ -219,6 +225,21 @@ export function Layout({ children }: LayoutProps) {
                 <span className="w-1 h-4 bg-primary rounded-full inline-block" />
                 تواصل معنا
               </h4>
+              {tenant ? (
+                <ul className="space-y-4">
+                  {tenant.whatsapp && (
+                    <li>
+                      <a href={`https://wa.me/${waDigits(tenant.whatsapp)}`} target="_blank" rel="noopener noreferrer"
+                        className="flex items-center gap-3 text-sm text-slate-400 hover:text-primary transition-colors group">
+                        <div className="w-8 h-8 rounded-lg bg-slate-800 group-hover:bg-primary/20 flex items-center justify-center transition-colors shrink-0">
+                          <MessageCircle className="w-4 h-4" />
+                        </div>
+                        <span className="font-numbers" dir="ltr">{tenant.whatsapp}</span>
+                      </a>
+                    </li>
+                  )}
+                </ul>
+              ) : (
               <ul className="space-y-4">
                 <li>
                   <a href="mailto:support@koreancar.com"
@@ -247,6 +268,7 @@ export function Layout({ children }: LayoutProps) {
                   </div>
                 </li>
               </ul>
+              )}
             </div>
           </div>
         </div>
@@ -255,7 +277,7 @@ export function Layout({ children }: LayoutProps) {
         <div className="border-t border-slate-800/60">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-5 flex flex-col md:flex-row justify-between items-center gap-3">
             <p className="text-slate-500 text-sm font-numbers">
-              © {new Date().getFullYear()} KoreanCar. All rights reserved.
+              © {new Date().getFullYear()} {tenant ? tenant.name : "KoreanCar"}. All rights reserved.
             </p>
             <div className="flex gap-5">
               <Link href="/faq"     className="text-slate-500 hover:text-slate-300 text-sm transition-colors">الشروط والأحكام</Link>

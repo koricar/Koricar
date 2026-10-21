@@ -12,6 +12,7 @@ import FAQ from "@/pages/faq";
 import HowToImport from "@/pages/how-to-import";
 import Contact from "@/pages/contact";
 import Equipment from "@/pages/equipment";
+import { TenantProvider, useTenant, waDigits } from "@/lib/tenant";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -24,7 +25,8 @@ const queryClient = new QueryClient({
 });
 
 function WhatsAppButton() {
-  const phoneNumber = "821068152732";
+  const { tenant } = useTenant();
+  const phoneNumber = tenant ? waDigits(tenant.whatsapp) : "821068152732";
   const message = encodeURIComponent("مرحباً، أريد الاستفسار عن استيراد سيارة من كوريا 🚗");
   const url = `https://wa.me/${phoneNumber}?text=${message}`;
 
@@ -96,6 +98,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
+      <TenantProvider>
       <TooltipProvider>
         <>
           <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
@@ -105,6 +108,7 @@ function App() {
           <WhatsAppButton />
         </>
       </TooltipProvider>
+      </TenantProvider>
     </QueryClientProvider>
   );
 }

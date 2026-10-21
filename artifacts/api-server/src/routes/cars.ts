@@ -997,7 +997,55 @@ async function mapLimit<T, R>(items: T[], n: number, fn: (x: T) => Promise<R>): 
   return out;
 }
 
-async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
+// ── Dealer scope: a dealer site (tenant) narrows the live Encar search to its makes / year / price ──
+const tenantCache = new Map<string, { t: any | null; at: number }>();
+async function loadTenantFilter(slug: string): Promise<any | null> {
+  const hit = tenantCache.get(slug);
+  if (hit && Date.now() - hit.at < 60000) return hit.t;
+  let t: any | null = null;
+  try {
+    const { db, tenants } = await import("@workspace/db");
+    const { eq } = await import("drizzle-orm");
+    const [row] = await db.select().from(tenants).where(eq(tenants.slug, slug)).limit(1);
+    t = row && row.active ? row : null;
+  } catch { t = null; }
+  tenantCache.set(slug, { t, at: Date.now() });
+  return t;
+}
+
+const DOMESTIC_KR = new Set(["현대", "기아", "제네시스", "쌍용", "KG모빌리티", "르노코리아(삼성)", "르노삼성", "쉐보레(GM대우)", "쉐보레", "대우"]);
+
+async function applyTenantScope(req: any, p: any): Promise<{ p: any; makes: string[] | null; blocked: boolean }> {
+  const slug = String(req.query.tenant ?? req.header("x-tenant") ?? "").trim();
+  if (!slug) return { p, makes: null, blocked: false };
+  const t = await loadTenantFilter(slug);
+  if (!t) return { p, makes: null, blocked: false };
+  const f = t.filter ?? {};
+  const out = { ...p };
+  if (f.yearMin) out.yearFrom = Math.max(out.yearFrom ?? 0, f.yearMin);
+  if (f.yearMax) out.yearTo = Math.min(out.yearTo ?? 9999, f.yearMax);
+  if (f.priceMinManwon) out.priceMin = Math.max(out.priceMin ?? 0, f.priceMinManwon);
+  if (f.priceMaxManwon) out.priceMax = Math.min(out.priceMax ?? 99999999, f.priceMaxManwon);
+  const makes: string[] = Array.isArray(f.makes) ? f.makes : [];
+  if (!makes.length) return { p: out, makes: null, blocked: false };
+  if (out.brand && out.brand !== "any") {
+    const kr = EN_TO_MANUFACTURER[String(out.brand).toLowerCase()];
+    return { p: out, makes: null, blocked: !!kr && !makes.includes(kr) };
+  }
+  return { p: out, makes, blocked: false };
+}
+
+function injectMakes(q: string, makes: string[] | null): string {
+  if (!makes || !makes.length) return q;
+  const ct = makes.every((m) => DOMESTIC_KR.has(m)) ? "_.CarType.Y." : "";
+  const part = makes.length === 1 ? `_.Manufacturer.${makes[0]}.` : `_.(Or.${makes.map((m) => `Manufacturer.${m}.`).join("_.")})`;
+  return q.replace(/\)$/, `${ct}${part})`);
+}
+
+async function searchNoAccident(req: any, res: any, p0: any): Promise<void> {
+  const scoped = await applyTenantScope(req, p0);
+  const p = scoped.p;
+  if (scoped.blocked) { res.json({ cars: [], total: 0, page: p.page ?? 1, limit: p.limit ?? 12, totalPages: 1 }); return; }
   const limit = p.limit ?? 12, page = p.page ?? 1;
   const skip = (page - 1) * limit;
   const need = skip + limit + 1; // one extra to know whether another page exists
@@ -1005,7 +1053,7 @@ async function searchNoAccident(req: any, res: any, p: any): Promise<void> {
   try {
     const modelType = req.query.modelType as "group" | "model" | undefined;
     const { q: baseQ, modelRaw } = buildEncarQuery({ brand: p.brand, model: p.model, sunroof: p.sunroof, fuelType: p.fuelType, transmission: p.transmission, bodyType: p.bodyType, color: p.color, yearFrom: p.yearFrom, yearTo: p.yearTo, modelType, priceMin: p.priceMin, priceMax: p.priceMax, mileageMax: p.mileageMax });
-    const q = baseQ.replace(/\)$/, "_.Accident.N.)");
+    const q = injectMakes(baseQ, scoped.makes).replace(/\)$/, "_.Accident.N.)");
     if (!q.includes("Accident.N")) throw new Error(`could not build query from ${baseQ}`);
     const matched: ReturnType<typeof mapEncarCar>[] = [];
     let exhausted = false, noRecord = 0, pagesScanned = 0, lastError = "";
@@ -1057,21 +1105,19 @@ router.get("/search", async (req, res) => {
 
   if (["1", "true"].includes(String(req.query.noAccident ?? ""))) { await searchNoAccident(req, res, parsed.data); return; }
 
-  if (await searchFromDb(req, res, parsed.data)) return;
+  if (req.query.source === "db" && await searchFromDb(req, res, parsed.data)) return;
 
   try {
-    const { q: encarQ, modelRaw } = buildEncarQuery({ brand, model, sunroof, fuelType, transmission, bodyType, color, yearFrom, yearTo, modelType, priceMin, priceMax, mileageMax });
+    const scoped = await applyTenantScope(req, parsed.data);
+    if (scoped.blocked) { res.json({ cars: [], total: 0, page, limit, totalPages: 1 }); return; }
+    const sp = scoped.p;
+    const { q: baseQ, modelRaw } = buildEncarQuery({ brand: sp.brand, model: sp.model, sunroof: sp.sunroof, fuelType: sp.fuelType, transmission: sp.transmission, bodyType: sp.bodyType, color: sp.color, yearFrom: sp.yearFrom, yearTo: sp.yearTo, modelType, priceMin: sp.priceMin, priceMax: sp.priceMax, mileageMax: sp.mileageMax });
+    const encarQ = injectMakes(baseQ, scoped.makes);
     const offset = (page - 1) * limit;
-    const url = new URL(`${ENCAR_API}/search/car/list/general`);
-    url.searchParams.set("count", "true"); url.searchParams.set("q", encarQ); url.searchParams.set("sr", `|ModifiedDate|${offset}|${limit}`);
-    
-    const resp = await fetch(url.toString(), {
-      headers: { Referer: "https://www.encar.com", "User-Agent": "Mozilla/5.0", Accept: "application/json, text/plain, */*" },
-      signal: AbortSignal.timeout(10000),
-    });
-    
-    if (!resp.ok) throw new Error(`Encar HTTP ${resp.status}`);
-    const data = (await resp.json()) as EncarResponse;
+    let sr = await searchList(encarQ, offset, limit);
+    if (!sr.ok) { await new Promise((r) => setTimeout(r, 600)); sr = await searchList(encarQ, offset, limit); }
+    if (!sr.ok || !sr.json) throw new Error(`Encar HTTP ${sr.status}`);
+    const data = sr.json as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
     
     const seenIds = new Set<string>();

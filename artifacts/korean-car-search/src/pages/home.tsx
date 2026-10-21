@@ -2,6 +2,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { Search, Loader2, FilterX, ChevronLeft, ChevronRight, Car, } from "lucide-react";
 import { useDebounce } from "use-debounce";
 import { useSearchCars } from "@workspace/api-client-react";
+import { useTenant } from "@/lib/tenant";
 import { useCarFilters } from "@/hooks/use-car-filters";
 import { Layout } from "@/components/layout";
 import { CarCard } from "@/components/car-card";
@@ -294,7 +295,8 @@ function HowItWorks() {
 export default function Home() {
   const { filters, updateFilter, resetFilters } = useCarFilters({ page: 1, limit: 12 });
   const [debouncedModel] = useDebounce(filters.model, 500);
-  const apiParams = { ...filters, query: undefined, model: debouncedModel || undefined };
+  const { slug: tenantSlug } = useTenant();
+  const apiParams = { ...filters, query: undefined, model: debouncedModel || undefined, tenant: tenantSlug || undefined };
 
   const handleHeroSearch = () => {
     const raw = filters.query?.trim();

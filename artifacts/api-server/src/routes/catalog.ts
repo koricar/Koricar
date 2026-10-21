@@ -35,6 +35,21 @@ const intParam = (v: unknown) => {
   return Number.isFinite(n) ? n : undefined;
 };
 
+// GET /api/catalog/tenant?slug=dealer1  or  ?host=cars.dealer.com  -> public branding for a dealer site
+router.get("/tenant", async (req, res) => {
+  try {
+    const slug = String(req.query.slug ?? "").trim();
+    const host = String(req.query.host ?? "").trim().toLowerCase().replace(/^www\./, "");
+    if (!slug && !host) return void res.status(400).json({ error: "slug or host is required" });
+    const { db, tenants } = await loadDb();
+    const [t] = await db.select().from(tenants).where(slug ? eq(tenants.slug, slug) : eq(tenants.domain, host)).limit(1);
+    if (!t || !t.active) return void res.status(404).json({ error: "tenant not found" });
+    res.json({ slug: t.slug, name: t.name, logoUrl: t.logoUrl, whatsapp: t.whatsapp, currency: t.currency, language: t.language, makes: (t.filter as any)?.makes ?? [] });
+  } catch (err) {
+    res.status(500).json({ error: String((err as Error).message ?? err) });
+  }
+});
+
 // GET /api/catalog/cars?tenant=slug&make=&model=&q=&yearMin=&yearMax=&priceMin=&priceMax=&fuel=&sort=&page=&limit=
 router.get("/cars", async (req, res) => {
   try {
