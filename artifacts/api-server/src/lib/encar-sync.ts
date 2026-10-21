@@ -404,21 +404,25 @@ export async function probeSearchFilters() {
   };
   const out: any[] = [];
   for (const [name, part] of Object.entries(candidates)) {
+    if (name !== "baseline" && name !== "Accident.N") continue; // other candidates already ruled out
+    const isAcc = name === "Accident.N";
     const q = `${base}${part})`;
     const u = new URL(`${API}/search/car/list/general`);
-    u.searchParams.set("count", "true"); u.searchParams.set("q", q); u.searchParams.set("sr", "|ModifiedDate|0|8");
+    u.searchParams.set("count", "true"); u.searchParams.set("q", q); u.searchParams.set("sr", isAcc ? "|ModifiedDate|0|40" : "|ModifiedDate|0|8");
     try {
       const r = await getJson(u.toString());
       const rows: any[] = r.json?.SearchResults ?? [];
       const entry: any = { filter: name, status: r.status, count: r.json?.Count ?? null, returned: rows.length };
       if (r.ok && rows.length && name !== "baseline") {
         const acc: any[] = [];
-        for (const c of rows.slice(0, 5)) {
+        for (const c of rows.slice(0, 40)) {
           const rec = await getJson(`${API}/v1/readside/record/vehicle/${c.Id}/open`, `https://fem.encar.com/cars/detail/${c.Id}`);
-          acc.push(rec.ok ? (rec.json?.myAccidentCnt ?? 0) + (rec.json?.otherAccidentCnt ?? 0) : `rec${rec.status}`);
+          if (!rec.ok) { if (acc.length < 40) acc.push("-"); continue; }
+          acc.push(`my${rec.json?.myAccidentCnt ?? 0}/other${rec.json?.otherAccidentCnt ?? 0}/total${rec.json?.accidentCnt ?? "?"}`);
+          if (acc.filter((x) => x !== "-").length >= 15) break;
           await sleep(200);
         }
-        entry.accidentsOfFirst5 = acc;
+        entry.recordsChecked = acc.filter((x) => x !== "-"); entry.noRecord = acc.filter((x) => x === "-").length;
       }
       out.push(entry);
     } catch (e) { out.push({ filter: name, error: (e as Error).message }); }
