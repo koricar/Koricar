@@ -447,7 +447,7 @@ function formatPrice(price: number): string {
   return `${price.toLocaleString()}만원 (~${sar.toLocaleString()}﷼)`;
 }
 
-function buildEncarQuery(params: {
+export function buildEncarQuery(params: {
   brand?: string; model?: string; modelType?: "group" | "model";
   sunroof?: boolean; fuelType?: string; transmission?: string;
   bodyType?: string; color?: string; yearFrom?: number; yearTo?: number;
@@ -537,17 +537,13 @@ function buildEncarQuery(params: {
     if (kr) q += `_.Color.${kr}.`;
   }
   if (params.yearFrom || params.yearTo) {
-    const from = params.yearFrom ? `${params.yearFrom}00` : "";
-    const to = params.yearTo ? `${params.yearTo}99` : "";
-    q += `_.Year.${from}..${to}.`;
+    q += `_.Year.range(${params.yearFrom ?? 1990}00..${params.yearTo ?? 2099}99).`;
   }
   if (params.priceMin !== undefined || params.priceMax !== undefined) {
-    const min = params.priceMin !== undefined ? params.priceMin : "";
-    const max = params.priceMax !== undefined ? params.priceMax : "";
-    q += `_.Price.${min}..${max}.`;
+    q += `_.Price.range(${params.priceMin ?? 0}..${params.priceMax ?? 999999}).`;
   }
   if (params.mileageMax !== undefined) {
-    q += `_.Mileage...${params.mileageMax}.`;
+    q += `_.Mileage.range(0..${params.mileageMax}).`;
   }
   q += ")";
   return { q, modelKr, modelRaw };

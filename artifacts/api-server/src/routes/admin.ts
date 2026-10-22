@@ -4,6 +4,8 @@ import { eq, sql } from "drizzle-orm";
 import { importApifyItems } from "../lib/import-cars";
 import { ensureCatalogTables } from "../lib/ensure-tables";
 import { runSync, syncState, probeCar, learnOptionCodes, reresolveOptions, backfillReports, probeSearchFilters } from "../lib/encar-sync";
+import { buildEncarQuery } from "./cars";
+import { searchList } from "../lib/encar-sync";
 import { ADMIN_PAGE_HTML } from "../lib/admin-page";
 
 /**
@@ -130,6 +132,50 @@ router.get("/synced-with-reports", auth, async (_req, res) => {
 router.get("/probe-search", auth, async (_req, res) => {
   try { res.json(await probeSearchFilters()); }
   catch (err) { res.status(500).json({ error: String((err as Error).message ?? err) }); }
+});
+
+router.get("/filter-test", auth, async (_req, res) => {
+  const FUEL: Record<string, string> = { gasoline: "가솔린", diesel: "디젤", electric: "전기", hybrid: "전기" };
+  const cases: Array<{ name: string; p: any; check?: (c: any) => string | null }> = [
+    { name: "brand=hyundai", p: { brand: "hyundai" }, check: (c) => (c.Manufacturer === "현대" ? null : `maker ${c.Manufacturer}`) },
+    { name: "brand=bmw", p: { brand: "bmw" }, check: (c) => (c.Manufacturer === "BMW" ? null : `maker ${c.Manufacturer}`) },
+    { name: "model=sonata", p: { model: "sonata" }, check: (c) => (String(c.Model).includes("쏘나타") ? null : `model ${c.Model}`) },
+    { name: "year 2020-2022", p: { yearFrom: 2020, yearTo: 2022 }, check: (c) => { const y = parseInt(String(c.FormYear ?? c.Year).slice(0, 4), 10); return y >= 2020 && y <= 2022 ? null : `year ${y}`; } },
+    { name: "year from 2023", p: { yearFrom: 2023 }, check: (c) => { const y = parseInt(String(c.FormYear ?? c.Year).slice(0, 4), 10); return y >= 2023 ? null : `year ${y}`; } },
+    { name: "year to 2015", p: { yearTo: 2015 }, check: (c) => { const y = parseInt(String(c.FormYear ?? c.Year).slice(0, 4), 10); return y <= 2015 ? null : `year ${y}`; } },
+    { name: "price 1000-2000", p: { priceMin: 1000, priceMax: 2000 }, check: (c) => (c.Price >= 1000 && c.Price <= 2000 ? null : `price ${c.Price}`) },
+    { name: "price max 800", p: { priceMax: 800 }, check: (c) => (c.Price <= 800 ? null : `price ${c.Price}`) },
+    { name: "price min 5000", p: { priceMin: 5000 }, check: (c) => (c.Price >= 5000 ? null : `price ${c.Price}`) },
+    { name: "mileage max 30000", p: { mileageMax: 30000 }, check: (c) => (c.Mileage <= 30000 ? null : `km ${c.Mileage}`) },
+    { name: "fuel=diesel", p: { fuelType: "diesel" }, check: (c) => (String(c.FuelType).includes("디젤") ? null : `fuel ${c.FuelType}`) },
+    { name: "fuel=electric", p: { fuelType: "electric" }, check: (c) => (String(c.FuelType).includes("전기") ? null : `fuel ${c.FuelType}`) },
+    { name: "fuel=gasoline", p: { fuelType: "gasoline" }, check: (c) => (String(c.FuelType).includes("가솔린") ? null : `fuel ${c.FuelType}`) },
+    { name: "fuel=hybrid", p: { fuelType: "hybrid" }, check: (c) => (String(c.FuelType).includes("+") ? null : `fuel ${c.FuelType}`) },
+    { name: "fuel=lpg", p: { fuelType: "lpg" }, check: (c) => (String(c.FuelType).includes("LPG") ? null : `fuel ${c.FuelType}`) },
+    { name: "transmission=auto", p: { transmission: "auto" }, check: (c) => (String(c.Transmission ?? "").includes("오토") ? null : `trans ${c.Transmission}`) },
+    { name: "transmission=manual", p: { transmission: "manual" }, check: (c) => (String(c.Transmission ?? "").includes("수동") ? null : `trans ${c.Transmission}`) },
+    { name: "color=white", p: { color: "white" } },
+    { name: "color=black", p: { color: "black" } },
+    { name: "sunroof", p: { sunroof: true }, check: (c) => (Array.isArray(c.Options) && c.Options.length ? null : "no options array") },
+    { name: "bodyType=suv", p: { bodyType: "suv" } },
+    { name: "combo: kia + 2019-2022 + 1500-3000 + diesel + auto", p: { brand: "kia", yearFrom: 2019, yearTo: 2022, priceMin: 1500, priceMax: 3000, fuelType: "diesel", transmission: "auto" },
+      check: (c) => { const y = parseInt(String(c.FormYear ?? c.Year).slice(0, 4), 10); const bad = [c.Manufacturer !== "기아" && "maker", (y < 2019 || y > 2022) && "year", (c.Price < 1500 || c.Price > 3000) && "price", !String(c.FuelType).includes("디젤") && "fuel", !String(c.Transmission ?? "").includes("오토") && "trans"].filter(Boolean); return bad.length ? bad.join(",") : null; } },
+    { name: "combo: sonata + year>=2018 + km<=80000", p: { model: "sonata", yearFrom: 2018, mileageMax: 80000 }, check: (c) => { const y = parseInt(String(c.FormYear ?? c.Year).slice(0, 4), 10); const bad = [!String(c.Model).includes("쏘나타") && "model", y < 2018 && "year", c.Mileage > 80000 && "km"].filter(Boolean); return bad.length ? bad.join(",") : null; } },
+  ];
+  const out: any[] = [];
+  for (const t of cases) {
+    try {
+      const { q } = buildEncarQuery(t.p);
+      const r = await searchList(q, 0, 20);
+      if (!r.ok || !r.json) { out.push({ test: t.name, result: "FAIL_HTTP", status: r.status, q }); continue; }
+      const rows: any[] = r.json.SearchResults ?? [];
+      const bad = t.check ? rows.map((c) => t.check!(c)).filter(Boolean) : [];
+      out.push({ test: t.name, result: rows.length === 0 ? "EMPTY" : bad.length ? "MISMATCH" : "OK", total: r.json.Count, checked: rows.length, wrong: bad.length, sampleWrong: bad.slice(0, 3), sample: rows[0] ? `${rows[0].Manufacturer} ${rows[0].Model} ${rows[0].FormYear} ${rows[0].Price}man ${rows[0].Mileage}km ${rows[0].FuelType}` : null, q });
+    } catch (e) { out.push({ test: t.name, result: "ERROR", error: String((e as Error).message) }); }
+    await new Promise((r) => setTimeout(r, 250));
+  }
+  const bad = out.filter((o) => o.result !== "OK");
+  res.json({ summary: `${out.length - bad.length}/${out.length} OK`, problems: bad.map((o) => ({ test: o.test, result: o.result, q: o.q, sampleWrong: o.sampleWrong, status: o.status })), all: out });
 });
 
 router.get("/probe/:id", auth, async (req, res) => {
