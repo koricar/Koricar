@@ -1540,14 +1540,47 @@ function rankLabel(r?: string): string {
  * Approximate position (in % of the exterior diagram image) for a damaged part.
  * The diagram shows the left side view, a top view and the right side view, front at the top.
  */
+/** Encar lists frame parts (members, pillars, floors, panels…) on the 2nd diagram; body parts on the 1st. */
+const INNER_KEYS = ["사이드멤버", "크로스멤버", "인사이드패널", "휠하우스", "필러", "대쉬", "대시", "플로어", "패키지트레이", "프론트패널", "리어패널", "에이프런", "트렁크플로어"];
+function isInnerPart(part: string): boolean {
+  const p = part.replace(/\s+/g, "");
+  if (p.includes("라디에이터")) return false; // radiator support is an outer part on Encar
+  return INNER_KEYS.some((k) => p.includes(k));
+}
+
+function diagramPositionInner(part: string, i: number): { x: number; y: number } {
+  // % of the second (frame) diagram: front of the car at the top, engine bay ≈ 0-32%, cabin ≈ 42-69%, trunk below.
+  const right = part.includes("(우)");
+  const left = part.includes("(좌)");
+  const sx = (l: number, r: number) => (right ? r : l);
+  const p = part.replace(/\s+/g, "");
+  const rear = p.includes("리어") || p.includes("뒤");
+  if (p.includes("크로스멤버")) return { x: 50, y: rear ? 88 : 27 };
+  if (p.includes("사이드멤버")) return { x: sx(43.5, 56.5), y: rear ? 86 : 21 };
+  if (p.includes("프론트패널")) return { x: 50, y: 8 };
+  if (p.includes("리어패널")) return { x: 50, y: 95 };
+  if (p.includes("에이프런")) return { x: sx(38, 62), y: 14 };
+  if (p.includes("휠하우스")) return { x: sx(36, 64), y: rear ? 80 : 17 };
+  if (p.includes("인사이드패널")) return { x: sx(37, 63), y: rear ? 78 : 36 };
+  if (p.includes("대쉬") || p.includes("대시")) return { x: 50, y: 36 };
+  if (p.includes("필러")) {
+    const y = /\(?C\)?|C필러|씨/.test(part) ? 72 : /B/.test(part) ? 58 : 42;
+    return { x: sx(35, 65), y };
+  }
+  if (p.includes("트렁크플로어")) return { x: 50, y: 85 };
+  if (p.includes("플로어")) return { x: 50, y: 56 };
+  if (p.includes("패키지트레이")) return { x: 50, y: 74 };
+  return { x: left ? 40 : right ? 60 : 50, y: 40 + ((i * 9) % 30) };
+}
+
 function diagramPosition(part: string, i: number): { x: number; y: number } {
   // Coordinates are % of Encar's 640x606 diagram: centre = top view, left/right = side views (front of car at the top).
   const left = part.includes("(좌)");
   const right = part.includes("(우)");
   const sideX = (l: number, r: number) => (right ? r : l);
   const p = part.replace(/\s+/g, "");
-  if (p.includes("프론트휀더") || p.includes("앞휀더")) return { x: sideX(16, 84), y: 18 };
-  if (p.includes("프론트도어") || p.includes("앞도어")) return { x: sideX(17, 83), y: 40 };
+  if (p.includes("프론트휀더") || p.includes("앞휀더")) return { x: sideX(17, 83), y: 27 };
+  if (p.includes("프론트도어") || p.includes("앞도어")) return { x: sideX(17, 83), y: 42 };
   if (p.includes("리어도어") || p.includes("뒷도어")) return { x: sideX(17, 83), y: 62 };
   if (p.includes("쿼터")) return { x: sideX(15, 85), y: 82 };
   if (p.includes("사이드실") || p.includes("로커")) return { x: sideX(24, 76), y: 52 };
@@ -1556,8 +1589,7 @@ function diagramPosition(part: string, i: number): { x: number; y: number } {
   if (p.includes("루프")) return { x: 50, y: 52 };
   if (p.includes("프론트범퍼") || p.includes("앞범퍼")) return { x: 50, y: 4 };
   if (p.includes("리어범퍼") || p.includes("뒷범퍼")) return { x: 50, y: 97 };
-  if (p.includes("프론트패널") || p.includes("라디에이터")) return { x: 50, y: 11 };
-  if (p.includes("리어패널")) return { x: 50, y: 92 };
+  if (p.includes("라디에이터") || p.includes("프론트패널")) return { x: 50, y: 4 };
   return { x: left ? 36 : right ? 64 : 50, y: 40 + ((i * 9) % 30) };
 }
 
@@ -1619,7 +1651,9 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           };
         })
       : [];
-    const diagramExterior = spreadMarkers(damages.map((d: any, i: number) => ({ ...diagramPosition(d.part ?? "", i), code: d.statusCode, label: `${d.partAr} — ${d.statusAr}` })));
+    const mark = (d: any, pos: { x: number; y: number }) => ({ ...pos, code: d.statusCode, label: `${d.partAr} — ${d.statusAr}` });
+    const diagramExterior = spreadMarkers(damages.map((d: any, i: number) => ({ d, i })).filter(({ d }: any) => !isInnerPart(d.part ?? "")).map(({ d, i }: any) => mark(d, diagramPosition(d.part ?? "", i))));
+    const diagramInterior = spreadMarkers(damages.map((d: any, i: number) => ({ d, i })).filter(({ d }: any) => isInnerPart(d.part ?? "")).map(({ d, i }: any) => mark(d, diagramPositionInner(d.part ?? "", i))));
     const accidentDetails = Array.isArray(rec?.accidents)
       ? rec.accidents.map((a: any) => ({
           date: a.date, type: "", typeAr: "", amount: a.insuranceBenefit ?? 0, description: "",
@@ -1635,7 +1669,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           history: rec ? { accidents: (rec.myAccidentCnt ?? 0) + (rec.otherAccidentCnt ?? 0), previousOwners: rec.ownerChangeCnt ?? null, firstRegistrationDate: rec.firstDate ?? null, accidentDetails: null } : null,
           damages, accidentDetails, ownerChangeDates: [], totalMyAccidentCost: rec?.myAccidentCost ?? 0,
           myAccidents: rec?.myAccidentCnt ?? 0, otherAccidents: rec?.otherAccidentCnt ?? 0,
-          diagramExterior, diagramInterior: [],
+          diagramExterior, diagramInterior,
         }
       : { hasReport: false };
 
@@ -1648,7 +1682,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           otherAccidents: rec.otherAccidentCnt ?? 0, ownerChanges: rec.ownerChangeCnt ?? 0, ownerChangeDates: [] }
       : null;
     const inspectionDetailed = hasReport
-      ? { hasReport: true, source: `#${row.encarId}`, message: null, diagram: { exterior: diagramExterior, interior: [] }, damages,
+      ? { hasReport: true, source: `#${row.encarId}`, message: null, diagram: { exterior: diagramExterior, interior: diagramInterior }, damages,
           insuranceSummary: insurance ?? { totalAccidents: 0, myAccidents: 0, otherAccidents: 0, ownerChanges: 0, ownerChangeDates: [] },
           accidentDetails, totalMyAccidentCost: rec?.myAccidentCost ?? 0, performanceCheck: inspectionReport.performanceCheck }
       : null;
