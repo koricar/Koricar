@@ -74,6 +74,7 @@ export const ADMIN_PAGE_HTML = `<!doctype html>
     <button id="syncStatus">حالة المزامنة</button>
     <button id="learn">تعلّم أسماء الخيارات</button>
     <button id="withRep">سيارات من المزامنة فيها فحص/تأمين</button>
+    <button id="filterTest">اختبار كل الفلاتر (سنة، سعر، وقود...)</button>
     <button id="probeSearch">اختبار فلتر "بدون حوادث" في Encar</button>
     <button id="backfill">إكمال الفحص والتأمين الناقص</button>
     <pre id="syncOut">—</pre>
@@ -118,6 +119,7 @@ $('sync').onclick = async () => { show($('syncOut'), await api('/sync', { method
 $('learn').onclick = async () => { $('syncOut').textContent = '... (قد تأخذ دقيقة)'; show($('syncOut'), await api('/learn-options', { method: 'POST' })); };
 $('backfill').onclick = async () => { $('syncOut').textContent = '... (قد تأخذ دقيقة)'; show($('syncOut'), await api('/backfill-reports', { method: 'POST', body: JSON.stringify({ limit: 60 }) })); };
 $('withRep').onclick = async () => { show($('syncOut'), await api('/synced-with-reports')); };
+$('filterTest').onclick = async () => { $('syncOut').textContent = '... (حوالي 30 ثانية)'; const r = await api('/filter-test'); show($('syncOut'), r && r.summary ? { summary: r.summary, problems: r.problems } : r); };
 $('probeSearch').onclick = async () => { $('syncOut').textContent = '... (حوالي 30 ثانية)'; show($('syncOut'), await api('/probe-search')); };
 $('syncStatus').onclick = async () => { show($('syncOut'), await api('/sync/status')); };
 $('probe').onclick = async () => { $('probeOut').textContent = '...'; show($('probeOut'), await api('/probe/' + $('probeId').value.trim())); };
