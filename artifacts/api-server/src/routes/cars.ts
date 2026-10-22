@@ -1541,23 +1541,37 @@ function rankLabel(r?: string): string {
  * The diagram shows the left side view, a top view and the right side view, front at the top.
  */
 function diagramPosition(part: string, i: number): { x: number; y: number } {
+  // Coordinates are % of Encar's 640x606 diagram: centre = top view, left/right = side views (front of car at the top).
   const left = part.includes("(좌)");
   const right = part.includes("(우)");
   const sideX = (l: number, r: number) => (right ? r : l);
   const p = part.replace(/\s+/g, "");
-  if (p.includes("프론트휀더") || p.includes("앞휀더")) return { x: sideX(20, 80), y: 26 };
-  if (p.includes("프론트도어") || p.includes("앞도어")) return { x: sideX(22, 78), y: 42 };
-  if (p.includes("리어도어") || p.includes("뒷도어")) return { x: sideX(22, 78), y: 58 };
-  if (p.includes("쿼터")) return { x: sideX(18, 82), y: 74 };
-  if (p.includes("사이드실") || p.includes("로커")) return { x: sideX(28, 72), y: 52 };
-  if (p.includes("후드") || p.includes("보닛")) return { x: 50, y: 20 };
-  if (p.includes("트렁크")) return { x: 50, y: 88 };
-  if (p.includes("루프")) return { x: 50, y: 56 };
-  if (p.includes("프론트범퍼") || p.includes("앞범퍼")) return { x: 50, y: 6 };
-  if (p.includes("리어범퍼") || p.includes("뒷범퍼")) return { x: 50, y: 96 };
-  if (p.includes("프론트패널") || p.includes("라디에이터")) return { x: 50, y: 10 };
+  if (p.includes("프론트휀더") || p.includes("앞휀더")) return { x: sideX(16, 84), y: 18 };
+  if (p.includes("프론트도어") || p.includes("앞도어")) return { x: sideX(17, 83), y: 40 };
+  if (p.includes("리어도어") || p.includes("뒷도어")) return { x: sideX(17, 83), y: 62 };
+  if (p.includes("쿼터")) return { x: sideX(15, 85), y: 82 };
+  if (p.includes("사이드실") || p.includes("로커")) return { x: sideX(24, 76), y: 52 };
+  if (p.includes("후드") || p.includes("보닛")) return { x: 50, y: 24 };
+  if (p.includes("트렁크")) return { x: 50, y: 85 };
+  if (p.includes("루프")) return { x: 50, y: 52 };
+  if (p.includes("프론트범퍼") || p.includes("앞범퍼")) return { x: 50, y: 4 };
+  if (p.includes("리어범퍼") || p.includes("뒷범퍼")) return { x: 50, y: 97 };
+  if (p.includes("프론트패널") || p.includes("라디에이터")) return { x: 50, y: 11 };
   if (p.includes("리어패널")) return { x: 50, y: 92 };
-  return { x: left ? 30 : right ? 70 : 50, y: 40 + ((i * 9) % 30) };
+  return { x: left ? 36 : right ? 64 : 50, y: 40 + ((i * 9) % 30) };
+}
+
+/** Shift markers that would sit on top of each other so each one stays visible. */
+function spreadMarkers<T extends { x: number; y: number }>(dots: T[]): T[] {
+  const out: T[] = [];
+  for (const d of dots) {
+    let c = { ...d };
+    for (let k = 0; k < 6 && out.some((o) => Math.hypot(o.x - c.x, (o.y - c.y) * 0.95) < 6); k++) {
+      c = { ...c, x: d.x + (k % 2 === 0 ? 1 : -1) * 6 * Math.ceil((k + 1) / 2) };
+    }
+    out.push(c);
+  }
+  return out;
 }
 
 const importing = new Map<string, Promise<void>>();
@@ -1605,7 +1619,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           };
         })
       : [];
-    const diagramExterior = damages.map((d: any, i: number) => ({ ...diagramPosition(d.part ?? "", i), code: d.statusCode, label: `${d.partAr} — ${d.statusAr}` }));
+    const diagramExterior = spreadMarkers(damages.map((d: any, i: number) => ({ ...diagramPosition(d.part ?? "", i), code: d.statusCode, label: `${d.partAr} — ${d.statusAr}` })));
     const accidentDetails = Array.isArray(rec?.accidents)
       ? rec.accidents.map((a: any) => ({
           date: a.date, type: "", typeAr: "", amount: a.insuranceBenefit ?? 0, description: "",

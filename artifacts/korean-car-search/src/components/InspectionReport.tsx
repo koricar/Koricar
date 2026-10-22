@@ -52,12 +52,12 @@ interface Props {
 
 // ── Color map ─────────────────────────────────────────────────────────────
 const STATUS_COLORS: Record<string, { bg: string; text: string; border: string; fill: string }> = {
-  X: { bg: "bg-red-500",      text: "text-red-400",      border: "border-red-500",      fill: "#ef4444" },
-  W: { bg: "bg-blue-500",     text: "text-blue-400",     border: "border-blue-500",     fill: "#3b82f6" },
-  C: { bg: "bg-orange-500",   text: "text-orange-400",   border: "border-orange-500",   fill: "#f97316" },
-  A: { bg: "bg-sky-400",      text: "text-sky-400",      border: "border-sky-400",      fill: "#38bdf8" },
-  U: { bg: "bg-emerald-500",  text: "text-emerald-400",  border: "border-emerald-500",  fill: "#10b981" },
-  T: { bg: "bg-gray-500",     text: "text-gray-400",     border: "border-gray-500",     fill: "#6b7280" },
+  X: { bg: "bg-red-500",      text: "text-red-400",      border: "border-red-500",      fill: "#e8514b" },
+  W: { bg: "bg-slate-500",    text: "text-slate-400",    border: "border-slate-500",    fill: "#5b7189" },
+  C: { bg: "bg-amber-500",    text: "text-amber-400",    border: "border-amber-500",    fill: "#f2a02d" },
+  A: { bg: "bg-sky-500",      text: "text-sky-400",      border: "border-sky-500",      fill: "#3f8fd6" },
+  U: { bg: "bg-emerald-500",  text: "text-emerald-400",  border: "border-emerald-500",  fill: "#4caf6a" },
+  T: { bg: "bg-stone-500",    text: "text-stone-400",    border: "border-stone-500",    fill: "#a07b6a" },
 };
 
 const LEGEND_ITEMS = [
@@ -111,7 +111,7 @@ function CarDiagram({
           >
             {/* Dot */}
             <div
-              className="w-5 h-5 rounded-full border-2 border-white shadow-lg flex items-center justify-center text-[9px] font-bold text-white transition-transform duration-200 group-hover:scale-150"
+              className="w-6 h-6 sm:w-7 sm:h-7 rounded-full shadow-md ring-1 ring-white/70 flex items-center justify-center text-[11px] sm:text-[13px] font-bold text-white transition-transform duration-200 group-hover:scale-125"
               style={{ backgroundColor: color }}
             >
               {dot.code}
