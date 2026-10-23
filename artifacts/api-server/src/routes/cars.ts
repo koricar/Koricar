@@ -1696,7 +1696,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           otherAccidents: rec.otherAccidentCnt ?? 0, ownerChanges: rec.ownerChangeCnt ?? 0, ownerChangeDates: [] }
       : null;
     const inspectionDetailed = hasReport
-      ? { hasReport: true, source: `#${row.encarId}`, message: null, diagram: { exterior: diagramExterior, interior: diagramInterior }, damages,
+      ? { hasReport: true, hasInspection: !!insp, hasRecord: !!rec, source: `#${row.encarId}`, message: null, diagram: { exterior: diagramExterior, interior: diagramInterior }, damages,
           insuranceSummary: insurance ?? { totalAccidents: 0, myAccidents: 0, otherAccidents: 0, ownerChanges: 0, ownerChangeDates: [] },
           accidentDetails, totalMyAccidentCost: rec?.myAccidentCost ?? 0, performanceCheck: inspectionReport.performanceCheck }
       : null;

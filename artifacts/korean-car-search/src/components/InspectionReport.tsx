@@ -22,6 +22,8 @@ interface AccidentDetail {
 
 interface InspectionDetailed {
   hasReport: boolean;
+  hasInspection?: boolean;
+  hasRecord?: boolean;
   source?: string;
   message?: string | null;
   diagram?: {
@@ -132,22 +134,21 @@ function CarDiagram({
 }
 
 // ── Main Component ────────────────────────────────────────────────────────
-export default function InspectionReport({ inspection, displayNumber }: Props) {
+export default function InspectionReport({ inspection: inspectionProp, displayNumber }: Props) {
+  let inspection = inspectionProp;
   // ← 3 تبويبات مطابقة للكوري
   const [inspectTab, setInspectTab] = useState<"performance" | "insurance">("performance");
   const [inspectView, setInspectView] = useState<"exterior" | "interior">("exterior");
 
-  if (!inspection || !inspection.hasReport) {
-    return (
-      <div className="bg-slate-800 rounded-2xl p-6 text-center text-slate-300 space-y-2">
-        <p className="font-bold">لا يوجد تقرير فحص أو سجل تأمين مسجّل لهذه السيارة في Encar</p>
-        <p className="text-sm text-slate-400">هذا لا يعني وجود مشكلة بالسيارة، بل أن التقرير غير متوفر من المصدر. اسأل عن حالتها عبر واتساب قبل اتخاذ القرار.</p>
-      </div>
-    );
-  }
+  // Same layout as Encar even when a report could not be fetched; unknown is shown as unknown, never as "clean".
+  const inspKnown = !!inspection?.hasReport && inspection?.hasInspection !== false;
+  const recKnown = !!inspection?.hasReport && inspection?.hasRecord !== false && !!inspection?.insuranceSummary;
+  const unknownNote = "التقرير غير متاح من المصدر حالياً، وسنعيد جلبه تلقائياً. اسأل عن حالة السيارة عبر واتساب قبل القرار.";
+  inspection = inspection ?? ({ hasReport: false } as InspectionDetailed);
 
   const damages = inspection.damages || [];
   const summary = inspection.insuranceSummary;
+  const dash = (n: number | undefined) => (recKnown && n !== undefined ? n : "—");
   const accidents = inspection.accidentDetails || [];
   const totalCost = inspection.totalMyAccidentCost || 0;
 
@@ -225,6 +226,12 @@ export default function InspectionReport({ inspection, displayNumber }: Props) {
           </div>
 
           {/* Status Banner */}
+          {!inspKnown ? (
+            <div className="p-5 rounded-2xl border-2 bg-amber-500/5 border-amber-500/20">
+              <p className="font-bold text-amber-300">تقرير الفحص غير متاح حالياً</p>
+              <p className="text-sm text-amber-200/70 mt-1">{unknownNote}</p>
+            </div>
+          ) : (
           <div className={`p-5 rounded-2xl border-2 flex items-center gap-4 ${
             damages.length > 0
               ? "bg-red-500/5 border-red-500/20"
@@ -256,6 +263,7 @@ export default function InspectionReport({ inspection, displayNumber }: Props) {
               )}
             </div>
           </div>
+          )}
 
           {/* Car Diagram with REAL Encar Images */}
           <div className="bg-slate-800 rounded-2xl border border-slate-700 p-4">
@@ -369,7 +377,7 @@ export default function InspectionReport({ inspection, displayNumber }: Props) {
       )}
 
       {/* ═══ TAB: INSURANCE (سجل التأمين) ═══ */}
-      {inspectTab === "insurance" && summary && (
+      {inspectTab === "insurance" && (
         <div className="space-y-6">
           <h3 className="text-lg font-black mb-4 flex items-center gap-2">
             <svg className="w-6 h-6 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -378,26 +386,30 @@ export default function InspectionReport({ inspection, displayNumber }: Props) {
             سجل التأمين
           </h3>
 
+          {!recKnown && (
+            <div className="p-4 rounded-2xl border-2 bg-amber-500/5 border-amber-500/20 text-sm text-amber-200/80">{unknownNote}</div>
+          )}
+
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
               <span className="text-xs text-slate-400 block mb-1">تغييرات الملكية</span>
-              <span className="text-2xl font-black text-white">{summary.ownerChanges}</span>
+              <span className="text-2xl font-black text-white">{dash(summary?.ownerChanges)}</span>
             </div>
             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
               <span className="text-xs text-slate-400 block mb-1">حوادث الطرف الآخر</span>
-              <span className={`text-2xl font-black ${summary.otherAccidents > 0 ? "text-orange-400" : "text-green-400"}`}>
-                {summary.otherAccidents}
+              <span className={`text-2xl font-black ${(summary?.otherAccidents ?? 0) > 0 ? "text-orange-400" : "text-green-400"}`}>
+                {dash(summary?.otherAccidents)}
               </span>
             </div>
             <div className="bg-slate-800 p-4 rounded-xl border border-slate-700 text-center">
               <span className="text-xs text-slate-400 block mb-1">حوادث من جانبي</span>
-              <span className={`text-2xl font-black ${summary.myAccidents > 0 ? "text-red-400" : "text-green-400"}`}>
-                {summary.myAccidents}
+              <span className={`text-2xl font-black ${(summary?.myAccidents ?? 0) > 0 ? "text-red-400" : "text-green-400"}`}>
+                {dash(summary?.myAccidents)}
               </span>
             </div>
             <div className="bg-red-500/5 p-4 rounded-xl border border-red-500/20 text-center">
               <span className="text-xs text-red-300 block mb-1">إجمالي الحوادث</span>
-              <span className="text-2xl font-black text-red-400">{summary.totalAccidents}</span>
+              <span className="text-2xl font-black text-red-400">{dash(summary?.totalAccidents)}</span>
             </div>
           </div>
 
@@ -428,13 +440,13 @@ export default function InspectionReport({ inspection, displayNumber }: Props) {
             </div>
           )}
 
-          {summary.ownerChangeDates.length > 0 && (
+          {(summary?.ownerChangeDates?.length ?? 0) > 0 && (
             <div className="mb-4">
               <h4 className="text-sm font-bold text-slate-300 mb-3">
                 تاريخ تغيير الملكية
               </h4>
               <div className="flex flex-wrap gap-2">
-                {summary.ownerChangeDates.map((date, i) => (
+                {(summary?.ownerChangeDates ?? []).map((date, i) => (
                   <span
                     key={i}
                     className="px-3 py-1.5 rounded-full text-sm bg-slate-700 text-slate-300 border border-slate-600"
