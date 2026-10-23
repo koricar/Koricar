@@ -12,11 +12,22 @@ const PAGE = 50;
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 async function getJson(url: string, referer?: string) {
-  const resp = await fetch(url, { headers: { ...HEADERS, ...(referer ? { Referer: referer } : {}) }, signal: AbortSignal.timeout(12000) });
-  const text = await resp.text();
-  let json: any = null;
-  try { json = JSON.parse(text); } catch { /* not json */ }
-  return { ok: resp.ok, status: resp.status, json, text: text.slice(0, 300) };
+  // Retry timeouts / network errors / 429 / 5xx so a transient failure is never mistaken for "no report".
+  let last: any = null;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      const resp = await fetch(url, { headers: { ...HEADERS, ...(referer ? { Referer: referer } : {}) }, signal: AbortSignal.timeout(12000) });
+      const text = await resp.text();
+      let json: any = null;
+      try { json = JSON.parse(text); } catch { /* not json */ }
+      last = { ok: resp.ok, status: resp.status, json, text: text.slice(0, 300) };
+      if (resp.ok || (resp.status < 500 && resp.status !== 429)) return last;
+    } catch (e) {
+      last = { ok: false, status: 0, json: null, text: String((e as Error).message ?? e).slice(0, 300) };
+    }
+    await sleep(500 * (attempt + 1));
+  }
+  return last;
 }
 
 export interface SyncFilter { makes?: string[]; yearMin?: number; yearMax?: number; priceMinManwon?: number; priceMaxManwon?: number }

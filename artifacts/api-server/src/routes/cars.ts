@@ -1,6 +1,6 @@
 import { Router, type IRouter } from "express";
 import { SearchCarsQueryParams } from "@workspace/api-zod";
-import { searchList, fetchRecordRaw, fetchFullCar } from "../lib/encar-sync";
+import { searchList, fetchRecordRaw, fetchFullCar, fetchReports } from "../lib/encar-sync";
 import { importApifyItems } from "../lib/import-cars";
 
 const router: IRouter = Router();
@@ -1602,6 +1602,7 @@ function spreadMarkers<T extends { x: number; y: number }>(dots: T[]): T[] {
   return out;
 }
 
+const reportRefetchAt = new Map<string, number>();
 const importing = new Map<string, Promise<void>>();
 function importOnDemand(id: string): Promise<void> {
   let p = importing.get(id);
@@ -1627,6 +1628,22 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
         [row] = await db.select().from(cars).where(eq(cars.encarId, id)).limit(1);
       } catch (e) { safeLog(req).error?.({ e, id }, "on-demand import failed") ?? console.error(e); }
       if (!row) return false; // fall through to the old live detail
+    }
+    // Cars stored without any report: ask Encar again (a transient failure at sync time must not hide an existing report).
+    let reportStatus: any = undefined;
+    if (!(row as any).inspection && !(row as any).record) {
+      const last = reportRefetchAt.get(id) ?? 0;
+      if (Date.now() - last > 5 * 60_000) {
+        reportRefetchAt.set(id, Date.now());
+        try {
+          const rep = await fetchReports(id, null);
+          reportStatus = rep.status;
+          if (rep.inspection || rep.record) {
+            await db.update(cars).set({ inspection: rep.inspection ?? null, record: rep.record ?? null }).where(eq(cars.encarId, id));
+            row = { ...(row as any), inspection: rep.inspection ?? null, record: rep.record ?? null };
+          }
+        } catch (e) { reportStatus = { error: String((e as Error).message ?? e) }; }
+      }
     }
     const car = mapEncarCarExtended(dbRowToEncarCar(row));
     const choiceCodes = (row.raw as any)?.optionsChoice;
@@ -1683,7 +1700,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
           accidentDetails, totalMyAccidentCost: rec?.myAccidentCost ?? 0, performanceCheck: inspectionReport.performanceCheck }
       : null;
 
-    res.json({ ...car, updatedAt: row.lastSyncedAt, inspectionReport, inspection, insurance, inspectionDetailed });
+    res.json({ ...car, reportStatus, updatedAt: row.lastSyncedAt, inspectionReport, inspection, insurance, inspectionDetailed });
     return true;
   } catch (err) {
     safeLog(req).error?.({ err, id }, "catalog DB detail failed") ?? console.error(err);
