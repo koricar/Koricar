@@ -1631,16 +1631,17 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
     }
     // Cars stored without any report: ask Encar again (a transient failure at sync time must not hide an existing report).
     let reportStatus: any = undefined;
-    if (!(row as any).inspection && !(row as any).record) {
+    if (!(row as any).inspection || !(row as any).record) {
       const last = reportRefetchAt.get(id) ?? 0;
       if (Date.now() - last > 5 * 60_000) {
         reportRefetchAt.set(id, Date.now());
         try {
           const rep = await fetchReports(id, null);
           reportStatus = rep.status;
-          if (rep.inspection || rep.record) {
-            await db.update(cars).set({ inspection: rep.inspection ?? null, record: rep.record ?? null }).where(eq(cars.encarId, id));
-            row = { ...(row as any), inspection: rep.inspection ?? null, record: rep.record ?? null };
+          const nextInsp = (row as any).inspection ?? rep.inspection ?? null, nextRec = (row as any).record ?? rep.record ?? null;
+          if ((rep.inspection && !(row as any).inspection) || (rep.record && !(row as any).record)) {
+            await db.update(cars).set({ inspection: nextInsp, record: nextRec }).where(eq(cars.encarId, id));
+            row = { ...(row as any), inspection: nextInsp, record: nextRec };
           }
         } catch (e) { reportStatus = { error: String((e as Error).message ?? e) }; }
       }
