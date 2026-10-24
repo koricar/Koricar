@@ -1161,7 +1161,8 @@ router.get("/:id", async (req, res): Promise<void> => {
     });
 
     if (!resp.ok) {
-      res.status(502).json({ error: "upstream_error", message: "تعذر جلب بيانات السيارة." });
+      if (resp.status === 404) { res.status(404).json({ error: "not_found", message: "هذه السيارة لم تعد متوفرة على Encar (غالباً بيعت أو أُزيلت)." }); return; }
+      res.status(502).json({ error: "upstream_error", upstreamStatus: resp.status, message: "تعذر جلب بيانات السيارة." });
       return;
     }
 
@@ -1603,6 +1604,7 @@ function spreadMarkers<T extends { x: number; y: number }>(dots: T[]): T[] {
 }
 
 const reportRefetchAt = new Map<string, number>();
+const reportLastStatus = new Map<string, any>();
 const importing = new Map<string, Promise<void>>();
 function importOnDemand(id: string): Promise<void> {
   let p = importing.get(id);
@@ -1637,7 +1639,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
         reportRefetchAt.set(id, Date.now());
         try {
           const rep = await fetchReports(id, null);
-          reportStatus = rep.status;
+          reportStatus = rep.status; reportLastStatus.set(id, rep.status);
           const nextInsp = (row as any).inspection ?? rep.inspection ?? null, nextRec = (row as any).record ?? rep.record ?? null;
           if ((rep.inspection && !(row as any).inspection) || (rep.record && !(row as any).record)) {
             await db.update(cars).set({ inspection: nextInsp, record: nextRec }).where(eq(cars.encarId, id));
@@ -1646,6 +1648,7 @@ async function detailFromDb(req: any, res: any, id: string): Promise<boolean> {
         } catch (e) { reportStatus = { error: String((e as Error).message ?? e) }; }
       }
     }
+    reportStatus = reportStatus ?? reportLastStatus.get(id);
     const car = mapEncarCarExtended(dbRowToEncarCar(row));
     const choiceCodes = (row.raw as any)?.optionsChoice;
     if (Array.isArray(choiceCodes) && choiceCodes.length) {
