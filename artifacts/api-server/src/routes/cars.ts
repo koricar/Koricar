@@ -1153,7 +1153,7 @@ router.get("/:id", async (req, res): Promise<void> => {
   if (await detailFromDb(req, res, String(id))) return;
 
   try {
-    const includeParams = ["CATEGORY", "SPEC", "PHOTOS", "CONTENTS", "ADVERTISEMENT", "MANAGE", "OPTIONS", "CONDITION", "PARTNERSHIP", "CONTACT"].join(",");
+    const includeParams = ["CATEGORY", "SPEC", "PHOTOS", "ADVERTISEMENT", "MANAGE", "OPTIONS", "CONDITION", "CONTACT"].join(",");
     const apiUrl = `https://api.encar.com/v1/readside/vehicle/${id}?include=${includeParams}`;
     const resp = await fetch(apiUrl, {
       headers: { Referer: `https://fem.encar.com/cars/detail/${id}`, "User-Agent": "Mozilla/5.0", Accept: "application/json" },
