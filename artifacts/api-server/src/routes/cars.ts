@@ -1112,7 +1112,11 @@ router.get("/search", async (req, res) => {
     const offset = (page - 1) * limit;
     let sr = await searchList(encarQ, offset, limit);
     if (!sr.ok) { await new Promise((r) => setTimeout(r, 600)); sr = await searchList(encarQ, offset, limit); }
-    if (!sr.ok || !sr.json) throw new Error(`Encar HTTP ${sr.status}`);
+    if (!sr.ok || !sr.json) {
+      safeLog(req).error?.({ status: sr.status, q: encarQ, body: sr.text }, "Encar search rejected");
+      res.status(502).json({ error: "upstream_error", upstreamStatus: sr.status, query: encarQ, upstreamBody: sr.text, message: "تعذر الاتصال بموقع Encar. يرجى المحاولة مرة أخرى." });
+      return;
+    }
     const data = sr.json as EncarResponse;
     let cars = data.SearchResults.map(mapEncarCar);
     
