@@ -1,5 +1,6 @@
 import { Router, type IRouter } from "express";
 import { SearchCarsQueryParams } from "@workspace/api-zod";
+import { translateModelAr, translatePartAr } from "../lib/translate-ar";
 import { searchList, fetchRecordRaw, fetchFullCar, fetchReports } from "../lib/encar-sync";
 import { importApifyItems } from "../lib/import-cars";
 
@@ -595,10 +596,7 @@ const ACCIDENT_TYPE_KR_TO_AR: Record<string, string> = {
 };
 
 function translatePartToAr(partName: string): string {
-  for (const [kr, ar] of Object.entries(PART_NAME_KR_TO_AR)) {
-    if (partName.includes(kr)) return ar;
-  }
-  return partName;
+  return translatePartAr(partName);
 }
 
 function translateStatusToAr(status: string): string {
@@ -877,7 +875,7 @@ function mapEncarCar(car: EncarCar) {
   const badgeText = `${car.Model ?? ""} ${car.Badge ?? ""}`.toLowerCase();
   const hasSunroof = ["선루프", "썬루프", "파노라마", "파노라믹", "파노"].some((kw) => badgeText.includes(kw));
   return {
-    id: car.Id, brand: brandEn, model, year, price, priceFormatted: formatPrice(price),
+    id: car.Id, brand: brandEn, model, modelAr: translateModelAr(model), year, price, priceFormatted: formatPrice(price),
     mileage: Math.round(car.Mileage), fuelType: fuelEn, transmission: transmissionEn,
     bodyType: "sedan", color: colorEn, colorAr, sunroof: hasSunroof, inspected, imageUrl,
     thumbnailUrl: imageUrl, images, description: `${brandEn} ${car.Model} ${car.FormYear}`,

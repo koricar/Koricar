@@ -87,7 +87,7 @@ export default function CarDetails() {
 
   const specsList = [
     { label: "الشركة المصنعة", value: car?.brand || "—", icon: <Car className="w-4 h-4" /> },
-    { label: "الموديل", value: car?.model || "—", icon: <Hash className="w-4 h-4" /> },
+    { label: "الموديل", value: car?.modelAr || car?.model || "—", icon: <Hash className="w-4 h-4" /> },
     { label: "سنة الصنع", value: car?.year || "—", icon: <Calendar className="w-4 h-4" /> },
         { label: "ناقل الحركة", value: TRANS_MAP[car?.transmission?.toLowerCase()] || car?.transmission || "—", icon: <Cog className="w-4 h-4" /> },
     { label: "المسافة المقطوعة", value: car?.mileage ? `${formatNumber(car.mileage)} كم` : "—", icon: <Gauge className="w-4 h-4" /> },
@@ -109,7 +109,7 @@ export default function CarDetails() {
       <div className="bg-muted border-b border-border/50 pt-24 pb-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <h1 className="text-3xl md:text-5xl font-black text-foreground mb-2">
-            {car?.model || "—"}
+            {car?.modelAr || car?.model || "—"}
           </h1>
           <p className="text-muted-foreground text-lg">
             {car?.brand} · {car?.year} · {FUEL_MAP[car?.fuelType?.toLowerCase()] || car?.fuelType}
@@ -351,7 +351,7 @@ export default function CarDetails() {
               />
 
               <a
-                href={`https://wa.me/?text=استفسار عن ${car?.model} - ${car?.priceFormatted}`}
+                href={`https://wa.me/?text=استفسار عن ${car?.modelAr || car?.model} - ${car?.priceFormatted}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 w-full py-4 rounded-xl bg-green-500 text-white font-bold hover:bg-green-600 transition"
