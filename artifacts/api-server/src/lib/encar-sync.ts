@@ -175,45 +175,56 @@ async function resolveStandardOptions(_id: string, codes: string[], warnings: st
   return names;
 }
 
+const vehicleIdCache = new Map<string, string>();
+/** Encar re-lists cars under a new listing id; inspection/record are keyed by the underlying vehicle id (visible in the photo path). */
+export function vehicleIdFromDetail(d: any): string | null {
+  const direct = d?.vehicleId ?? d?.manage?.vehicleId;
+  if (direct) return String(direct);
+  const path: string | undefined = (Array.isArray(d?.photos) ? d.photos : []).map((p: any) => p?.path).find((x: any) => typeof x === "string");
+  const m = path?.match(/\/(\d{6,})_\d+\.(?:jpg|png)/i);
+  return m ? m[1] : null;
+}
+async function resolveVehicleId(id: string): Promise<{ vehicleId: string | null; carNo: string | null }> {
+  try {
+    const r = await getJson(`${API}/v1/readside/vehicle/${id}?include=PHOTOS`, `https://fem.encar.com/cars/detail/${id}`);
+    if (r.ok && r.json) {
+      const v = vehicleIdFromDetail(r.json);
+      if (v) vehicleIdCache.set(id, v);
+      return { vehicleId: v, carNo: r.json.vehicleNo ?? null };
+    }
+  } catch { /* ignore */ }
+  return { vehicleId: vehicleIdCache.get(id) ?? null, carNo: null };
+}
+
 /** Inspection + accident record for one car; records HTTP statuses so missing reports can be diagnosed. */
-export async function fetchReports(id: string, carNo: string | null, warnings: string[] = []) {
+export async function fetchReports(id: string, carNo: string | null, warnings: string[] = [], vehicleId?: string | null) {
   const ref = `https://fem.encar.com/cars/detail/${id}`;
   const status: Record<string, number | string> = {};
   let inspection: any = null, record: any = null;
-  try {
-    const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}`, ref);
-    status.inspection = r.status;
-    if (r.ok) inspection = mapInspection(r.json); else if (r.status !== 404) warnings.push(`inspection ${r.status}`);
-  } catch (e) { status.inspection = "err"; warnings.push(`inspection ${(e as Error).message}`); }
-  try {
-    let r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, ref);
-    status.record = r.status;
-    if (!r.ok && carNo) { r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open?vehicleNo=${encodeURIComponent(carNo)}`, ref); status.recordWithNo = r.status; }
-    if (r.ok) record = mapRecord(r.json, carNo); else if (r.status !== 404) warnings.push(`record ${r.status}`);
-  } catch (e) { status.record = "err"; warnings.push(`record ${(e as Error).message}`); }
-  // Plate number is not stored with the car: get it from Encar and retry what returned 404 (some reports need it).
-  if ((!inspection || !record) && !carNo) {
-    try {
-      const v = await getJson(`${API}/v1/readside/vehicle/${id}`, ref);
-      status.vehicle = v.status;
-      carNo = v.json?.vehicleNo ?? null;
-    } catch { /* ignore */ }
+  if (!vehicleId) {
+    const r = await resolveVehicleId(id);
+    vehicleId = r.vehicleId; carNo = carNo ?? r.carNo;
   }
-  if (carNo) {
+  const ids = [...new Set([vehicleId, id].filter((x): x is string => !!x))];
+  status.ids = ids.join(",");
+  for (const rid of ids) {
     if (!inspection) {
       try {
-        const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}?vehicleNo=${encodeURIComponent(carNo)}`, ref);
-        status.inspectionWithNo = r.status;
-        if (r.ok) inspection = mapInspection(r.json);
-      } catch { /* ignore */ }
+        let r = await getJson(`${API}/v1/readside/inspection/vehicle/${rid}`, ref);
+        status[`inspection_${rid}`] = r.status;
+        if (!r.ok && carNo) { r = await getJson(`${API}/v1/readside/inspection/vehicle/${rid}?vehicleNo=${encodeURIComponent(carNo)}`, ref); status[`inspectionWithNo_${rid}`] = r.status; }
+        if (r.ok) inspection = mapInspection(r.json); else if (r.status !== 404) warnings.push(`inspection ${r.status}`);
+      } catch (e) { status[`inspection_${rid}`] = "err"; warnings.push(`inspection ${(e as Error).message}`); }
     }
     if (!record) {
       try {
-        const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open?vehicleNo=${encodeURIComponent(carNo)}`, ref);
-        status.recordWithNo = r.status;
-        if (r.ok) record = mapRecord(r.json, carNo);
-      } catch { /* ignore */ }
+        let r = await getJson(`${API}/v1/readside/record/vehicle/${rid}/open`, ref);
+        status[`record_${rid}`] = r.status;
+        if (!r.ok && carNo) { r = await getJson(`${API}/v1/readside/record/vehicle/${rid}/open?vehicleNo=${encodeURIComponent(carNo)}`, ref); status[`recordWithNo_${rid}`] = r.status; }
+        if (r.ok) record = mapRecord(r.json, carNo); else if (r.status !== 404) warnings.push(`record ${r.status}`);
+      } catch (e) { status[`record_${rid}`] = "err"; warnings.push(`record ${(e as Error).message}`); }
     }
+    if (inspection && record) break;
   }
   return { inspection, record, status };
 }
@@ -247,7 +258,7 @@ export async function fetchFullCar(id: string, listItem?: any) {
   const carNo: string | null = d.vehicleNo ?? null;
   const warnings: string[] = [];
 
-  const rep = await fetchReports(id, carNo, warnings);
+  const rep = await fetchReports(id, carNo, warnings, vehicleIdFromDetail(d));
   const inspection = rep.inspection, record = rep.record;
 
   const opts = d.options ?? {};
@@ -475,6 +486,9 @@ export async function searchList(q: string, offset: number, limit: number) {
 
 /** Accident record via the same helper (null when no open record). */
 export async function fetchRecordRaw(id: string): Promise<{ ok: boolean; status: number; json: any }> {
-  const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, `https://fem.encar.com/cars/detail/${id}`);
+  const ref = `https://fem.encar.com/cars/detail/${id}`;
+  const rid = vehicleIdCache.get(id) ?? (await resolveVehicleId(id)).vehicleId ?? id;
+  let r = await getJson(`${API}/v1/readside/record/vehicle/${rid}/open`, ref);
+  if (!r.ok && rid !== id) r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open`, ref);
   return { ok: r.ok, status: r.status, json: r.json };
 }
