@@ -191,6 +191,30 @@ export async function fetchReports(id: string, carNo: string | null, warnings: s
     if (!r.ok && carNo) { r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open?vehicleNo=${encodeURIComponent(carNo)}`, ref); status.recordWithNo = r.status; }
     if (r.ok) record = mapRecord(r.json, carNo); else if (r.status !== 404) warnings.push(`record ${r.status}`);
   } catch (e) { status.record = "err"; warnings.push(`record ${(e as Error).message}`); }
+  // Plate number is not stored with the car: get it from Encar and retry what returned 404 (some reports need it).
+  if ((!inspection || !record) && !carNo) {
+    try {
+      const v = await getJson(`${API}/v1/readside/vehicle/${id}`, ref);
+      status.vehicle = v.status;
+      carNo = v.json?.vehicleNo ?? null;
+    } catch { /* ignore */ }
+  }
+  if (carNo) {
+    if (!inspection) {
+      try {
+        const r = await getJson(`${API}/v1/readside/inspection/vehicle/${id}?vehicleNo=${encodeURIComponent(carNo)}`, ref);
+        status.inspectionWithNo = r.status;
+        if (r.ok) inspection = mapInspection(r.json);
+      } catch { /* ignore */ }
+    }
+    if (!record) {
+      try {
+        const r = await getJson(`${API}/v1/readside/record/vehicle/${id}/open?vehicleNo=${encodeURIComponent(carNo)}`, ref);
+        status.recordWithNo = r.status;
+        if (r.ok) record = mapRecord(r.json, carNo);
+      } catch { /* ignore */ }
+    }
+  }
   return { inspection, record, status };
 }
 
